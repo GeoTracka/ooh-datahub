@@ -1,9 +1,10 @@
 # Map-First Promotion Wizard MVP Design
 
-**Status:** Approved interaction direction; audience-lens revision awaiting user review
+**Status:** Approved for implementation planning
 **Date:** 2026-08-03
 **Primary sectors:** FMCG, Real Estate, Bank/Fintech
 **Primary outcome:** A defensible, adjustable OOH recommendation that culminates in a supplier-verification RFQ draft
+**Implementation plan:** [`2026-08-03-promotion-wizard-demo-mvp.md`](../plans/2026-08-03-promotion-wizard-demo-mvp.md)
 
 ## 1. Executive decision
 
