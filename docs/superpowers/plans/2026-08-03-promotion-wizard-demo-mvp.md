@@ -1,5 +1,7 @@
 # Promotion Wizard Demo MVP Implementation Plan
 
+> **Status: Superseded — do not execute.** The approved [Calibrated Reach and Live Enrichment Design](../specs/2026-08-03-calibrated-reach-enrichment-design.md) changes the measurement and runtime boundaries. This plan remains as historical context until it is replaced after design-spec review.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a presentation-ready, map-first promotion wizard that turns an FMCG, Real Estate or Bank/Fintech brief into a deterministic Lagos OOH recommendation, navigable audience evidence, reversible adjustments, live spreadsheet enrichment and a watermarked supplier-verification RFQ.

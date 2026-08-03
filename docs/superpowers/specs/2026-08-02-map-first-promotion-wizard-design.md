@@ -1,10 +1,14 @@
 # Map-First Promotion Wizard MVP Design
 
-**Status:** Approved for implementation planning
+**Status:** Approved design; implementation plan revision pending
 **Date:** 2026-08-03
 **Primary sectors:** FMCG, Real Estate, Bank/Fintech
 **Primary outcome:** A defensible, adjustable OOH recommendation that culminates in a supplier-verification RFQ draft
 **Implementation plan:** [`2026-08-03-promotion-wizard-demo-mvp.md`](../plans/2026-08-03-promotion-wizard-demo-mvp.md)
+
+**Normative addendum:** [Calibrated Reach and Live Enrichment Design](2026-08-03-calibrated-reach-enrichment-design.md)
+
+**Implementation warning:** The linked implementation plan predates the calibrated-reach addendum. It is retained for history, but it is not executable until revised. Where the two design documents conflict, the addendum controls.
 
 ## 1. Executive decision
 
