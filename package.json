@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "bundle:build": "tsx scripts/build-demo-bundle.ts",
+    "bundle:check": "tsx scripts/validate-frozen-bundle.ts",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "keywords": [],
@@ -50,6 +52,7 @@
     "fast-check": "^4.9.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
+    "tsx": "^4.23.5",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }
