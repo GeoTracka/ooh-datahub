@@ -24,7 +24,10 @@ export type PlannerAction =
   | { type: "undo" }
   | { type: "reset" }
   | { type: "applied" }
-  | { type: "review-rfq" };
+  | { type: "review-rfq" }
+  | { type: "apply-and-review-rfq" }
+  | { type: "close-rfq" }
+  | { type: "close-rfq-with-draft"; plan: PlanningResult };
 
 export function plannerReducer(
   state: PlannerState,
@@ -84,6 +87,29 @@ export function plannerReducer(
       };
     case "review-rfq":
       if (!state.appliedPlan) throw new Error("NO_APPLIED_PLAN");
+      if (state.draftPlan) throw new Error("APPLY_DRAFT_BEFORE_RFQ");
+      if (!state.appliedPlan.recommended.valid) throw new Error("PACKAGE_INVALID");
       return { ...state, status: "rfq" };
+    case "apply-and-review-rfq":
+      if (!state.draftPlan) throw new Error("NO_DRAFT_PLAN");
+      if (!state.draftPlan.recommended.valid) throw new Error("PACKAGE_INVALID");
+      return {
+        ...state,
+        appliedPlan: state.draftPlan,
+        draftPlan: null,
+        draftHistory: [],
+        lastAction: null,
+        status: "rfq",
+      };
+    case "close-rfq":
+      return { ...state, status: "loaded" };
+    case "close-rfq-with-draft":
+      return {
+        ...state,
+        draftPlan: action.plan,
+        draftHistory: [],
+        lastAction: "RFQ schedule changed",
+        status: "dirty",
+      };
   }
 }

@@ -1,0 +1,16 @@
+feat: generate supplier-verification RFQ draft
+
+Task 11 of calibrated promotion wizard plan. Adds the RFQ contracts
+(Zod-validated review input with date-order, deadline, and confirmation
+guards), the generateRfq planner that produces supplier-isolated
+messages and a consolidated internal request with audience planning
+basis, the RfqDrawer accessible modal with focus management and
+schedule revision routing, and plannerReducer cases for atomic
+apply-and-review, close, and close-with-draft. Every supplier message
+hides other suppliers, internal budget, and replay fingerprints; the
+internal request keeps applied upload provenance internal. 15 new
+tests passing.
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

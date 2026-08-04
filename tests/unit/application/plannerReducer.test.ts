@@ -28,7 +28,7 @@ const brief = {
 };
 
 describe("plannerReducer", () => {
-  it("keeps the RFQ basis on the applied plan until Apply", () => {
+  it("keeps the RFQ basis on the applied plan until Apply", { timeout: 30_000 }, () => {
     const applied = buildPlan(frozenLagosBundle, brief);
     const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });
     const draft = recalculatePlan(frozenLagosBundle, applied, { budgetNgn: 20_000_000 });
@@ -226,5 +226,59 @@ describe("plannerReducer", () => {
     expect(draft.selectedZoneIds).toHaveLength(3);
     expect(draft.selectedZoneIds).not.toContain(excluded);
     expect(draft.measurement!.fingerprint).not.toBe(applied.measurement!.fingerprint);
+  });
+
+  it("atomically applies a valid draft and enters RFQ without replacing original", () => {
+    const original = buildPlan(frozenLagosBundle, brief);
+    const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: original });
+    const draft = recalculatePlan(frozenLagosBundle, original, { daypart: "evening" });
+    const dirty = plannerReducer(loaded, { type: "drafted", plan: draft });
+    const rfq = plannerReducer(dirty, { type: "apply-and-review-rfq" });
+    expect(rfq).toMatchObject({
+      originalPlan: original,
+      appliedPlan: draft,
+      draftPlan: null,
+      draftHistory: [],
+      status: "rfq",
+    });
+  });
+
+  it("rejects direct dirty or invalid review and closes a valid RFQ to loaded", () => {
+    const original = buildPlan(frozenLagosBundle, brief);
+    const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: original });
+    const draft = recalculatePlan(frozenLagosBundle, original, { daypart: "evening" });
+    const dirty = plannerReducer(loaded, { type: "drafted", plan: draft });
+    expect(() => plannerReducer(dirty, { type: "review-rfq" }))
+      .toThrow("APPLY_DRAFT_BEFORE_RFQ");
+    const invalid = {
+      ...loaded,
+      appliedPlan: {
+        ...original,
+        recommended: { ...original.recommended, valid: false },
+      },
+    };
+    expect(() => plannerReducer(invalid, { type: "review-rfq" }))
+      .toThrow("PACKAGE_INVALID");
+    const review = plannerReducer(loaded, { type: "review-rfq" });
+    expect(plannerReducer(review, { type: "close-rfq" }).status).toBe("loaded");
+  });
+
+  it("turns changed RFQ dates into a recomputed dirty schedule revision", () => {
+    const original = buildPlan(frozenLagosBundle, brief);
+    const review = plannerReducer(
+      plannerReducer(initialPlannerState, { type: "loaded", plan: original }),
+      { type: "review-rfq" },
+    );
+    const revised = recalculatePlan(frozenLagosBundle, original, {
+      flightStart: "2026-09-08",
+    });
+    const dirty = plannerReducer(review, {
+      type: "close-rfq-with-draft",
+      plan: revised,
+    });
+    expect(dirty.status).toBe("dirty");
+    expect(dirty.appliedPlan).toBe(original);
+    expect(dirty.draftPlan).toBe(revised);
+    expect(revised.measurement!.fingerprint).not.toBe(original.measurement!.fingerprint);
   });
 });

@@ -26,6 +26,7 @@ import { CausalDrawer } from "@/features/CausalDrawer";
 import { LensTabs } from "@/features/LensTabs";
 import { PackageStrip } from "@/features/PackageStrip";
 import { RecommendationCards } from "@/features/RecommendationCards";
+import { RfqDrawer } from "@/features/RfqDrawer";
 import { MapCanvas } from "@/maps/MapCanvas";
 import { projectMapLibreScene } from "@/maps/projectScene";
 import { siteDeliveryCompatible } from "@/planning/movement";
@@ -145,8 +146,7 @@ export function PlannerPage() {
   }
   function reviewRfq() {
     if (!visible?.recommended.valid) return;
-    if (dirty) dispatch({ type: "applied" });
-    dispatch({ type: "review-rfq" });
+    dispatch({ type: dirty ? "apply-and-review-rfq" : "review-rfq" });
   }
   function undoDraft() {
     const previous = state.draftHistory.at(-1) ?? state.appliedPlan;
@@ -256,6 +256,20 @@ export function PlannerPage() {
         />
       )}
       {uploadOpen && <div role="dialog" aria-label="Upload inventory" />}
+      {state.status === "rfq" && state.appliedPlan && (
+        <RfqDrawer
+          plan={state.appliedPlan}
+          onClose={() => dispatch({ type: "close-rfq" })}
+          onScheduleRevision={(flightStart, flightEnd) => {
+            const revised = recalculatePlan(bundle, state.appliedPlan!, {
+              flightStart,
+              flightEnd,
+            });
+            setBrief(revised.brief);
+            dispatch({ type: "close-rfq-with-draft", plan: revised });
+          }}
+        />
+      )}
     </main>
   );
 }
