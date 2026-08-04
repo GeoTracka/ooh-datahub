@@ -1,9 +1,10 @@
 # Calibrated Reach and Live Enrichment Design
 
-**Status:** Approved design; ready for implementation-plan revision
+**Status:** Approved design; replacement implementation plan ready
 **Date:** 2026-08-03
 **Parent design:** [Map-First Promotion Wizard MVP Design](2026-08-02-map-first-promotion-wizard-design.md)
-**Superseded plan:** [Promotion Wizard Demo MVP Implementation Plan](../plans/2026-08-03-promotion-wizard-demo-mvp.md)
+**Implementation plan:** [Calibrated Promotion Wizard Demo MVP Implementation Plan](../plans/2026-08-03-calibrated-promotion-wizard-demo-mvp.md)
+**Historical superseded plan:** [Promotion Wizard Demo MVP Implementation Plan](../plans/2026-08-03-promotion-wizard-demo-mvp.md)
 **Primary sectors:** FMCG, Real Estate, Bank/Fintech
 **Primary promise:** Turn a short campaign brief or uploaded inventory sheet into a visually navigable, evidence-labelled OOH recommendation and a supplier-verification RFQ draft that is ready for review.
 
@@ -13,7 +14,7 @@ This document is the normative addendum to the parent design. It preserves the m
 
 In product language, **booking-ready request** means an editable supplier-verification RFQ draft that is ready for user review. It never means inventory is reserved, confirmed, paid, or automatically sent.
 
-The existing implementation plan was approved before this addendum. It must be revised before implementation begins. In particular, its browser-only, no-geocoding, MapLibre-only, and synthetic per-face reach assumptions are no longer valid.
+The replacement implementation plan incorporates this addendum. It removes the historical plan’s browser-only, no-geocoding, MapLibre-only, and summed synthetic per-face reach assumptions while preserving a deliberately small Evidence-D demo boundary.
 
 ## 2. Executive decision
 
@@ -76,6 +77,8 @@ The interface never silently upgrades an assumed or modelled value into an obser
 - Support FMCG, Real Estate, and Bank/Fintech objective presets.
 - Generate an editable, supplier-grouped RFQ draft with explicit verification fields.
 - Establish a data envelope that can later accept supermarkets, micro-influencers, university or hostel posterboards, radio stations, and other media.
+
+**Executable upload boundary:** the demo implements one current-inventory CSV/TSV/XLSX template. Service/distribution-location templates, catchment polygons, `service_radius_m`, and eligibility constraints remain post-MVP extensions under the future media/data envelope. Uploaded inventory is context-only until a separately governed calibration bundle declares compatibility.
 
 ### 4.2 Non-goals
 
@@ -163,6 +166,10 @@ The drill-down presents six connected steps:
 
 When eligible, Influence appears as an optional subsection after Unique because it reweights reached people; it is not a substitute step in the physical exposure chain.
 
+The package strip exposes three different explanation intents: the selected objective metric, the highest permitted claim, and Influence Capture. They are never aliases. Each resolves to its own value, unit, evidence sources, transformation, caveats, and terminal stage; for example, a Movement-only permitted claim ends at Movement rather than displaying an unavailable Unique value as its result. A Planning Fit score can enter this causal route only through **D — Delivery**. A, C, P, and E remain transparent score components, but they are not represented as audience-delivery stages.
+
+Planning Fit and audience interpretation also have distinct navigable views. The method path is **method → pillar → zone → site → evidence**; only its D branch may hand off to the causal delivery chain. The audience path is **summary → metric → demographic cell → zone → site → source** and shows target-universe and propensity inputs without inventing cell- or face-level reach. Entering a Reach or Influence audience metric activates the matching map lens; closing the view restores the prior lens and selection.
+
 Each step exposes:
 
 - current value and unit;
@@ -215,7 +222,9 @@ For location s and time band t:
 
 **AP(s,t) = 100 × percentile of F(x(s,t)) within the comparison set**
 
-F is a versioned feature function using context such as:
+For the executable MVP, the comparison basis is narrower and fully fixed: **F is mean face-day person-passage movement for the requested daypart**. A package or zone first averages the selected faces; that mean is ranked against at least 30 frozen cohort rows expressed in the same unit, geography, basis version, and daypart. Campaign duration does not multiply either side, so one-day and 28-day requests produce the same Activity Potential for the same faces and daypart. `All day` is exactly AM + Midday + PM + Evening for every face and cohort row. Missing, expired, mismatched, duplicated, or undersized cohort evidence makes the index unavailable rather than changing its denominator.
+
+The underlying mean-face-day movement may come from a versioned model whose candidate predictors include:
 
 - destination density and category diversity;
 - population and land-use context;
@@ -447,6 +456,8 @@ The versioned bundle contains:
 - bundle identifier and creation date.
 
 The browser must be able to run the seeded demo entirely from this bundle.
+
+Source-manifest identifiers are unique keys, not first-match hints. Bundle validation, measurement eligibility, and provenance views all use one order-independent index and reject any duplicate identifier before lookup. Every record exposes its owner, transformation, quality flags, and a governed link or immutable snapshot identifier so the terminal evidence view is confidence-readable. All manifest periods, site-availability periods, campaign dates, planner revisions, and RFQ dates use one strict real-calendar parser and reject impossible or reversed ranges at their boundary.
 
 ## 9. Recommendation logic
 
@@ -739,13 +750,16 @@ The flow is:
 2. inspect sheets and map headers;
 3. validate rows and show accepted, warning, and rejected counts;
 4. preview locations on the map where coordinates exist;
-5. choose up to 50 accepted rows for the MVP;
-6. review an enrichment preflight showing provider and product, transmitted rows and fields, estimated calls and cost, expected retention, attribution, and whether each result is context-only or model-eligible;
-7. click **Enrich locations** to authorize optional live calls;
-8. review approximate matches and contextual features; and
-9. run the planner.
+5. review accepted and excluded rows through ten-row pagination, then choose up to 50 accepted rows for the MVP; no off-page row is preselected;
+6. record a local declaration over the full selected context set; this action makes no row-bearing network call and can independently authorize a saved customer correction for row-scoped supplier-RFQ export;
+7. for selections with addresses, separately authorize and review an enrichment preflight whose disclosed transmission contains only that address-bearing subset, with provider and product, exact fields, estimated calls and cost, expected retention, attribution, and whether each result is context-only or model-eligible;
+8. click **Enrich locations** to authorize optional live calls for exactly that disclosed subset;
+9. review approximate matches and contextual features; and
+10. run the planner.
 
 The 50-row cap is a product limit, not a provider batch guarantee. The gateway still orchestrates and meters the provider's required request units. Before transmission, the importer quarantines or requires explicit removal of person names, private residential addresses unrelated to media inventory, sensitive attributes, and other apparent personal data.
+
+A mixed selection may contain coordinate-only and address-only rows. All selected rows remain in the immutable local context snapshot and later planning/RFQ draft. The local declaration is independent of both network authorizations, so a coordinate-only selection can be declared, customer-corrected and granted exact row-scoped supplier-export permission without a preflight call. Only address-bearing rows enter the app-server preflight and Google Geocoding scopes. Provider responses are reconciled by row ID against that exact authorized subset, while untransmitted coordinate-only rows remain unchanged; missing, extra, or duplicate responses fail closed. File, sheet, mapping or selection changes invalidate the declaration and derived authorizations. Withdrawing app-server consent clears only live-review state and preserves a still-valid local declaration, correction and supplier-export permission.
 
 ### 13.2 Field contract
 
@@ -778,6 +792,8 @@ Geocoding returns a normalized location, immutable precision class, and source r
 
 Confirmation verifies that the returned address is the intended record; it does not upgrade its spatial precision. A marker move or coordinate edit creates a separately provenanced user correction and never relabels the provider coordinate as customer-owned. Calibrated use requires an independently supplied coordinate meeting the model threshold or an applicability rule that explicitly propagates the positional uncertainty.
 
+Supplier output retains a location coordinate only when the selected value is a customer correction whose provenance and legal-approval ID bind to the exact declaration-backed, row-scoped supplier-export authorization. Original uploaded coordinates, open/provider values, provider candidates and expired or mismatched authorizations remain map/context evidence only and render as `Confirmation requested` in the RFQ.
+
 ## 14. Failure and degraded-mode experience
 
 The product should fail downward, not fail closed:
@@ -790,6 +806,7 @@ The product should fail downward, not fail closed:
 - rate unavailable → include a rate-verification field in the RFQ;
 - availability unavailable → include an availability-verification field;
 - provider quota exceeded → reuse only non-expired, contract-permitted features; otherwise fall back to seeded or customer facts and visibly reduce the evidence state;
+- no single eligible inventory source because it is missing, out of geography, out of period, or ambiguous across multiple distinct records → retain asset lines only as a supplier-verification shortlist; mark market and zones unconfirmed and remove audience claims, evidence, and plan/model/replay fingerprints from both the RFQ preview and generated artifact; a duplicate manifest identifier instead fails bundle validation before planning;
 - calibration-bundle mismatch → stop absolute claims and surface the version conflict.
 
 Every degraded state includes one actionable recovery step.
@@ -797,6 +814,8 @@ Every degraded state includes one actionable recovery step.
 ## 15. Sector presets
 
 ### 15.1 FMCG
+
+Demo preset: **Demo Spark** for students, young workers and convenience shoppers; broad-reach objective, PM daypart and ₦18m working budget.
 
 Default emphasis:
 
@@ -808,6 +827,8 @@ Default emphasis:
 
 ### 15.2 Real Estate
 
+Demo preset: **Harbor Homes** for young professionals, diaspora property intenders and resident investors; influential-core objective, evening daypart and ₦25m working budget.
+
 Default emphasis:
 
 - qualified corridor and catchment reach;
@@ -817,6 +838,8 @@ Default emphasis:
 - enquiry or site-visit proximity.
 
 ### 15.3 Bank/Fintech
+
+Demo preset: **FlowPay Merchant** for merchant owners, students and young professional users; near-conversion objective, all-day daypart and ₦20m working budget.
 
 Default emphasis:
 
@@ -907,6 +930,8 @@ The main demo ends at a usable supplier-verification draft, not at a dashboard. 
 - Out-of-domain inputs degrade automatically.
 - The feature-use registry has no duplicate pillar assignments.
 - Seeded claims remain Evidence D.
+- Activity Potential uses the governed mean-face-day cohort basis and is invariant to flight duration.
+- Every date accepted by bundle, estimate, optimiser, planner-recalculation, and RFQ boundaries is a real calendar date in valid order.
 
 ### 19.3 Data and provider safety
 
@@ -940,9 +965,9 @@ Implementation verification must include:
 - accessibility checks for colour-independent evidence and map explanations; and
 - calibration-report tests that fail the bundle build when the Evidence-C gates do not pass.
 
-## 21. Superseded implementation assumptions
+## 21. Assumptions removed by the replacement plan
 
-The revised implementation plan must remove or replace these assumptions from the earlier plan:
+The replacement implementation plan removes or replaces these assumptions from the earlier plan:
 
 - browser-only architecture;
 - prohibition on geocoding or contextual enrichment;

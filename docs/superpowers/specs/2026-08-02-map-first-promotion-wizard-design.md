@@ -1,14 +1,16 @@
 # Map-First Promotion Wizard MVP Design
 
-**Status:** Approved design; implementation plan revision pending
+**Status:** Approved design; replacement implementation plan ready
 **Date:** 2026-08-03
 **Primary sectors:** FMCG, Real Estate, Bank/Fintech
 **Primary outcome:** A defensible, adjustable OOH recommendation that culminates in a supplier-verification RFQ draft
-**Implementation plan:** [`2026-08-03-promotion-wizard-demo-mvp.md`](../plans/2026-08-03-promotion-wizard-demo-mvp.md)
+**Implementation plan:** [Calibrated Promotion Wizard Demo MVP Implementation Plan](../plans/2026-08-03-calibrated-promotion-wizard-demo-mvp.md)
+
+**Historical plan:** [`2026-08-03-promotion-wizard-demo-mvp.md`](../plans/2026-08-03-promotion-wizard-demo-mvp.md)
 
 **Normative addendum:** [Calibrated Reach and Live Enrichment Design](2026-08-03-calibrated-reach-enrichment-design.md)
 
-**Implementation warning:** The linked implementation plan predates the calibrated-reach addendum. It is retained for history, but it is not executable until revised. Where the two design documents conflict, the addendum controls.
+**Implementation note:** The replacement plan incorporates the calibrated-reach addendum and supersedes the historical plan. Where this parent design and the addendum conflict, the addendum still controls.
 
 ## 1. Executive decision
 
@@ -103,7 +105,7 @@ The stored `MONTHLY RATE` is often derived from `ANNUAL RATE / 12`. It is a nomi
 - Transparent Planning Fit scoring and separate Evidence Confidence.
 - One compact audience signal on the first result: modelled target reach and influence capture, or explicit degraded/unavailable labels.
 - Historical competitor/rate evidence from the hub.
-- Live `.xlsx` or `.csv` upload for either inventory or first-party service/distribution locations.
+- Live `.xlsx`, `.csv` or `.tsv` upload for current inventory rows. First-party service/distribution templates and eligibility geometry are deliberately deferred so the demo has one unambiguous, reviewable import path.
 - Supplier-grouped RFQ drafts for supplier verification, with copy/download actions and provenance-aware export controls.
 - Three pre-seeded demonstration briefs, one per target sector.
 
@@ -136,7 +138,7 @@ The interface has six explicit states:
 
 No scorecard or evidence panel is open by default in any state.
 
-The audience strip is a second line beneath the package facts, not a KPI grid: `240k–290k est. target reach • ~63% influence capture`, followed by `Synthetic scenario • Audience evidence D`. Reach percentage and both full scenario ranges live in the drawer; `~63%` is the rounded base-scenario result or median statistical replicate, never an unstated midpoint. If neither exists, the strip shows the rounded range. Headline counts round to two significant digits/nearest thousand and percentages to whole points; evidence retains raw paired values. On narrow screens the line collapses to one `Audience estimate` button that opens the drawer with Reach and Influence tabs already visible. The values are deterministic demo fixtures, not Lagos market claims. Production values appear only when §7.8 is satisfied. Otherwise the same slot shows the truthful degraded state, for example `Target reach not modelled • Influence profile not configured`.
+The audience strip is a second line beneath the package facts, not a KPI grid: `240k–290k est. target reach • ~63% influence capture`, followed by `Synthetic scenario • Audience evidence D`. Reach percentage and both full scenario ranges live in the drawer; `~63%` is the rounded base-scenario result or median statistical replicate, never an unstated midpoint. If neither exists, the strip shows the rounded range. Headline counts round to two significant digits/nearest thousand and percentages to whole points; evidence retains lossless canonical paired values rather than a second rounded representation. On narrow screens the line collapses to one `Audience estimate` button that opens the drawer with Reach and Influence tabs already visible. The values are deterministic demo fixtures, not Lagos market claims. Production values appear only when §7.8 is satisfied. Otherwise the same slot shows the truthful degraded state, for example `Target reach not modelled • Influence profile not configured`.
 
 The compact brief shows only sector, product and audience. Sector templates supply visible default assumptions for objective, Lagos geography, working budget, flight duration and the seeded demo audience/influence profile. `More options` exposes objective, geography, exact budget, dates and one readable assumption such as `Influence lens: merchant, campus and professional connectors · Confirmed`, with the profile name/version beneath it. Seeded demo briefs are preconfirmed. The user may choose another reviewed profile or `No influence profile`; raw propensity weights are not edited in the default experience. An unconfirmed non-demo mapping shows `Influence profile awaiting confirmation`, never a percentage, and must be confirmed before its numbers enter the internal RFQ. A recommendation may be explored with assumed dates, but RFQ generation requires explicit date confirmation.
 
@@ -181,28 +183,26 @@ While a valid dirty draft exists, the primary RFQ action is labeled `Apply & rev
 
 ### 5.4 Live upload
 
-`Upload spreadsheet` is available beside the brief and from the adjustment drawer. The user chooses one of two MVP templates:
-
-1. **Inventory:** current sites/faces, owners, coordinates, formats, rates and availability.
-2. **Service/distribution locations:** stores, branches, ATMs, agents, merchants, project location or other first-party points that constrain where the product can be bought or served.
+`Upload spreadsheet` is available beside the brief and from the adjustment drawer. The executable MVP accepts one template: **Inventory** — current sites/faces, owners, coordinates or addresses, formats, rates and availability. This narrower choice is intentional: it proves live spreadsheet mapping, local validation, optional geocoding, context-only planning, and RFQ provenance without introducing an unrelated catchment-policy editor.
 
 Import flow:
 
-1. Choose `.xlsx` or `.csv`.
+1. Choose `.xlsx`, `.csv` or `.tsv`.
 2. Select the data sheet when an `.xlsx` contains more than one plausible table.
 3. Auto-map headers to the canonical schema.
-4. Show required, mapped, ignored and invalid fields plus a ten-row preview.
+4. Show the required location mapping separately from recommended/mapped, ignored and invalid fields, plus a ten-row preview.
 5. Quarantine invalid rows; never silently drop or coerce them.
-6. Confirm import.
-7. Show the new map layer and recalculate affected recommendations as a reversible dirty draft.
+6. Record a local declaration over the exact selected rows; this action transmits no row data.
+7. Optionally save customer coordinate corrections with separate, row-scoped supplier-RFQ export permission and optionally authorize address-only live geocoding.
+8. Show the new map layer and recalculate affected recommendations as a reversible dirty draft.
 
-Header mappings below 80% model confidence require explicit user confirmation. Inventory imports require a source face ID, owner/seller, coordinates or a geocodable address, format, static/DOOH classification, rate, currency, gross/net status, rate basis, availability window, source artifact/dataset and `rate_as_of`. The system assigns an internal UUID and namespaces the supplied ID to the import dataset. A missing permit or fresh-photo field is allowed only as an explicit conditional/unknown state.
+Header mappings below 80% model confidence require explicit user confirmation. An MVP context row requires only coordinates or a usable address. Asset ID is recommended; when absent, the importer generates a stable sheet-and-row label and records a warning. Owner/seller, format/class, rate/currency/basis, availability, source artifact and `rate_as_of` remain recommended supplier-verification fields: missing values stay explicit and cannot become calibrated inventory or an unconditional booking line. A missing permit or fresh-photo field is likewise conditional/unknown.
 
-Service/distribution imports require a source location ID, type, coordinates or address, status, weight and source artifact/dataset; validity dates are optional but recommended. The user chooses `Context only` or `Eligibility constraint`. Eligibility mode requires a supplied polygon or an explicit `service_radius_m` column/value shown at confirmation; the system never invents or silently buffers a point. The seeded upload fixture uses a disclosed 2 km radius stored as a user-provided planning assumption, not an exposure zone.
+Service/distribution imports are post-MVP. A later guided template will require a source location ID, type, coordinates or address, status, weight and source artifact/dataset. Any future eligibility mode will require a supplied polygon or an explicit `service_radius_m` value shown at confirmation; it will never invent or silently buffer a point.
 
-Before confirmation, the uploader records data purpose, rights to use and the §8.4 privacy classification. Confirming an upload after a recommendation exists creates a reversible dirty draft rather than silently replacing the baseline. `What changed?` names the dataset revision, affected rows, service geometry/rule and the gates or score inputs that changed.
+Before confirmation, the uploader records data purpose, rights to use and the §8.4 privacy classification in a versioned declaration scoped to all selected rows. That declaration is independent of network consent. Only address-bearing rows can enter the separately disclosed app-server preflight and provider scopes; coordinate-only uploads can be declared, corrected, and authorized for supplier-RFQ export without either network consent. File, sheet, mapping or selection changes invalidate the declaration and its derived authorizations. Withdrawing app-server consent preserves a still-valid local declaration and row-scoped export permission. Confirming an upload after a recommendation exists creates a reversible dirty draft rather than silently replacing the baseline. `What changed?` names the dataset revision, affected rows, service geometry/rule and the gates or score inputs that changed.
 
-The demo's strongest upload moment is a distribution/service-location file: the map gains the first-party locations, zones outside the serviceable catchment become conditional or ineligible, and the three recommendations visibly change.
+The demo upload moment is a current-inventory file: accepted rows appear as a clearly labelled context-only layer, optional address geocoding is separately authorized and reviewed, and applying the selected rows creates a reversible context-shortlist draft. Supplier RFQs retain a coordinate only when it is a separately saved customer correction with an exact, current declaration-bound row authorization; uploaded coordinates and provider-derived candidates remain internal context and become `Confirmation requested` in supplier output. The upload never silently changes calibrated delivery or invents a service catchment.
 
 The simple MVP does not expose a third generic `audience score` upload. Target universes, influence profiles and reach-model runs enter through seeded fixtures or a governed provider/admin import because a standalone demographic or reach-percentage column cannot establish a denominator, qualified exposure or package deduplication. A later guided audience import may expose the §8.1 structures only after schema, rights, privacy, effective-sample, uncertainty, model-version and compatibility validation. It rejects/quarantines a reach percentage without its universe and deduplication metadata, unique reach above universe, overlapping cells presented as mutually exclusive, demographic-only `thought leader` values, missing model/uncertainty fields and sensitive or under-threshold cells.
 
@@ -283,7 +283,7 @@ The D pillar is versioned and visibly labeled as exactly one of:
 - `D_Audience`: delivery from a qualified audience estimate; or
 - `D_ContextProxy`: source-backed contextual target fit when no qualified delivery estimate exists.
 
-`DeliveryScore` is `PR(compatible target exposure)` within the frozen normalization cohort, or `100 × min(qualified reach / reach_goal, 1)` when a validated unique-reach method and explicit goal exist. `D_mode` is the enum above; the numeric output is `D_score`. The §7.8 visual lens is not a sixth pillar. In the MVP, Influence Capture is always `display_only`; Estimated Target Reach is `D_input` only when that same qualified value drives `D_Audience`, otherwise it too is `display_only`. Re-displaying a D input adds no second contribution, and the audience primitives do not also enter A. A post-MVP `influential_core` objective may replace broad reach with influence-weighted reach as the single D input, but may never add both.
+`DeliveryScore` is `PR(compatible target exposure)` within the frozen normalization cohort, or `100 × min(qualified reach / reach_goal, 1)` when a validated unique-reach method and explicit goal exist. `D_mode` is the enum above; the numeric output is `D_score`. The §7.8 visual lens is not a sixth pillar. In the MVP, Estimated Target Reach is `D_input` only when the Broad reach objective uses that same qualified value to drive `D_Audience`; otherwise it is `display_only`. For the explicit Influential core objective, influence-weighted reached mass replaces broad reach as the one D input, while the displayed Influence Capture percentage is a denominator-normalized explanation of that same delivery quantity. Re-displaying either value adds no second contribution, and the audience primitives do not also enter A. Broad reach and influence-weighted reach are never added together.
 
 `FrequencyFit` is allowed only when the same validated unique-audience method supplies package average frequency `f` and the user supplies `0 < f_min ≤ f_max` for the same target, universe, geography and period:
 
@@ -500,7 +500,7 @@ Marginal values are diagnostics and are not presented as additive shares because
 
 A package percentage is valid only when the selected faces share one target/universe definition and version, geography, campaign period/daypart, metric basis, 1+ threshold and compatible package-level cross-face/cross-zone/cross-day deduplication method. The influence cells additionally share one category/domain, construct, instrument/method, language/local-validation basis, threshold/calibration version, target population and field period. Per-face or per-zone reach estimates cannot be summed. The engine needs a run keyed by the exact `exposure_plan_fingerprint` or a qualified model capable of recomputing that exact plan. The fingerprint contains sorted face IDs, flight dates, face-level dayparts, static posting or DOOH play schedules, requested share-of-time, uptime/availability assumptions, metric threshold and model revision. A changed or unsupported plan makes the draft audience result unavailable until recomputed unless valid whole-universe bounds exist; it never silently extrapolates. Holding every existing face's dates, dayparts, posting/play schedule, share-of-time and uptime assumptions fixed, adding a face cannot reduce reach and removing one cannot increase it. A delivery reallocation creates a different exposure-plan fingerprint and is not subject to that monotonic comparison.
 
-Each derived audience metric persists `decision_use = D_input | display_only`. In the MVP, Influence Capture is `display_only`; qualified broad reach may be the single `D_Audience` input and is merely reused visually, not counted again. Influence propensity never enters A, and changing a display-only influence profile cannot change Planning Fit. A later, explicitly selected `influential_core` objective may use Influence Capture instead of broad target reach as the one D input; it never uses both.
+Each derived audience metric persists `decision_use = D_input | display_only`. Qualified broad reach is the single `D_Audience` input for Broad reach. For the explicitly selected Influential core objective, influence-weighted reached mass is the single D input and the Influence Capture percentage is its display projection against the governed denominator; it is not another score input. Influence propensity never enters A, and changing a display-only influence profile cannot change Planning Fit. The two delivery alternatives are never used together.
 
 ## 8. Canonical data model
 
@@ -653,14 +653,14 @@ The demo earns confidence by making each input visibly change one decision while
 | Sector, product and audience | Three numbered zone polygons/markers, muted alternatives and one recommendation sentence | Method preset → pillar → zone evidence |
 | Generated package | One compact audience strip shows estimated target reach and influence capture; clicking it activates the Reach/Influence lens while rank styling remains the default | Metric → archetype/cell → marginal zone contribution → site → source/method |
 | Budget change | Added/removed faces highlight briefly; package strip and selected-zone emphasis update | `What changed?` shows cost, selections and affected contributions |
-| Outlet/branch/ATM/agent/project upload | New first-party point layer and supplied service buffers/polygons appear; in/out-of-catchment candidates change state | Uploaded row → mapped point → disclosed geometry/rule → affected face |
+| Future governed outlet/branch/ATM/agent/project upload (post-MVP) | A later module may add a first-party point layer and supplied service polygons/buffers; this transformation is not part of the executable inventory-upload demo | Uploaded row → mapped point → disclosed geometry/rule → affected face |
 | Inventory upload | Valid faces appear as selectable markers; invalid/quarantined rows stay off-map | Face → mapped fields → source row and quality flags |
 | Historical category/brand evidence | Optional concentration heat layer appears only when requested; zone click opens a small period/format trend | Aggregated cell → contributing placement rows → hub source |
 | Qualified traffic/exposure | Direction/daypart layer or view cone appears only for the chosen metric mode | Metric → qualification thresholds → raw movement/delivery inputs |
 | Site selection | The chosen marker opens photo, face facts, role, conditions and swap/remove actions | Site → offer/permit/evidence records |
 | RFQ review | Selected faces collapse into supplier groups with condition badges | Supplier group → exact lines → fields awaiting confirmation |
 
-Visual encodings are consistent: solid numbered marks are selected recommendations, muted outlines are eligible alternatives, amber is conditional/stale, red is ineligible, and grey is unknown. No heatmap, buffer or metric layer appears without a legend, source period and one-sentence interpretation.
+Visual encodings are consistent: solid numbered marks are selected recommendations, muted outlines are eligible alternatives, outlined squares are uploaded context, purple double outlines are provider matches awaiting review, amber is conditional/stale, red is ineligible, and grey is unknown. Upload and provider-review marks explicitly say `not a selected recommendation` in their adjacent legend. No heatmap, buffer or metric layer appears without a legend, source period and one-sentence interpretation. The displayed source period is recomputed from the currently active lens's contributing evidence only; switching Plan, Activity, Reach or Influence cannot retain an unrelated plan-wide period label.
 
 ## 10. Supplier-verification RFQ contract
 
@@ -743,7 +743,7 @@ The unauthenticated/single-fixed-user demo can access only seeded synthetic audi
 | `POST /api/plans/{id}/reset` | Restore immutable baseline |
 | `POST /api/rfqs` | Valid plan/draft + reviewed fields → provenance-gated supplier-verification RFQ payload and downloadable request |
 
-All plan responses include `method_version`, `preset`, `data_revision`, `normalization_cohort_id`, `score_state`, `score` when valid, `pillar_contributions`, `D_mode`, `E_mode`, `confidence`, `assumptions`, `evidence_ids`, `claim_limitations` and `audience_summary`. `audience_summary.ui_role = summary`; its nested `reach` object has `status`, basis, `decision_use = D_input | display_only`, claim-specific Q/grade and paired scenario/replicate objects containing scenario ID, universe, raw count and raw percentage. Its nested `influence` object has its own `status`, `decision_use = display_only` in the MVP, claim-specific Q/grade, capture objects keyed to the same scenario/replicate IDs and archetype/cell results. The summary also contains interval/scenario type, the weaker `audience_evidence_grade` among numeric metrics actually displayed, exposure-plan fingerprint, model/profile versions, represented-universe coverage, comparability keys, assumptions, limitations and evidence IDs. It never combines independently rounded endpoints or substitutes a proxy index into a reach/capture field; every displayed count/percentage pair reconciles to the same universe and scenario.
+All plan responses include `method_version`, `preset`, `data_revision`, `normalization_cohort_id`, `score_state`, `score` when valid, `pillar_contributions`, `D_mode`, `E_mode`, `confidence`, `assumptions`, `evidence_ids`, `claim_limitations` and `audience_summary`. `audience_summary.ui_role = summary`; its nested `reach` object has `status`, basis, `decision_use = D_input | display_only`, claim-specific Q/grade and paired scenario/replicate objects containing scenario ID, universe, raw count and raw percentage. Its nested `influence` object has its own `status`, `decision_use = D_input | display_only`, claim-specific Q/grade, capture objects keyed to the same scenario/replicate IDs and archetype/cell results. `D_input` is valid only for the explicit Influential core objective and refers to its influence-weighted reached-mass numerator; the capture percentage remains a display projection of the same quantity. The summary also contains interval/scenario type, the weaker `audience_evidence_grade` among numeric metrics actually displayed, exposure-plan fingerprint, model/profile versions, represented-universe coverage, comparability keys, assumptions, limitations and evidence IDs. It never combines independently rounded endpoints or substitutes a proxy index into a reach/capture field; every displayed count/percentage pair reconciles to the same universe and scenario.
 
 ## 13. AI safety and failure behavior
 
@@ -780,17 +780,17 @@ Market share cannot be projected directly from advertising spend. The future com
 
 Media can influence exposure and effective reach and may contribute to awareness, consideration and trial intent. Influence Capture is only exposure coverage of a configured influence-weighted universe; it does not show that those people noticed, believed, discussed or acted on the message. Media does not directly solve distribution, stock-outs, pricing, product-market fit, repeat, production capacity, retailer rejection or competitive discounting.
 
-The MVP therefore does not project market share. When first-party distribution/service data is supplied, it may show a factual constraint diagnostic only with a named numerator, denominator, geometry, source and date—for example `34% of candidate faces fall inside the supplied 2 km service buffers (8 of 24; client upload dated 2026-07-31)`. It may also show `distribution status unknown`. Probabilistic demand, trial, repeat and Monte Carlo simulation belong in a separately validated post-MVP module.
+The MVP therefore does not project market share. The inventory uploader does not accept or infer distribution/service catchments; it shows `distribution status unknown`. A later governed service-location module may show a factual constraint diagnostic only with a named numerator, denominator, user-supplied geometry, source and date. Probabilistic demand, trial, repeat and Monte Carlo simulation belong in a separately validated post-MVP module.
 
 ## 15. Demo data and script
 
-Seed 24–36 curated Lagos demo faces across five zones and three fictional media owners. Each seeded face has coordinates, fictional owner, format, illustrative demo rate with an as-of date, illustrative availability, a clearly labeled illustrative site image, evidence records and an explicit `demo` provenance tag. Add a deterministic synthetic target universe, cross-face/zone overlap model and category-specific influence profile for every seeded brief so package changes instantly recompute a scenario range. Every alternative face reachable through a seeded swap or service-location upload is inside that model's declared coverage. Each sector fixture includes one deliberate broad-reach versus influential-core trade-off plus fixed expected baseline, post-swap and post-upload snapshots for regression testing. Every audience figure says `Synthetic scenario • Audience evidence D`. The UI never presents these data as live, verified or owner-confirmed, and all resulting RFQ outputs are watermarked `DEMO — DO NOT SEND`. Connect a bounded historical subset for competitive context and the FAAN time series for airport context; neither source populates the audience lens.
+Seed 24–36 curated Lagos demo faces across five zones and three fictional media owners. Each seeded face has coordinates, fictional owner, format, illustrative demo rate with an as-of date, illustrative availability, a clearly labeled illustrative site image, evidence records and an explicit `demo` provenance tag. Add a deterministic synthetic target universe, cross-face/zone overlap model and category-specific influence profile for every seeded brief so package changes instantly recompute a scenario range. Every alternative face reachable through a seeded swap is inside that model's declared coverage. Each sector fixture includes one deliberate broad-reach versus influential-core trade-off plus fixed expected baseline, post-swap and context-only inventory-upload snapshots for regression testing. Every audience figure says `Synthetic scenario • Audience evidence D`. The UI never presents these data as live, verified or owner-confirmed, and all resulting RFQ outputs are watermarked `DEMO — DO NOT SEND`. Connect a bounded historical subset for competitive context and the FAAN time series for airport context; neither source populates the audience lens.
 
 Pre-seeded briefs:
 
-- **Bank/Fintech:** NovaPay Flex Account for young professionals, students and digital merchants.
-- **FMCG:** Zest Malt 330 ml launch for students, young households and convenience shoppers.
-- **Real Estate:** Harbour Point Residences for affluent professionals, investors and diaspora buyers.
+- **FMCG:** Demo Spark for students, young workers and convenience shoppers; broad-reach objective, PM daypart and ₦18m working budget.
+- **Real Estate:** Harbor Homes for young professionals, diaspora property intenders and resident investors; influential-core objective, evening daypart and ₦25m working budget.
+- **Bank/Fintech:** FlowPay Merchant for merchant owners, students and young professional users; near-conversion objective, all-day daypart and ₦20m working budget.
 
 Four-minute core happy path:
 
@@ -798,7 +798,7 @@ Four-minute core happy path:
 2. Create recommendation; three zones, one package and the two-value audience estimate appear immediately.
 3. Click `Influence capture`, select one archetype, watch the supporting zones/faces highlight and open one evidence record in the same drawer sequence.
 4. Replace a zone; show broader target reach rising while influence capture falls, then inspect `What changed?` and apply or undo the draft.
-5. Upload a small outlet/branch/project spreadsheet; watch the service layer, recommendation and audience estimate change.
+5. Upload a small current-inventory spreadsheet; inspect accepted/rejected rows, optionally review geocoding, and apply the selected context-only shortlist without changing calibrated audience delivery.
 6. Review and generate the watermarked supplier-verification RFQ draft.
 
 `How was this chosen?` is an optional presenter branch after step 4 or 5; it shows the fixed Planning Fit formula and the separate audience-estimate method without interrupting the core story.
@@ -820,7 +820,7 @@ Four-minute core happy path:
 - A numeric Planning Fit has five top-level pillar contributions that sum to the displayed score and 100% of preset weight; otherwise the score state is `insufficient evidence`.
 - Every ranked cohort uses one homogeneous D mode and compatible measurement basis.
 - Planning Fit and Evidence Confidence are always distinct.
-- Influence Capture remains diagnostic/display-only in the MVP, never becomes a sixth Planning Fit pillar, never reuses audience primitives inside A and cannot change Planning Fit when only its display profile changes.
+- Influence Capture remains a diagnostic display percentage and never becomes a sixth Planning Fit pillar. Only its governed influence-weighted reached-mass numerator may become the one D input for the explicit Influential core objective; audience primitives are never reused inside A, and a display-only profile change cannot alter Planning Fit.
 - Every reach percentage names one positive target universe, geography, period/daypart, exposure basis/threshold, exact-package deduplication method, model/version, uncertainty and evidence source; per-face/zone reach is never summed.
 - Exact package reach can drive D only when the same model/version scores every eligible candidate package before selection; a winner-only audience run remains display-only.
 - Every Influence Capture percentage uses the §7.8 denominator and a documented category-specific influence construct. Demographics-only evidence may show only the existing `Audience context fit (D_ContextProxy)` plus `Influence profile not configured`; it produces no influence/thought-leader metric.
@@ -833,7 +833,7 @@ Four-minute core happy path:
 - Historical placements are never presented as current availability.
 - Passenger movement is never presented as reach, impressions or unique visitors.
 - Upload preview identifies mapped, ignored, invalid and quarantined rows before confirmation.
-- A confirmed post-recommendation upload creates a reversible draft with its dataset/cohort revision and explicit service geometry visible in `What changed?`.
+- A confirmed post-recommendation inventory upload creates a reversible context-shortlist draft with its dataset/cohort revision and selected rows visible in `What changed?`; it contains no invented service geometry.
 - A result with fewer than three eligible zones shows the truthful count and gate reasons; it never inserts a filler zone.
 - Invalid adjustments preserve the last valid package/score and disable RFQ progression.
 - The RFQ contains only the active baseline or applied-custom package values; an unapplied dirty draft cannot generate, and each supplier receives only its own lines.
@@ -855,7 +855,7 @@ Four-minute core happy path:
 - **Lineage/standards tests:** derived-from chains, checksums/snapshots, governing version, exposure-plan fingerprint, per-metric decision-use replay, paired count/share reconciliation, empirical fail-closed versus synthetic/full-enumeration sample handling, filter/delta/marginal-level and complementary suppression, total-minus-visible/draft-minus-baseline disclosure prevention, adult-only denominator and OOH qualification gates.
 - **RFQ tests:** required review fields, supplier isolation, active faces only, totals, conditional approvals, audience-planning basis, default audience-estimate exclusion from supplier copy, denied/internal/permitted-aggregate export rights, suppressed-detail exclusion, incompatible supplier-method isolation, no guarantee/perception language, provenance gate and recoverable failure.
 - **UI tests:** state transitions, compact audience-strip rendering/rounding, separate reach/influence hit targets, collapsed five-interaction evidence path, `Reach | Influence` activation, exact-marginal versus evidence-only site states, proportional-symbol legend, archetype/zone/site cross-highlighting, map/drawer synchronization/restoration, invalidated-audience apply acknowledgment, focus return, keyboard operation, Escape/Back behavior, upload preview and responsive overflow.
-- **End-to-end tests:** one happy path per sector plus distribution/service upload and RFQ generation.
+- **End-to-end tests:** one happy path per sector plus current-inventory upload, optional geocode review, context-shortlist application and RFQ generation.
 
 ## 18. Reference principles
 
