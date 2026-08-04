@@ -6,6 +6,7 @@ import type { Brief } from "@/contracts/domain";
 import type { MeasurementStage } from "@/contracts/metrics";
 import type { DrawerTarget, MapLens } from "@/contracts/renderer";
 import {
+  applyUploadContextToPlan,
   buildPlan,
   promoteAlternativeZone,
   recalculatePlan,
@@ -27,6 +28,7 @@ import { LensTabs } from "@/features/LensTabs";
 import { PackageStrip } from "@/features/PackageStrip";
 import { RecommendationCards } from "@/features/RecommendationCards";
 import { RfqDrawer } from "@/features/RfqDrawer";
+import { UploadDialog } from "@/features/UploadDialog";
 import { MapCanvas } from "@/maps/MapCanvas";
 import { projectMapLibreScene } from "@/maps/projectScene";
 import { siteDeliveryCompatible } from "@/planning/movement";
@@ -255,7 +257,31 @@ export function PlannerPage() {
           onClose={() => setDrawer(null)}
         />
       )}
-      {uploadOpen && <div role="dialog" aria-label="Upload inventory" />}
+      {uploadOpen && (
+        <UploadDialog
+          onClose={() => setUploadOpen(false)}
+          onDraft={(contextRevision) => {
+            const basis = visible ?? buildPlan(bundle, brief);
+            if (!visible) dispatch({ type: "loaded", plan: basis });
+            dispatch({
+              type: "drafted",
+              plan: applyUploadContextToPlan(bundle, basis, contextRevision),
+              reason: "Apply uploaded context · " + contextRevision.dataRevision,
+            });
+            setUploadOpen(false);
+          }}
+        />
+      )}
+      {visible?.contextRevision && (
+        <aside aria-label="Uploaded planning status">
+          <strong>Context shortlist</strong>
+          <span>Evidence unavailable · context only</span>
+          <span>{visible.contextRevision.claimResolution.reasonCode}</span>
+          <p>{visible.contextRevision.claimResolution.recoveryAction}</p>
+          <p>Revision {visible.contextRevision.dataRevision}</p>
+          <p>{dirty ? "Unapplied context change" : "Applied plan context"}</p>
+        </aside>
+      )}
       {state.status === "rfq" && state.appliedPlan && (
         <RfqDrawer
           plan={state.appliedPlan}
