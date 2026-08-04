@@ -1,3 +1,5 @@
+import { PlannerPage } from "@/features/PlannerPage";
+
 export default function HomePage() {
-  return <main><h1>OOH Promotion Wizard</h1></main>;
+  return <PlannerPage />;
 }

@@ -8,3 +8,89 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input, select { font: inherit; }
+
+.planner-shell {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  min-height: 100vh;
+}
+
+.map-region {
+  position: relative;
+  min-height: 620px;
+  background: #e9edf1;
+}
+
+.map-surface { position: absolute; inset: 0; }
+.map-marker {
+  --marker-scale: 0.5;
+  display: grid;
+  place-items: center;
+  width: calc(30px + 24px * var(--marker-scale));
+  height: calc(30px + 24px * var(--marker-scale));
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background: #145c54;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgb(16 32 51 / 24%);
+  font-size: 11px;
+  font-weight: 750;
+}
+.map-marker:focus-visible { outline: 3px solid #ffbf47; outline-offset: 3px; }
+.map-attribution {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  padding: 3px 6px;
+  background: rgb(255 255 255 / 90%);
+  font-size: 11px;
+}
+
+.upload-map {
+  position: relative;
+  min-height: 340px;
+  overflow: hidden;
+  border: 1px solid #dce1e8;
+  border-radius: 12px;
+}
+
+.comparison-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.comparison-pair > section {
+  padding: 12px;
+  border: 1px solid #dce1e8;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.zone-cards {
+  position: absolute;
+  top: 76px;
+  left: 16px;
+  z-index: 2;
+  width: min(360px, calc(100% - 32px));
+}
+
+.package-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-top: 1px solid #dce1e8;
+}
+
+@media (max-width: 820px) {
+  .planner-shell { display: block; }
+  .map-region { min-height: 58vh; }
+  .zone-cards { position: relative; top: 64px; left: 0; width: auto; margin: 0 12px; }
+  .package-strip { grid-template-columns: 1fr 1fr; }
+  .comparison-pair { grid-template-columns: 1fr; }
+}

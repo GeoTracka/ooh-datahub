@@ -1,6 +1,7 @@
 import type { FrozenBundle } from "@/bundle/bundleSchema";
 import type { PlannerState } from "@/application/plannerReducer";
 import type { EstimatePackageResult, ScenarioMeasurement } from "@/contracts/metrics";
+import type { DrawerTarget, MapLens, SpatialFeature } from "@/contracts/renderer";
 import { activityPotential } from "@/planning/activityPotential";
 import { estimatePackage } from "@/planning/engine";
 
@@ -203,4 +204,142 @@ export function selectZoneCards(bundle: FrozenBundle, state: PlannerState) {
       role: index === 0 ? "Lead delivery zone" : index === 1 ? "Complementary audience zone" : "Coverage balance zone",
     };
   });
+}
+
+export function selectLensFeatures(
+  bundle: FrozenBundle,
+  state: PlannerState,
+  lens: MapLens,
+): SpatialFeature[] {
+  const plan = selectVisiblePlan(state);
+  if (!plan || !plan.measurement) return [];
+  return selectZoneCards(bundle, state).map((card) => {
+    const zone = bundle.zones.find((item) => item.id === card.zoneId)!;
+    const metric = lens === "plan"
+      ? { label: "Recommendation rank", value: card.rank, unit: "rank" as const }
+      : lens === "activity"
+        ? { label: "Activity Potential", value: card.activityPotential, unit: "index_0_100" as const }
+        : lens === "influence"
+          ? { label: "Marginal influence-weighted reach", value: card.marginalInfluenceMass, unit: "people" as const }
+          : plan.brief.objective === "near_conversion"
+            ? { label: "Marginal serviceable reach", value: card.marginalServiceableReach, unit: "people" as const }
+            : { label: "Marginal target reach", value: card.marginalReach, unit: "people" as const };
+    return {
+      id: card.zoneId,
+      coordinateField: {
+        value: { longitude: zone.center[0], latitude: zone.center[1] },
+        policy: {
+          sourceProduct: "synthetic" as const,
+          sourceField: "zones.center",
+          contentClass: "CUSTOMER_VALUE" as const,
+          allowedPurposes: ["LIVE_DISPLAY_CONTEXT" as const],
+          displaySurfaces: ["MAPLIBRE" as const],
+          persistence: { kind: "NEVER" as const },
+          policyVersion: "2026-08-03",
+          receivedAt: bundle.manifest.createdAt,
+        },
+      },
+      visual: {
+        label: card.label,
+        metricLabel: metric.label,
+        value: metric.value,
+        unit: metric.unit,
+        evidenceLabel: "Evidence " + plan.measurement!.claim.evidence,
+      },
+    };
+  });
+}
+
+export function selectCausalDrawerViewModel(
+  bundle: FrozenBundle,
+  plan: NonNullable<PlannerState["appliedPlan"]>,
+  target: DrawerTarget,
+) {
+  if (!plan.measurement) throw new Error("DRAWER_MEASUREMENT_UNAVAILABLE");
+  if (target.kind === "site" && !plan.recommended.siteIds.includes(target.id)) {
+    throw new Error("DRAWER_SITE_OUTSIDE_VISIBLE_PLAN");
+  }
+  if (target.kind === "zone" && !plan.selectedZoneIds.includes(target.id)) {
+    throw new Error("DRAWER_ZONE_OUTSIDE_VISIBLE_PLAN");
+  }
+  if (
+    target.kind === "evidence" &&
+    !plan.recommended.siteIds.includes(target.siteId)
+  ) {
+    throw new Error("DRAWER_EVIDENCE_SITE_OUTSIDE_VISIBLE_PLAN");
+  }
+  const siteIds = target.kind === "package" || target.kind === "pillar"
+    ? plan.recommended.siteIds
+    : target.kind === "zone"
+      ? plan.recommended.siteIds.filter((siteId) =>
+          bundle.sites.find((site) => site.id === siteId)?.zoneId === target.id
+        )
+      : target.kind === "site"
+        ? [target.id]
+        : [target.siteId];
+  const measurement = target.kind === "package" || target.kind === "pillar"
+    ? plan.measurement
+    : estimatePackage(bundle, {
+        sector: plan.brief.sector,
+        daypart: plan.brief.daypart,
+        siteIds,
+        flightStart: plan.brief.flightStart,
+        flightEnd: plan.brief.flightEnd,
+      });
+  const label = target.kind === "package"
+    ? "Recommended package"
+    : target.kind === "pillar"
+      ? target.id + " pillar"
+    : target.kind === "zone"
+      ? bundle.zones.find((zone) => zone.id === target.id)?.label ?? target.id
+      : target.kind === "site"
+        ? bundle.sites.find((site) => site.id === target.id)?.label ?? target.id
+        : "Evidence · " + target.id;
+  const sourceIds = [...new Set([
+    ...measurement.claim.sourceIds,
+    ...(measurement.influence?.sourceIds ?? []),
+  ])].sort();
+  const nextTargets: DrawerTarget[] = target.kind === "package"
+    ? (["A", "D", "C", "P", "E"] as const).map((id) => ({
+        kind: "pillar" as const,
+        id,
+        metric: target.metric,
+      }))
+    : target.kind === "pillar"
+      ? plan.selectedZoneIds.map((id) => ({
+          kind: "zone" as const,
+          id,
+          metric: target.metric,
+        }))
+      : target.kind === "zone"
+        ? siteIds.map((id) => ({
+            kind: "site" as const,
+            id,
+            metric: target.metric,
+          }))
+        : target.kind === "site"
+          ? sourceIds.map((id) => ({
+              kind: "evidence" as const,
+              id,
+              siteId: target.id,
+              metric: target.metric,
+            }))
+          : [];
+  return {
+    target,
+    label,
+    measurement,
+    siteIds,
+    nextTargets,
+    sourceRecord: target.kind === "evidence"
+      ? bundle.sourceManifest.find((source) => source.id === target.id) ?? null
+      : null,
+    scopeNote: target.kind === "package"
+      ? "Package-level causal estimate"
+      : target.kind === "pillar"
+        ? "Registered Planning Fit pillar; Delivery is counted once"
+        : target.kind === "evidence"
+          ? "Terminal source record for the selected site rerun"
+          : "Entity-specific rerun using the same schedule, panel, and causal primitives",
+  };
 }
