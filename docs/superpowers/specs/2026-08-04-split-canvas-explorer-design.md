@@ -70,7 +70,7 @@ Steps are adaptive — the user can confirm early and skip later steps.
     - Evidence grade.
   - Tapping a card focuses the map on that zone (pan/zoom), shows its sites, and opens a "View delivery story" button for the causal drawer.
 - **Primary CTA**: "This package works" (advance to step 4).
-- **Secondary action**: "Explore a zone" (select a zone from the carousel).
+- **Secondary action**: tap any zone card in the carousel to focus the map on that zone and reveal a "View delivery story" button for the causal drawer. Tapping again outside the card returns to the full-package view.
 - **Skip condition**: none — this is the main recommendation moment.
 
 ### Step 4 — Choose outcome
@@ -80,7 +80,7 @@ Steps are adaptive — the user can confirm early and skip later steps.
   1. **Review RFQ** — open the RFQ drawer to generate a supplier verification draft.
   2. **Upload customer inventory** — open the upload dialog to enrich and use customer-owned sites as context.
   3. **Fine-tune package** — go to step 5 for include/swap/remove adjustments.
-- **Primary CTA**: hidden at first; the choice card itself is the action. A small "Back to package" link is available.
+- **CTA**: each choice card is a large, clickable action. Tapping one opens the corresponding drawer or advances to step 5. A small "Back to package" link returns to step 3.
 
 ### Step 5 — Fine-tune package
 
