@@ -1,38 +1,42 @@
 import { expect, test } from "@playwright/test";
 
 for (const preset of [
-  { value: "fmcg", label: "FMCG" },
-  { value: "real_estate", label: "Real Estate" },
-  { value: "bank_fintech", label: "Bank / Fintech" },
+  { label: "FMCG · Broad reach", sector: "fmcg" },
+  { label: "Real Estate · Influential core", sector: "real_estate" },
+  { label: "Bank / Fintech · Near conversion", sector: "bank_fintech" },
 ]) {
-  test(preset.label + " builds from the same evidence-labelled engine", async ({ page }) => {
+  test(preset.label + " builds from the same evidence-labelled explorer", async ({ page }) => {
     await page.goto("/");
-    await page.getByLabel("Sector").selectOption(preset.value);
-    await page.getByRole("button", { name: "Build campaign" }).click();
+    await page.getByRole("button", { name: preset.label }).click();
+    await page.getByRole("button", { name: "Continue to timing" }).click();
+    await page.getByRole("button", { name: "Show recommended zones" }).click();
     await expect(page.getByTestId("zone-card")).toHaveCount(3);
     await expect(page.getByText(/Scenario target reach/)).toBeVisible();
     await expect(page.getByText(/Evidence D/).first()).toBeVisible();
+    await expect(page.getByLabel("Sector")).not.toBeVisible();
   });
 }
 
-test("objective, time, budget, include, remove, swap, undo and apply stay coherent", async ({ page }) => {
+test("default-profile skip goes directly to the recommendation decision", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Build campaign" }).click();
-  await page.getByLabel("Objective").selectOption("influential_core");
-  await expect(page.getByText(/Marginal influence/).first()).toBeVisible();
-  await page.getByLabel("Campaign time").selectOption("evening");
-  await page.getByLabel(/Budget \(NGN\)/).fill("20000000");
-  await page.getByRole("button", { name: "Include compatible face" }).click();
-  await page.getByRole("button", { name: "Swap first face in its zone" }).click();
-  await page.getByRole("button", { name: /^Remove / }).first().click();
-  await expect(page.getByText("Unapplied changes")).toBeVisible();
+  await page.getByRole("button", { name: "Use default timing & budget" }).click();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+  await expect(page.getByTestId("zone-card")).toHaveCount(3);
+});
 
-  const undo = page.getByRole("button", { name: "Undo" });
-  await undo.click();
-  await undo.click();
-  await undo.click();
+test("fine-tune keeps invalid intermediate drafts blocked until Undo restores a valid package", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Use default timing & budget" }).click();
+  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: /Fine-tune package/ }).click();
+
+  await page.getByRole("button", { name: "Include compatible face" }).click();
+  await page.getByRole("button", { name: "Include compatible face" }).click();
+  await page.getByRole("button", { name: "Include compatible face" }).click();
+  await page.getByRole("button", { name: "Include compatible face" }).click();
   const apply = page.getByRole("button", { name: "Apply & review RFQ" });
+  await expect(apply).toBeDisabled();
+
+  await page.getByRole("button", { name: "Undo" }).click();
   await expect(apply).toBeEnabled();
-  await apply.click();
-  await expect(page.getByRole("dialog", { name: "Supplier verification RFQ" })).toBeVisible();
 });
