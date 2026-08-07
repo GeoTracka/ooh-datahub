@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PlannerPage } from "@/features/PlannerPage";
@@ -7,52 +7,52 @@ vi.mock("@/maps/MapCanvas", () => ({
   MapCanvas: () => <div data-testid="map-canvas" />,
 }));
 
-describe("PlannerPage", () => {
-  it("shows three zone cards and one compact package strip", async () => {
+describe("PlannerPage explorer", () => {
+  it("starts with one campaign-profile decision surface", () => {
     render(<PlannerPage />);
-    await userEvent.click(screen.getByRole("button", { name: "Build campaign" }));
+    expect(screen.getByRole("region", { name: /Step 1 of 5: Who is this campaign for/ }))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText("Product name")).toBeInTheDocument();
+    expect(screen.queryByTestId("zone-card")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("package-strip")).not.toBeInTheDocument();
+  });
+
+  it("supports the default timing skip and shows one three-zone package", async () => {
+    render(<PlannerPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
+    expect(screen.getByRole("region", { name: /Step 3 of 5: Recommended package/ }))
+      .toBeInTheDocument();
     expect(screen.getAllByTestId("zone-card")).toHaveLength(3);
     expect(screen.getAllByTestId("package-strip")).toHaveLength(1);
     expect(screen.getByText(/Scenario target reach/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Evidence D/).length).toBeGreaterThan(0);
-  }, 30000);
-
-  it("keeps all four lenses visible and explains an unavailable lens", async () => {
-    render(<PlannerPage />);
-    await userEvent.click(screen.getByRole("button", { name: "Build campaign" }));
     for (const name of ["Plan", "Activity", "Reach", "Influence"]) {
       expect(screen.getByRole("tab", { name })).toBeInTheDocument();
     }
   }, 30000);
 
-  it("changes card delivery copy when the objective changes", async () => {
+  it("focuses a recommendation before opening its delivery story", async () => {
     render(<PlannerPage />);
-    await userEvent.click(screen.getByRole("button", { name: "Build campaign" }));
-    expect(screen.getAllByText(/Marginal target reach/)).toHaveLength(3);
-    await userEvent.selectOptions(
-      screen.getByLabelText("Objective"),
-      "influential_core",
-    );
-    expect(screen.getAllByText(/Marginal influence/)).toHaveLength(3);
-    expect(screen.getByText("Unapplied changes")).toBeInTheDocument();
-    const changes = screen.getByRole("region", { name: "What changed" });
-    await userEvent.click(within(changes).getByText("Compare with original recommendation"));
-    expect(within(changes).getAllByText(/Not comparable/)).toHaveLength(2);
-    expect(within(changes).getAllByText(/Low \/ Base \/ High/)).toHaveLength(4);
-    expect(within(changes).getAllByText(/Planning Fit/).length).toBeGreaterThan(0);
-    expect(within(changes).getAllByText(/Evidence/).length).toBeGreaterThan(0);
-    expect(within(changes).getAllByText(/Affected pillars/)).toHaveLength(2);
-    expect(within(changes).getAllByText(/Action:/)).toHaveLength(2);
-    expect(within(changes).getAllByText("Calculation basis")).toHaveLength(4);
+    await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
+    const zoneCards = screen.getAllByTestId("zone-card");
+    await userEvent.click(zoneCards[1].querySelector("button")!);
+    expect(screen.getByRole("button", { name: "View delivery story" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "How delivery was estimated" }))
+      .not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "View delivery story" }));
+    expect(screen.getByRole("dialog", { name: "How delivery was estimated" }))
+      .toBeInTheDocument();
   }, 30000);
 
-  it("keeps a below-minimum budget repairable and blocks RFQ review", async () => {
+  it("routes package acceptance into outcomes and fine-tune", async () => {
     render(<PlannerPage />);
-    await userEvent.click(screen.getByRole("button", { name: "Build campaign" }));
-    const budget = screen.getByLabelText("Budget (NGN)");
-    await userEvent.clear(budget);
-    await userEvent.type(budget, "1");
-    expect(screen.getByText("BUDGET_EXCEEDED")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apply & review RFQ" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
+    await userEvent.click(screen.getByRole("button", { name: "This package works" }));
+    expect(screen.getByRole("region", { name: /Step 4 of 5:/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Fine-tune package/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Fine-tune package/ }));
+    expect(screen.getByRole("region", { name: /Step 5 of 5: Make this package yours/ }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Plan adjustments" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
   }, 30000);
 });
