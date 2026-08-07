@@ -16,13 +16,19 @@ async function filesUnder(directory: string): Promise<string[]> {
   return nested.flat();
 }
 
-const staticRoot = resolve(".next/static");
-const violations: string[] = [];
-for (const file of await filesUnder(staticRoot)) {
-  const contents = await readFile(file, "utf8");
-  if (forbidden.some((pattern) => pattern.test(contents))) violations.push(file);
+async function main(): Promise<void> {
+  const staticRoot = resolve(".next/static");
+  const violations: string[] = [];
+  for (const file of await filesUnder(staticRoot)) {
+    const contents = await readFile(file, "utf8");
+    if (forbidden.some((pattern) => pattern.test(contents))) {
+      violations.push(file);
+    }
+  }
+  if (violations.length > 0) {
+    throw new Error("CLIENT_SECRET_PATTERN:" + violations.join(","));
+  }
+  console.log("No server-key patterns found in .next/static");
 }
-if (violations.length > 0) {
-  throw new Error("CLIENT_SECRET_PATTERN:" + violations.join(","));
-}
-console.log("No server-key patterns found in .next/static");
+
+void main();
