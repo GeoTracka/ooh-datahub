@@ -108,7 +108,6 @@ export function UploadDialog({
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const [accepted, setAccepted] = useState<ValidatedInventoryRow[]>([]);
   const [sheets, setSheets] = useState<LocalSheet[]>([]);
   const [sheetIndex, setSheetIndex] = useState(0);
@@ -125,6 +124,9 @@ export function UploadDialog({
     string,
     { latitude: string; longitude: string }
   >>({});
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   useEffect(() => {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
@@ -375,7 +377,7 @@ export function UploadDialog({
       </section>}
       <p>{parsing
         ? "Reading spreadsheet locally…"
-        : accepted.length + " accepted · " + rejectedCount + " rejected · " + quarantineCount + " quarantined"}</p>
+        : accepted.length + " accepted · " + quarantineCount + " quarantined · " + rejectedCount + " rejected"}</p>
       {parseError && <p role="alert">{parseError}</p>}
       {enrichmentError && <p role="alert">{enrichmentError}. Uploaded facts remain usable offline.</p>}
       {!pendingMappingReview && <UploadPreview
@@ -383,7 +385,11 @@ export function UploadDialog({
         selected={selected}
         onToggle={(assetId) => setSelected((current) => {
           const next = new Set(current);
-          next.has(assetId) ? next.delete(assetId) : next.add(assetId);
+          if (next.has(assetId)) {
+            next.delete(assetId);
+          } else {
+            next.add(assetId);
+          }
           if (next.size > 50) return current;
           return next;
         })}
