@@ -242,7 +242,8 @@ export function UploadDialog({
   function applyCorrection(rowId: string) {
     const value = corrections[rowId];
     if (!value?.latitude.trim() || !value.longitude.trim()) {
-      throw new Error("CORRECTION_COORDINATE_REQUIRED");
+      setEnrichmentError("CORRECTION_COORDINATE_REQUIRED");
+      return;
     }
     const latitude = Number(value.latitude);
     const longitude = Number(value.longitude);
@@ -250,8 +251,10 @@ export function UploadDialog({
       !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
       !Number.isFinite(longitude) || longitude < -180 || longitude > 180
     ) {
-      throw new Error("CORRECTION_COORDINATE_INVALID");
+      setEnrichmentError("CORRECTION_COORDINATE_INVALID");
+      return;
     }
+    setEnrichmentError(null);
     setSnapshot((current) => current
       ? correctCoordinate(
           current,
@@ -269,6 +272,7 @@ export function UploadDialog({
       <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {
         const file = event.target.files?.[0];
         if (file) void selectFile(file);
+        event.target.value = "";
       }} />
       {sheets.length > 1 && <label>Worksheet<select value={sheetIndex} onChange={(event) => {
         const index = Number(event.target.value);

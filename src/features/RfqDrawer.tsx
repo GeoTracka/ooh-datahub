@@ -30,9 +30,10 @@ export function RfqDrawer({
   onScheduleRevision(flightStart: string, flightEnd: string): void;
   generator?: typeof generateRfq;
 }) {
-  const supplierIds = [...new Set(plan.recommended.siteIds.map((siteId) =>
-    frozenLagosBundle.sites.find((site) => site.id === siteId)!.supplierId
-  ))].sort();
+  const supplierIds = [...new Set(plan.recommended.siteIds.flatMap((siteId) => {
+    const site = frozenLagosBundle.sites.find((s) => s.id === siteId);
+    return site ? [site.supplierId] : [];
+  }))].sort();
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [responseDeadline, setResponseDeadline] = useState("");

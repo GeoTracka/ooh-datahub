@@ -66,7 +66,8 @@ export function CausalDrawer({
       returnFocusRef.current?.focus();
     };
   }, []);
-  const stage = measurement.stages.find((item) => item.id === activeStage)!;
+  const stage = measurement.stages.find((item) => item.id === activeStage);
+  if (!stage) return null;
   return (
     <aside role="dialog" aria-modal="true" aria-label="How delivery was estimated">
       <button ref={closeRef} type="button" onClick={onClose}>Close</button>

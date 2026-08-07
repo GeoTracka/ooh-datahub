@@ -193,7 +193,9 @@ export function PlannerPage() {
             metric: visible.brief.objective === "influential_core" ? "influence" : "reach",
           })}
           onSite={(siteId) => {
-            const zoneId = bundle.sites.find((site) => site.id === siteId)!.zoneId;
+            const site = bundle.sites.find((s) => s.id === siteId);
+            if (!site) return;
+            const zoneId = site.zoneId;
             const metric = visible.brief.objective === "influential_core" ? "influence" : "reach";
             openDrawer(
               { kind: "site", id: siteId, metric },
