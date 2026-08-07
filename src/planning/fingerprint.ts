@@ -3,10 +3,20 @@ import type { Daypart, Sector } from "@/contracts/domain";
 import type { ExposureBlock } from "@/planning/movement";
 import { canonicalJson } from "@/shared/canonicalJson";
 
+const bundleCanonicalCache = new WeakMap<object, string>();
+
 function canonicalKey(namespace: string, value: unknown): string {
   // These keys are compared by full canonical equality. They are deliberately
   // not shortened to a collision-prone display hash.
   return namespace + "|" + canonicalJson(value);
+}
+
+function canonicalBundle(bundle: FrozenBundle): string {
+  const cached = bundleCanonicalCache.get(bundle);
+  if (cached) return cached;
+  const serialized = canonicalJson(bundle);
+  bundleCanonicalCache.set(bundle, serialized);
+  return serialized;
 }
 
 export function exposurePlanFingerprint(
@@ -22,13 +32,15 @@ export function exposurePlanFingerprint(
     exposureThreshold: "1+";
   },
 ): string {
-  // The demo favors exactness over compactness: full canonical bundle content plus
-  // controls is the cache/RFQ identity. No shortened hash can collide. The UI only
-  // shows a labelled prefix and exposes the complete value on demand.
-  return canonicalKey("estimate-result-v2", {
-    bundle,
-    request: { ...request, siteIds: [...request.siteIds].sort() },
+  // Preserve the exact historical canonical bytes while avoiding a full bundle
+  // traversal for every candidate evaluated against the same immutable bundle.
+  const normalizedRequest = canonicalJson({
+    ...request,
+    siteIds: [...request.siteIds].sort(),
   });
+  return "estimate-result-v2|" +
+    "{\"bundle\":" + canonicalBundle(bundle) +
+    ",\"request\":" + normalizedRequest + "}";
 }
 
 export function reachComparabilityKey(input: {
