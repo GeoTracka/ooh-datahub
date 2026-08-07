@@ -24,19 +24,16 @@ test("default-profile skip goes directly to the recommendation decision", async 
   await expect(page.getByTestId("zone-card")).toHaveCount(3);
 });
 
-test("fine-tune keeps invalid intermediate drafts blocked until Undo restores a valid package", async ({ page }) => {
+test("fine-tune blocks an invalid removal until Undo restores the package", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await page.getByRole("button", { name: "This package works" }).click();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
 
-  await page.getByRole("button", { name: "Include compatible face" }).click();
-  await page.getByRole("button", { name: "Include compatible face" }).click();
-  await page.getByRole("button", { name: "Include compatible face" }).click();
-  await page.getByRole("button", { name: "Include compatible face" }).click();
+  await page.getByRole("button", { name: /^Remove / }).first().click();
   const apply = page.getByRole("button", { name: "Apply & review RFQ" });
   await expect(apply).toBeDisabled();
 
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(apply).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
 });
