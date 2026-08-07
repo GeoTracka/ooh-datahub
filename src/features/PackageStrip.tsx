@@ -1,6 +1,8 @@
 import type { MetricClaim } from "@/contracts/metrics";
 import type { PlanningResult } from "@/contracts/domain";
 import { selectPermittedDeliveryView } from "@/application/permittedDeliveryView";
+import { frozenLagosBundle } from "@/bundle/loadFrozenBundle";
+import { resolveBriefAudience } from "@/planning/briefNormalization";
 
 function compact(value: number): string {
   return new Intl.NumberFormat("en", {
@@ -25,6 +27,7 @@ export function PackageStrip({
   if (!plan.measurement) return null;
   const claim = plan.measurement.claim;
   const influence = plan.measurement.influence;
+  const audience = resolveBriefAudience(frozenLagosBundle, plan.brief);
   const reachRecovery = plan.measurement.stages
     .find((stage) => stage.id === "unique")?.recoveryAction ?? null;
   const delivery = selectPermittedDeliveryView(claim, reachRecovery);
@@ -52,6 +55,10 @@ export function PackageStrip({
       <div>
         <strong>Recommended package</strong>
         <span>{plan.recommended.siteIds.length} sites · ₦{compact(plan.recommended.costNgn)}</span>
+        <span>
+          Audience basis · {audience.label}
+          {audience.mode === "focused" ? " · focused" : " · sector preset"}
+        </span>
       </div>
       <button type="button" onClick={() => onExplain("reach")}>
         <span>{delivery.label} · {delivery.unitLabel} · {delivery.evidenceLabel} {Math.round(reachEvidenceScore)}/100</span>
