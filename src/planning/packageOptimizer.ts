@@ -13,7 +13,16 @@ import { estimatePackage } from "@/planning/engine";
 import { evaluateEvidence } from "@/planning/evidence";
 import { siteDeliveryCompatible } from "@/planning/movement";
 import { resolveObjectiveDelivery } from "@/planning/objectiveDelivery";
-import { percentileRank, planningFit } from "@/planning/planningFit";
+import {
+  objectiveWeights,
+  percentileRank,
+  planningFit,
+} from "@/planning/planningFit";
+
+const MAX_EXHAUSTIVE_INVENTORY = 18;
+const MAX_BOUNDED_ZONES = 8;
+const MAX_SITES_PER_BOUNDED_ZONE = 2;
+export const MAX_EXACT_CANDIDATES = 512;
 
 function combinations<T>(items: T[], minimum: number, maximum: number): T[][] {
   const output: T[][] = [];
@@ -36,6 +45,112 @@ function mean(values: number[]): number {
 
 function canonicalPackageId(siteIds: string[]): string {
   return [...siteIds].sort().join("|");
+}
+
+function cheapSiteScore(
+  site: FrozenBundle["sites"][number],
+  brief: Brief,
+): number {
+  const scores = site.planningScoresBySector[brief.sector];
+  const weights = objectiveWeights[brief.objective];
+  const denominator = weights.A + weights.C + weights.P + weights.E;
+  return (
+    weights.A * scores.A +
+    weights.C * scores.C +
+    weights.P * scores.P +
+    weights.E * scores.E
+  ) / denominator;
+}
+
+function boundedCandidateSiteSets(
+  bundle: FrozenBundle,
+  brief: Brief,
+): FrozenBundle["sites"][] {
+  const grouped = new Map<string, FrozenBundle["sites"]>();
+  for (const site of bundle.sites) {
+    if (site.rateNgn > brief.normalizationBudgetNgn) continue;
+    const current = grouped.get(site.zoneId) ?? [];
+    current.push(site);
+    grouped.set(site.zoneId, current);
+  }
+
+  const rankedZones = [...grouped.entries()]
+    .map(([zoneId, sites]) => {
+      const rankedSites = [...sites]
+        .sort((left, right) =>
+          cheapSiteScore(right, brief) - cheapSiteScore(left, brief) ||
+          left.rateNgn - right.rateNgn ||
+          left.id.localeCompare(right.id),
+        )
+        .slice(0, MAX_SITES_PER_BOUNDED_ZONE);
+      return {
+        zoneId,
+        sites: rankedSites,
+        score: rankedSites.length === 0
+          ? -1
+          : mean(rankedSites.map((site) => cheapSiteScore(site, brief))),
+      };
+    })
+    .filter((zone) => zone.sites.length > 0)
+    .sort((left, right) =>
+      right.score - left.score || left.zoneId.localeCompare(right.zoneId),
+    )
+    .slice(0, MAX_BOUNDED_ZONES);
+
+  const candidates = new Map<string, {
+    sites: FrozenBundle["sites"];
+    preliminaryScore: number;
+    costNgn: number;
+  }>();
+
+  for (const zones of combinations(rankedZones, 3, 3)) {
+    const variants = zones.map((zone) => [
+      [zone.sites[0]],
+      ...(zone.sites.length > 1 ? [[zone.sites[0], zone.sites[1]]] : []),
+    ]);
+    const visit = (index: number, selected: FrozenBundle["sites"]) => {
+      if (index === variants.length) {
+        const costNgn = selected.reduce((sum, site) => sum + site.rateNgn, 0);
+        if (costNgn > brief.normalizationBudgetNgn) return;
+        const id = canonicalPackageId(selected.map((site) => site.id));
+        candidates.set(id, {
+          sites: [...selected],
+          preliminaryScore: mean(selected.map((site) => cheapSiteScore(site, brief))),
+          costNgn,
+        });
+        return;
+      }
+      for (const variant of variants[index]) {
+        visit(index + 1, [...selected, ...variant]);
+      }
+    };
+    visit(0, []);
+  }
+
+  return [...candidates.values()]
+    .sort((left, right) =>
+      right.preliminaryScore - left.preliminaryScore ||
+      left.costNgn - right.costNgn ||
+      canonicalPackageId(left.sites.map((site) => site.id)).localeCompare(
+        canonicalPackageId(right.sites.map((site) => site.id)),
+      ),
+    )
+    .slice(0, MAX_EXACT_CANDIDATES)
+    .map((candidate) => candidate.sites);
+}
+
+export function candidateSiteSetsForPlanning(
+  bundle: FrozenBundle,
+  brief: Brief,
+): FrozenBundle["sites"][] {
+  if (bundle.sites.length > MAX_EXHAUSTIVE_INVENTORY) {
+    return boundedCandidateSiteSets(bundle, brief);
+  }
+  return combinations(bundle.sites, 3, 6).filter((sites) => {
+    const zones = new Set(sites.map((site) => site.zoneId));
+    const cost = sites.reduce((sum, site) => sum + site.rateNgn, 0);
+    return zones.size === 3 && cost <= brief.normalizationBudgetNgn;
+  });
 }
 
 export function comparePackageCandidates(
@@ -65,15 +180,7 @@ export function optimizePackage(
 ): PlanningResult {
   const resolvedAudience = resolveBriefAudience(bundle, brief);
   const planningBundle = applyResolvedAudience(bundle, brief.sector, resolvedAudience);
-  const allNormalizationSets = combinations(
-    planningBundle.sites,
-    3,
-    6,
-  ).filter((sites) => {
-    const zones = new Set(sites.map((site) => site.zoneId));
-    const cost = sites.reduce((sum, site) => sum + site.rateNgn, 0);
-    return zones.size === 3 && cost <= brief.normalizationBudgetNgn;
-  });
+  const allNormalizationSets = candidateSiteSetsForPlanning(planningBundle, brief);
   const flightCompatibleSets = allNormalizationSets.filter((sites) =>
     sites.every((site) => siteDeliveryCompatible(
       site,
