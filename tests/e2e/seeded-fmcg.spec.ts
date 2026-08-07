@@ -13,9 +13,9 @@ test("four-minute FMCG path reaches a verification RFQ", async ({ page }) => {
   await explanation.getByRole("button", { name: /^Site / }).first().click();
   await expect(explanation).toBeVisible();
   for (const stage of ["Location", "Places", "Movement", "OTS", "Target", "Unique"]) {
-    await expect(page.getByRole("button", { name: stage })).toBeVisible();
+    await expect(explanation.getByRole("button", { name: stage, exact: true })).toBeVisible();
   }
-  await page.getByRole("button", { name: "Close" }).click();
+  await explanation.getByRole("button", { name: "Close" }).click();
 
   await page.getByLabel("Campaign time").selectOption("evening");
   await expect(page.getByText("Unapplied changes")).toBeVisible();
