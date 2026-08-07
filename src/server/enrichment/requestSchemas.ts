@@ -18,7 +18,8 @@ export const EnrichmentRowSchema = z
     assetId: z.string().optional(),
     supplier: z.string().optional(),
     format: z.string().optional(),
-    rateNgn: z.number().optional(),
+    rateNgn: z.number().finite().nonnegative().optional(),
+    orientation: z.string().trim().min(1).optional(),
   })
   .superRefine((row, context) => {
     const hasPair = row.latitude !== undefined && row.longitude !== undefined;
