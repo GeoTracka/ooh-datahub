@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildPlan } from "@/application/plannerService";
 import { frozenLagosBundle as bundle } from "@/bundle/loadFrozenBundle";
 import { PackageStrip } from "@/features/PackageStrip";
