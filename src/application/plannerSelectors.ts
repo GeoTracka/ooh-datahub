@@ -3,6 +3,10 @@ import type { PlannerState } from "@/application/plannerReducer";
 import type { EstimatePackageResult, ScenarioMeasurement } from "@/contracts/metrics";
 import type { DrawerTarget, MapLens, SpatialFeature } from "@/contracts/renderer";
 import { activityPotential } from "@/planning/activityPotential";
+import {
+  applyResolvedAudience,
+  resolveBriefAudience,
+} from "@/planning/briefNormalization";
 import { estimatePackage } from "@/planning/engine";
 
 export function selectVisiblePlan(state: PlannerState) {
@@ -35,6 +39,14 @@ type ZoneCardView = {
 };
 
 const zoneCardCache = new WeakMap<Plan, ZoneCardView[]>();
+
+function resolvedPlanningBundle(bundle: FrozenBundle, plan: Plan): FrozenBundle {
+  return applyResolvedAudience(
+    bundle,
+    plan.brief.sector,
+    resolveBriefAudience(bundle, plan.brief),
+  );
+}
 
 function objectiveDeliveryDefinition(plan: Plan) {
   if (plan.brief.objective === "influential_core") {
@@ -163,6 +175,7 @@ export function selectZoneCards(bundle: FrozenBundle, state: PlannerState): Zone
   const cached = zoneCardCache.get(plan);
   if (cached) return cached;
 
+  const planningBundle = resolvedPlanningBundle(bundle, plan);
   const measurement: EstimatePackageResult = plan.measurement;
   const baseScenario = measurement.scenarios.find((item) => item.id === "base")!;
   const reachEligible = ["scenario_target_reach", "calibrated_target_reach"]
@@ -172,7 +185,7 @@ export function selectZoneCards(bundle: FrozenBundle, state: PlannerState): Zone
     const withoutZone = plan.recommended.siteIds.filter((siteId) => {
       return bundle.sites.find((site) => site.id === siteId)?.zoneId !== zoneId;
     });
-    const reduced = estimatePackage(bundle, {
+    const reduced = estimatePackage(planningBundle, {
       sector: plan.brief.sector,
       daypart: plan.brief.daypart,
       siteIds: withoutZone,
@@ -325,6 +338,7 @@ export function selectCausalDrawerViewModel(
   ) {
     throw new Error("DRAWER_EVIDENCE_SITE_OUTSIDE_VISIBLE_PLAN");
   }
+  const planningBundle = resolvedPlanningBundle(bundle, plan);
   const siteIds = target.kind === "package" || target.kind === "pillar"
     ? plan.recommended.siteIds
     : target.kind === "zone"
@@ -336,7 +350,7 @@ export function selectCausalDrawerViewModel(
         : [target.siteId];
   const measurement = target.kind === "package" || target.kind === "pillar"
     ? plan.measurement
-    : estimatePackage(bundle, {
+    : estimatePackage(planningBundle, {
         sector: plan.brief.sector,
         daypart: plan.brief.daypart,
         siteIds,
