@@ -48,6 +48,7 @@ export type PlanContextRevision = {
     address: string | null;
     format: string | null;
     rateNgn: number | null;
+    orientation: string | null;
     coordinate: {
       value: [number, number];
       provider: "customer" | "google" | "mapbox";
