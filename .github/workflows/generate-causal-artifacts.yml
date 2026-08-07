@@ -1,0 +1,35 @@
+name: Generate causal artifacts (temporary)
+
+on:
+  push:
+    branches: [agent/causal-data-integrity]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/causal-data-integrity
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.32.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm bundle:build
+      - run: pnpm golden:build
+      - name: Commit deterministic artifacts
+        run: |
+          if git diff --quiet -- src/demo/lagos-v1/bundle.json src/demo/lagos-v1/golden-outputs.json; then
+            echo "Artifacts already synchronized"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/demo/lagos-v1/bundle.json src/demo/lagos-v1/golden-outputs.json
+          git commit -m "chore: regenerate causal bundle and golden outputs"
+          git push origin HEAD:agent/causal-data-integrity
