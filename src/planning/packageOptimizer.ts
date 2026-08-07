@@ -5,6 +5,10 @@ import type {
   PillarScores,
   PlanningResult,
 } from "@/contracts/domain";
+import {
+  applyResolvedAudience,
+  resolveBriefAudience,
+} from "@/planning/briefNormalization";
 import { estimatePackage } from "@/planning/engine";
 import { evaluateEvidence } from "@/planning/evidence";
 import { siteDeliveryCompatible } from "@/planning/movement";
@@ -59,8 +63,10 @@ export function optimizePackage(
   brief: Brief,
   selectedSiteIds?: string[],
 ): PlanningResult {
+  const resolvedAudience = resolveBriefAudience(bundle, brief);
+  const planningBundle = applyResolvedAudience(bundle, brief.sector, resolvedAudience);
   const allNormalizationSets = combinations(
-    bundle.sites,
+    planningBundle.sites,
     3,
     6,
   ).filter((sites) => {
@@ -81,17 +87,19 @@ export function optimizePackage(
     ? flightCompatibleSets
     : allNormalizationSets;
 
-  const recommendationEvidence = evaluateEvidence(bundle.evidenceProfiles.recommendation);
+  const recommendationEvidence = evaluateEvidence(
+    planningBundle.evidenceProfiles.recommendation,
+  );
 
   function evaluate(sites: FrozenBundle["sites"]) {
-    const measurement = estimatePackage(bundle, {
+    const measurement = estimatePackage(planningBundle, {
       sector: brief.sector,
       daypart: brief.daypart,
       siteIds: sites.map((site) => site.id),
       flightStart: brief.flightStart,
       flightEnd: brief.flightEnd,
     });
-    const delivery = resolveObjectiveDelivery(bundle, brief, measurement);
+    const delivery = resolveObjectiveDelivery(planningBundle, brief, measurement);
     return {
       sites,
       measurement,
@@ -185,7 +193,7 @@ export function optimizePackage(
   let recommended = ranked[0];
   if (selectedSiteIds) {
     const selectedSites = selectedSiteIds.map((siteId) => {
-      const site = bundle.sites.find((candidate) => candidate.id === siteId);
+      const site = planningBundle.sites.find((candidate) => candidate.id === siteId);
       if (!site) throw new Error("UNKNOWN_SITE_OVERRIDE:" + siteId);
       return site;
     });
