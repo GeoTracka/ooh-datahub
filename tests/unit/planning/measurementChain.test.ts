@@ -143,8 +143,7 @@ describe("estimatePackage", () => {
   it("degrades missing exposure geometry to movement instead of assuming it", () => {
     const missingGeometry = structuredClone(frozenLagosBundle);
     const site = missingGeometry.sites.find((item) => item.id === request.siteIds[0])!;
-    delete (site as typeof site & { exposureGeometry?: typeof site.exposureGeometry })
-      .exposureGeometry;
+    Reflect.deleteProperty(site as unknown as Record<string, unknown>, "exposureGeometry");
     const result = estimatePackage(missingGeometry, request);
     expect(result.claim.kind).toBe("movement");
     expect(result.influence).toBeNull();
