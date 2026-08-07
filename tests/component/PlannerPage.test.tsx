@@ -52,7 +52,7 @@ describe("PlannerPage explorer", () => {
     await userEvent.click(screen.getByRole("button", { name: /Fine-tune package/ }));
     expect(screen.getByRole("region", { name: /Step 5 of 5: Make this package yours/ }))
       .toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Plan adjustments" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Plan adjustments")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
   }, 30000);
 });
