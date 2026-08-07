@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
+import "./explorer.css";
 
 export const metadata: Metadata = {
   title: "OOH Promotion Wizard",
