@@ -36,6 +36,9 @@ export type EstimateRequest = {
   flightEnd: string;
 };
 
+type Site = FrozenBundle["sites"][number];
+type ExposureGeometry = Site["exposureGeometry"];
+
 const panelFailures = new Set<PanelFailureCode>([
   "SCALING_OUTSIDE_ENVELOPE",
   "MEMBER_RATE_OUTSIDE_ENVELOPE",
@@ -47,6 +50,30 @@ function panelFailureCode(error: unknown): PanelFailureCode | null {
   return panelFailures.has(error.message as PanelFailureCode)
     ? error.message as PanelFailureCode
     : null;
+}
+
+function exposureGeometry(site: Site): ExposureGeometry | null {
+  return (site as Site & { exposureGeometry?: ExposureGeometry }).exposureGeometry ?? null;
+}
+
+function effectiveVisibility(site: Site): number | null {
+  const geometry = exposureGeometry(site);
+  if (!geometry) return null;
+  return geometry.orientationFactor * geometry.viewZoneFactor;
+}
+
+function exposureGeometrySourceCompatible(bundle: FrozenBundle, site: Site): boolean {
+  const geometry = exposureGeometry(site);
+  if (!geometry) return false;
+  const source = bundle.sourceManifest.find((item) => item.id === geometry.sourceId);
+  return Boolean(
+    source &&
+    source.kind === "exposure_geometry" &&
+    source.geographyId === bundle.manifest.geographyId &&
+    source.productScope === "all" &&
+    source.periodStart <= bundle.manifest.createdAt.slice(0, 10) &&
+    source.periodEnd >= bundle.manifest.createdAt.slice(0, 10),
+  );
 }
 
 const claimRank = {
@@ -80,6 +107,21 @@ export function estimatePackage(
     request.flightStart,
     request.flightEnd,
   ));
+  const orientationAvailable = selected.every((site) => {
+    const geometry = exposureGeometry(site);
+    return Boolean(
+      geometry &&
+      Number.isFinite(geometry.orientationDeg) &&
+      Number.isFinite(geometry.orientationFactor),
+    );
+  });
+  const viewZoneAvailable = selected.every((site) => {
+    const geometry = exposureGeometry(site);
+    return Boolean(geometry && Number.isFinite(geometry.viewZoneFactor));
+  });
+  const geometrySourcesCompatible = selected.every((site) =>
+    exposureGeometrySourceCompatible(bundle, site)
+  );
   const flightDays = inclusiveFlightDays(request.flightStart, request.flightEnd);
   const scheduleBlocks = materializeExposureBlocks(
     request.flightStart,
@@ -105,14 +147,22 @@ export function estimatePackage(
   const serviceabilitySourceIds = [...new Set(bundle.targets
     .filter((target) => target.sector === request.sector)
     .map((target) => target.serviceabilitySourceId))].sort();
+  const exposureGeometrySourceIds = [...new Set(selected.flatMap((site) => {
+    const geometry = exposureGeometry(site);
+    return geometry ? [geometry.sourceId] : [];
+  }))].sort();
   const movementSourceIds = [...new Set([
     ...inventorySourceIds,
     "feature:" + bundle.manifest.featureSnapshotId,
     "movement-model:" + bundle.manifest.modelVersion,
     "schedule-model:" + bundle.manifest.scheduleModelVersion,
   ])].sort();
-  const targetOtsSourceIds = [...new Set([
+  const generalOtsSourceIds = [...new Set([
     ...movementSourceIds,
+    ...exposureGeometrySourceIds,
+  ])].sort();
+  const targetOtsSourceIds = [...new Set([
+    ...generalOtsSourceIds,
     ...universeSourceIds,
     ...allocationSourceIds,
   ])].sort();
@@ -141,10 +191,11 @@ export function estimatePackage(
     movementAvailable: true,
     movementUnit: "person_passages",
     personConversionAvailable: true,
-    orientationAvailable: true,
-    viewZoneAvailable: true,
+    orientationAvailable,
+    viewZoneAvailable,
     schedule: scheduleCompatible ? "assumed" : "missing",
-    visibilityAndDeliveryAvailable: scheduleCompatible,
+    visibilityAndDeliveryAvailable:
+      scheduleCompatible && orientationAvailable && viewZoneAvailable && geometrySourcesCompatible,
     targetUniverseAvailable,
     targetAllocationAvailable,
     overlap: "assumed",
@@ -169,6 +220,8 @@ export function estimatePackage(
     }
     const siteInputs = selected.map((site) => {
       const shares = site.targetShareBySector[request.sector];
+      const visibility = effectiveVisibility(site);
+      if (visibility === null) throw new Error("EXPOSURE_GEOMETRY_UNAVAILABLE");
       return {
         siteId: site.id,
         zoneId: site.zoneId,
@@ -179,7 +232,7 @@ export function estimatePackage(
           );
           const ots = generalOts(
             movement,
-            Math.min(1, site.visibility * scenario.visibilityMultiplier),
+            Math.min(1, visibility * scenario.visibilityMultiplier),
             site.deliverySchedule.uptime * site.deliverySchedule.shareOfTime,
           );
           return {
@@ -279,16 +332,20 @@ export function estimatePackage(
       baseScenarioDefinition.movementMultiplier,
     ), 0),
   0);
-  const baseGeneralOts = selected.reduce((siteSum, site) =>
-    siteSum + scheduleBlocks.reduce((blockSum, block) => blockSum + generalOts(
-      passageEvents(
-        site.baseMovement[block.daypart],
-        baseScenarioDefinition.movementMultiplier,
-      ),
-      Math.min(1, site.visibility * baseScenarioDefinition.visibilityMultiplier),
-      site.deliverySchedule.uptime * site.deliverySchedule.shareOfTime,
-    ), 0),
-  0);
+  const baseGeneralOts = canGeneralOts
+    ? selected.reduce((siteSum, site) => {
+        const visibility = effectiveVisibility(site);
+        if (visibility === null) throw new Error("EXPOSURE_GEOMETRY_UNAVAILABLE");
+        return siteSum + scheduleBlocks.reduce((blockSum, block) => blockSum + generalOts(
+          passageEvents(
+            site.baseMovement[block.daypart],
+            baseScenarioDefinition.movementMultiplier,
+          ),
+          Math.min(1, visibility * baseScenarioDefinition.visibilityMultiplier),
+          site.deliverySchedule.uptime * site.deliverySchedule.shareOfTime,
+        ), 0);
+      }, 0)
+    : 0;
   const hasReach = canUniqueReach &&
     scenarios.every((scenario) => scenario.reach !== null);
   const failureCode = scenarios.find((scenario) => scenario.failureCode)?.failureCode;
@@ -337,7 +394,7 @@ export function estimatePackage(
             evidence: evidenceResults.generalOts.grade,
             unit: "ots",
             value: baseGeneralOts,
-            sourceIds: movementSourceIds,
+            sourceIds: generalOtsSourceIds,
             caveats: ["Target reach is unavailable because the target basis is incompatible"],
             applicability: "outside",
           }
@@ -351,7 +408,9 @@ export function estimatePackage(
               unit: "person_passages",
               value: baseMovement,
               sourceIds: movementSourceIds,
-              caveats: ["OTS unavailable because the requested face schedule is incomplete"],
+              caveats: [
+                "OTS unavailable because exposure geometry or the requested face schedule is incomplete",
+              ],
               applicability: "outside",
             }
           : activityPotentialValue !== null &&
@@ -469,6 +528,11 @@ export function estimatePackage(
     flightDays,
   });
 
+  const uniqueUniverseSourceIds = [...new Set(universeSourceIds)].sort();
+  const geometrySourceLabel = exposureGeometrySourceIds.length > 0
+    ? exposureGeometrySourceIds.join(", ")
+    : "Exposure geometry unavailable";
+
   return {
     claim,
     influence,
@@ -517,33 +581,35 @@ export function estimatePackage(
       {
         id: "location",
         state: "assumed",
-        valueText: selected.length + " selected synthetic media faces",
-        sourceLabel: "Lagos synthetic inventory",
+        valueText: selected.length + " selected synthetic media faces with declared orientation",
+        sourceLabel: inventorySourceIds.join(", "),
         freshnessLabel: bundle.manifest.createdAt.slice(0, 10),
-        transformation: "Selected IDs resolved to frozen coordinates and faces",
-        nextMapping: "Coordinates join the frozen context snapshot",
-        caveats: ["Synthetic demo inventory"],
+        transformation: "Selected IDs resolve to frozen coordinates, face orientation, and view-zone assumptions",
+        nextMapping: "The frozen context/model snapshot provides the corresponding base movement output",
+        caveats: ["Synthetic demo inventory and exposure geometry"],
         recoveryAction: null,
       },
       {
         id: "places",
         state: "assumed",
-        valueText: "Frozen contextual attraction inputs",
-        sourceLabel: bundle.manifest.featureSnapshotId,
+        valueText: "Frozen context snapshot; per-feature values not materialized",
+        sourceLabel: "feature:" + bundle.manifest.featureSnapshotId,
         freshnessLabel: bundle.manifest.dataRevision,
-        transformation: "Context features feed movement predictors; they are not footfall",
-        nextMapping: "Predictors enter the movement scenario",
-        caveats: ["Nearby destinations imply context, not observed visits"],
+        transformation: "No live POI/place feature calculation runs here; baseMovement is the frozen model output associated with this context snapshot",
+        nextMapping: "Frozen baseMovement enters the Movement scenario",
+        caveats: [
+          "Do not interpret this stage as observed visits or a runtime POI-to-movement calculation",
+        ],
         recoveryAction: null,
       },
       {
         id: "movement",
         state: "modelled",
         valueText: String(Math.round(baseMovement)) + " person passages",
-        sourceLabel: bundle.manifest.modelVersion,
+        sourceLabel: "movement-model:" + bundle.manifest.modelVersion,
         freshnessLabel: bundle.manifest.dataRevision,
-        transformation: "Frozen movement × coherent Base scenario multiplier",
-        nextMapping: "Movement is filtered by visibility and delivery",
+        transformation: "Frozen base movement × coherent Base scenario multiplier × campaign schedule blocks",
+        nextMapping: "Movement is filtered by declared orientation, view-zone, and delivery factors",
         caveats: ["Scenario movement; not a live traffic count"],
         recoveryAction: null,
       },
@@ -553,16 +619,16 @@ export function estimatePackage(
         valueText: canGeneralOts
           ? String(Math.round(baseGeneralOts)) + " general OTS"
           : "OTS unavailable",
-        sourceLabel: bundle.manifest.modelVersion,
-        freshnessLabel: bundle.manifest.dataRevision,
-        transformation: "Movement × visibility × delivery",
+        sourceLabel: geometrySourceLabel,
+        freshnessLabel: bundle.manifest.exposureGeometryVersion,
+        transformation: "Movement × orientation factor × view-zone factor × delivery uptime/share",
         nextMapping: "General OTS is allocated to target cells",
         caveats: canGeneralOts
-          ? ["Opportunity to see is not unique people"]
-          : ["Selected-face availability does not cover the requested flight"],
+          ? ["Opportunity to see is not unique people; exposure geometry is synthetic Evidence D"]
+          : ["A selected face is missing compatible exposure geometry or flight delivery"],
         recoveryAction: canGeneralOts
           ? null
-          : "Replace the unavailable face or change the flight dates",
+          : claimResolution.recoveryAction,
       },
       {
         id: "target",
@@ -570,9 +636,9 @@ export function estimatePackage(
         valueText: base.targetOts !== null
           ? String(Math.round(base.targetOts)) + " target OTS"
           : "Target OTS unavailable",
-        sourceLabel: bundle.manifest.targetUniverseVersion,
+        sourceLabel: uniqueUniverseSourceIds.join(", "),
         freshnessLabel: bundle.manifest.dataRevision,
-        transformation: "General OTS × sector and cell allocation",
+        transformation: "General OTS × governed sector/cell allocation",
         nextMapping: "Target OTS scales the stable overlap panel",
         caveats: targetUniverseAvailable && targetAllocationAvailable
           ? ["Target allocation is assumed in the seeded bundle"]
@@ -587,7 +653,7 @@ export function estimatePackage(
         valueText: hasReach
           ? String(Math.round(base.reach!)) + " target people 1+"
           : "Unique reach unavailable",
-        sourceLabel: "conditional-poisson-weighted-panel-v1",
+        sourceLabel: "overlap-model:conditional-poisson-weighted-panel-v1",
         freshnessLabel: bundle.manifest.replicateSetId,
         transformation: "Stable member propensities → 1 − exp(−Σλ)",
         nextMapping: "Eligible unique delivery enters the objective Delivery pillar once",
@@ -605,6 +671,7 @@ export function estimatePackage(
       modelVersion: bundle.manifest.modelVersion,
       featureSnapshotId: bundle.manifest.featureSnapshotId,
       featureSchemaCompatibilityId: bundle.manifest.featureSchemaCompatibilityId,
+      exposureGeometryVersion: bundle.manifest.exposureGeometryVersion,
       evidenceProfileVersion: bundle.manifest.evidenceProfileVersion,
       scheduleModelVersion: bundle.manifest.scheduleModelVersion,
       influenceLinkageAssumptionId: bundle.manifest.influenceLinkageAssumptionId,
