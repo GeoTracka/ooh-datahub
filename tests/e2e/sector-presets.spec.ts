@@ -26,7 +26,16 @@ test("objective, time, budget, include, remove, swap, undo and apply stay cohere
   await page.getByRole("button", { name: "Swap first face in its zone" }).click();
   await page.getByRole("button", { name: /^Remove / }).first().click();
   await expect(page.getByText("Unapplied changes")).toBeVisible();
-  await page.getByRole("button", { name: "Undo" }).click();
-  await page.getByRole("button", { name: "Apply & review RFQ" }).click();
+
+  // Undo is history-aware. The include/swap intermediate drafts may still be
+  // package-invalid (for example, a 7th site), so rewind through those states
+  // until the last valid pre-include draft is restored.
+  const undo = page.getByRole("button", { name: "Undo" });
+  await undo.click();
+  await undo.click();
+  await undo.click();
+  const apply = page.getByRole("button", { name: "Apply & review RFQ" });
+  await expect(apply).toBeEnabled();
+  await apply.click();
   await expect(page.getByRole("dialog", { name: "Supplier verification RFQ" })).toBeVisible();
 });
