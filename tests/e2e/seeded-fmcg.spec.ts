@@ -1,25 +1,40 @@
 import { expect, test } from "@playwright/test";
 
-test("four-minute FMCG path reaches a verification RFQ", async ({ page }) => {
+test("five-step FMCG explorer reaches a verification RFQ", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Build campaign" }).click();
+  await expect(page.getByRole("region", { name: /Step 1 of 5:/ })).toBeVisible();
+
+  await page.getByRole("button", { name: "Continue to timing" }).click();
+  await expect(page.getByRole("region", { name: /Step 2 of 5:/ })).toBeVisible();
+  await page.getByRole("group", { name: "Campaign time" })
+    .getByRole("button", { name: "Evening" }).click();
+  await page.getByRole("button", { name: "Show recommended zones" }).click();
+
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
   await expect(page.getByTestId("zone-card")).toHaveCount(3);
   await expect(page.getByText(/Scenario target reach/)).toBeVisible();
   await expect(page.getByText(/Evidence D/).first()).toBeVisible();
 
-  const firstZone = page.getByTestId("zone-card").first();
-  await firstZone.getByRole("button").first().click();
+  const zoneCards = page.getByTestId("zone-card");
+  await zoneCards.nth(1).getByRole("button").first().click();
+  await expect(page.getByRole("dialog", { name: "How delivery was estimated" }))
+    .not.toBeVisible();
+  await page.getByRole("button", { name: "View delivery story" }).click();
   const explanation = page.getByRole("dialog", { name: "How delivery was estimated" });
-  await explanation.getByRole("button", { name: /^Site / }).first().click();
   await expect(explanation).toBeVisible();
   for (const stage of ["Location", "Places", "Movement", "OTS", "Target", "Unique"]) {
     await expect(explanation.getByRole("button", { name: stage, exact: true })).toBeVisible();
   }
   await explanation.getByRole("button", { name: "Close" }).click();
 
-  await page.getByLabel("Campaign time").selectOption("evening");
+  await page.getByRole("button", { name: "This package works" }).click();
+  await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
+  await page.getByRole("button", { name: /Fine-tune package/ }).click();
+  await expect(page.getByRole("region", { name: /Step 5 of 5:/ })).toBeVisible();
+  await page.getByRole("button", { name: "Swap first face in its zone" }).click();
   await expect(page.getByText("Unapplied changes")).toBeVisible();
   await page.getByRole("button", { name: "Apply & review RFQ" }).click();
+
   await expect(page.getByText("DEMO — DO NOT SEND")).toBeVisible();
   await page.getByLabel("Buyer name").fill("Demo Buyer");
   await page.getByLabel("Buyer email").fill("buyer@example.test");
