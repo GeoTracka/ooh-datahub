@@ -1,0 +1,2 @@
+asset_id,address,latitude,longitude,coordinate accuracy m,supplier,format,rate,coordinate source,coordinate attestation id,source artifact id
+UP-001,Herbert Macaulay Way Yaba Lagos,6.5158,3.3717,25,Upload Media,static,3200000,customer_captured,customer-coordinate-attestation-1,upload-fixture-1

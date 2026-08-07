@@ -1,3 +1,11 @@
+node_modules/
+.next/
+coverage/
+tsconfig.tsbuildinfo
+playwright-report/
+test-results/
+.env*
+!.env.example
 .worktrees/
 .codex-recover-plan.mjs
 docs/superpowers/plans/.calibrated-wizard-FAB90-patches.json.gz
