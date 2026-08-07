@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("seeded flow makes no external request", async ({ page }) => {
+test("seeded explorer makes no external request", async ({ page }) => {
   const external: string[] = [];
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url());
@@ -12,7 +12,7 @@ test("seeded flow makes no external request", async ({ page }) => {
     await route.continue();
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Build campaign" }).click();
+  await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByTestId("package-strip")).toBeVisible();
   expect(external).toEqual([]);
 });
