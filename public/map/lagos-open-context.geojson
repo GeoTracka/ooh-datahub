@@ -1,11 +1,81 @@
 {
   "type": "FeatureCollection",
-  "features": [{
-    "type": "Feature",
-    "properties": { "name": "Lagos demo context", "source": "synthetic" },
-    "geometry": {
-      "type": "Polygon",
-      "coordinates": [[[3.20, 6.35], [3.65, 6.35], [3.65, 6.75], [3.20, 6.75], [3.20, 6.35]]]
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "extent",
+        "name": "Lagos synthetic planning extent",
+        "source": "synthetic_demo"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[3.28, 6.38], [3.54, 6.38], [3.54, 6.65], [3.28, 6.65], [3.28, 6.38]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "corridor",
+        "name": "Mainland planning spine",
+        "source": "synthetic_demo",
+        "note": "Illustrative connection between seeded planning zones; not a road geometry"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[3.3792, 6.5158], [3.3436, 6.5534], [3.3515, 6.6018]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "corridor",
+        "name": "Island planning spine",
+        "source": "synthetic_demo",
+        "note": "Illustrative connection between seeded planning zones; not a road geometry"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[3.4219, 6.4281], [3.4723, 6.4698]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "corridor",
+        "name": "Mainland-island planning link",
+        "source": "synthetic_demo",
+        "note": "Illustrative zone relationship; not a navigation route"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[3.3792, 6.5158], [3.401, 6.472], [3.4219, 6.4281]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "zone", "id": "yaba", "name": "Yaba / Akoka", "source": "synthetic_demo" },
+      "geometry": { "type": "Point", "coordinates": [3.3792, 6.5158] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "zone", "id": "ikeja", "name": "Ikeja", "source": "synthetic_demo" },
+      "geometry": { "type": "Point", "coordinates": [3.3515, 6.6018] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "zone", "id": "vi", "name": "Victoria Island", "source": "synthetic_demo" },
+      "geometry": { "type": "Point", "coordinates": [3.4219, 6.4281] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "zone", "id": "oshodi", "name": "Oshodi", "source": "synthetic_demo" },
+      "geometry": { "type": "Point", "coordinates": [3.3436, 6.5534] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "kind": "zone", "id": "lekki", "name": "Lekki", "source": "synthetic_demo" },
+      "geometry": { "type": "Point", "coordinates": [3.4723, 6.4698] }
     }
-  }]
+  ]
 }

@@ -17,12 +17,14 @@ export function PackageStrip({
   canReviewRfq,
   onExplain,
   onReviewRfq,
+  showRfqAction = true,
 }: {
   plan: PlanningResult;
   isDirty: boolean;
   canReviewRfq: boolean;
   onExplain(metric: "reach" | "influence"): void;
   onReviewRfq(): void;
+  showRfqAction?: boolean;
 }) {
   if (!plan.measurement) return null;
   const claim = plan.measurement.claim;
@@ -79,14 +81,16 @@ export function PackageStrip({
           : plan.recommended.planningFit.toFixed(0) + "/100"}</strong>
         <span>Recommendation evidence {plan.recommended.evidenceGrade} · {Math.round(plan.recommended.evidenceScore)}/100</span>
       </div>
-      <button
-        type="button"
-        className="primary"
-        disabled={!canReviewRfq}
-        onClick={onReviewRfq}
-      >
-        {isDirty ? "Apply & review RFQ" : "Review RFQ"}
-      </button>
+      {showRfqAction && (
+        <button
+          type="button"
+          className="primary"
+          disabled={!canReviewRfq}
+          onClick={onReviewRfq}
+        >
+          {isDirty ? "Apply & review RFQ" : "Review RFQ"}
+        </button>
+      )}
     </section>
   );
 }
