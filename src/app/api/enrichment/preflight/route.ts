@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  accessGrantForRequest,
+  assertGrantCallAllowance,
+  enrichmentHttpStatus,
+} from "@/server/enrichment/access";
 import { disabledCapabilities } from "@/server/enrichment/providers/disabledProvider";
 import { PreflightBodySchema } from "@/server/enrichment/requestSchemas";
 import { runtimeEnrichmentGateway } from "@/server/enrichment/runtime";
@@ -6,7 +11,22 @@ import { runtimeEnrichmentGateway } from "@/server/enrichment/runtime";
 export async function POST(request: Request) {
   try {
     const body = PreflightBodySchema.parse(await request.json());
-    const preflight = runtimeEnrichmentGateway.preflight(body);
+    const grant = accessGrantForRequest(request);
+    assertGrantCallAllowance(grant, body.rows);
+    const preflight = runtimeEnrichmentGateway.preflight({
+      ...body,
+      principalId: grant?.principalId ?? null,
+      grantId: grant?.grantId ?? null,
+    });
+    if (grant) {
+      console.info(JSON.stringify({
+        event: "enrichment_preflight",
+        principalId: grant.principalId,
+        tenantId: grant.tenantId,
+        grantId: grant.grantId,
+        maximumCalls: preflight.maximumCalls,
+      }));
+    }
     return NextResponse.json({
       ...preflight,
       retention:
@@ -20,6 +40,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const code = error instanceof Error ? error.message : "INVALID_PREFLIGHT";
-    return NextResponse.json({ error: code }, { status: 400 });
+    return NextResponse.json({ error: code }, { status: enrichmentHttpStatus(code) });
   }
 }

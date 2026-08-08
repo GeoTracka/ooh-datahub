@@ -18,11 +18,15 @@ const liveEnabled = process.env.LIVE_ENRICHMENT_ENABLED === "true";
 const geocodingEnabled = process.env.GOOGLE_GEOCODING_V4_ENABLED === "true";
 const apiKey = process.env.GOOGLE_GEOCODING_API_KEY?.trim() ?? "";
 const preflightSecret = process.env.ENRICHMENT_PREFLIGHT_SECRET?.trim() ?? "";
+const accessGrantSecret = process.env.ENRICHMENT_ACCESS_GRANT_SECRET?.trim() ?? "";
+const upstreamQuotaConfigured = process.env.ENRICHMENT_QUOTA_ENFORCEMENT === "upstream";
 const enabled =
   liveEnabled &&
   geocodingEnabled &&
   apiKey.length > 0 &&
-  preflightSecret.length >= 32;
+  preflightSecret.length >= 32 &&
+  accessGrantSecret.length >= 32 &&
+  upstreamQuotaConfigured;
 const disabledGeocoder: GeocodingProvider = {
   geocode: async () => ({ status: "PROVIDER_ERROR", candidates: [] }),
 };
