@@ -8,8 +8,17 @@ const focusableSelector = [
   "input:not([disabled])",
   "select:not([disabled])",
   "textarea:not([disabled])",
+  "summary",
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
+
+function isTabbable(element: HTMLElement): boolean {
+  if (element.closest("[hidden], [aria-hidden='true']")) return false;
+  const closedDetails = element.closest("details:not([open])");
+  if (closedDetails && element.tagName !== "SUMMARY") return false;
+  const style = window.getComputedStyle(element);
+  return style.display !== "none" && style.visibility !== "hidden";
+}
 
 export function ModalFocusContainment() {
   useEffect(() => {
@@ -23,7 +32,7 @@ export function ModalFocusContainment() {
 
       const items = Array.from(
         dialog.querySelectorAll<HTMLElement>(focusableSelector),
-      );
+      ).filter(isTabbable);
       if (items.length === 0) {
         event.preventDefault();
         return;
