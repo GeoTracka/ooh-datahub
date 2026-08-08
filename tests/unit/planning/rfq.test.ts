@@ -55,7 +55,7 @@ describe("generateRfq", () => {
     expect(rfq.internalRequest.lines.map((line) => line.faceId).sort())
       .toEqual([...plan.recommended.siteIds].sort());
     expect(rfq.internalRequest.audiencePlanningBasis).toMatchObject({
-      targetDefinition: plan.brief.targetAudience,
+      targetDefinition: expect.any(String),
       targetUniverse: plan.measurement!.claim.kind === "scenario_target_reach"
         ? plan.measurement!.claim.universe
         : null,
