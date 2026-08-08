@@ -1,0 +1,56 @@
+name: Apply upload context wiring
+
+on:
+  push:
+    branches: [agent/upload-context-comparison]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/upload-context-comparison
+      - name: Patch Step 3 comparison wiring
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/features/PlannerPage.tsx')
+          text = path.read_text()
+
+          old = '} from "@/application/plannerSelectors";\n'
+          new = old + 'import { selectUploadedContextComparisons } from "@/application/uploadContextSelectors";\n'
+          if old not in text or 'selectUploadedContextComparisons' in text:
+              raise SystemExit('selector import pattern missing or already applied')
+          text = text.replace(old, new, 1)
+
+          old = 'import { UploadDialog } from "@/features/UploadDialog";\n'
+          new = old + 'import { UploadedContextPanel } from "@/features/UploadedContextPanel";\n'
+          if old not in text or 'UploadedContextPanel' in text:
+              raise SystemExit('panel import pattern missing or already applied')
+          text = text.replace(old, new, 1)
+
+          old = '  const deltas = selectPlanDeltas(state);\n'
+          new = old + '  const uploadedContextRows = visible\n    ? selectUploadedContextComparisons(bundle, visible)\n    : [];\n'
+          if old not in text or 'const uploadedContextRows' in text:
+              raise SystemExit('derived rows pattern missing or already applied')
+          text = text.replace(old, new, 1)
+
+          old = '''            {visible.contextRevision && (\n              <aside className="explorer-context-status" aria-label="Uploaded planning status">\n                <strong>Customer inventory · context only</strong>\n                <span>{visible.contextRevision.selectedRows.length} reviewed rows</span>\n                <span>{visible.contextRevision.claimResolution.reasonCode}</span>\n                <span>{dirty ? "Unapplied context change" : "Applied plan context"}</span>\n              </aside>\n            )}'''
+          new = old + '''\n            {visible.contextRevision && (\n              <UploadedContextPanel rows={uploadedContextRows} />\n            )}'''
+          if old not in text or 'rows={uploadedContextRows}' in text:
+              raise SystemExit('Step 3 context pattern missing or already applied')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - name: Remove temporary workflow and commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/PlannerPage.tsx
+          git rm .github/workflows/apply-upload-context-wiring.yml
+          git commit -m "feat: wire context-only customer inventory comparison into Step 3"
+          git push origin HEAD:agent/upload-context-comparison
