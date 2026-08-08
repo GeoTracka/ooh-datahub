@@ -1,115 +1,187 @@
 # OOH Promotion Wizard
 
-A calibrated promotion wizard for out-of-home (OOH) media planning in Lagos.
-Built with Next.js 16, React 19, TypeScript 7, and Zod 4.
+A calibrated out-of-home (OOH) promotion-planning wizard for Lagos.
+Built with Next.js 16, React 19, TypeScript 6, and Zod 4.
 
-The wizard produces a three-zone package recommendation from a frozen, seeded
-data bundle, surfaces evidence-graded delivery claims, and generates a
-supplier verification RFQ — all without requiring a live network connection in
-seeded mode.
+The application turns a campaign brief into one deterministic three-zone package,
+shows the evidence and causal basis behind delivery claims, supports context-only
+customer inventory, and produces a supplier-verification RFQ. The seeded demo
+runs without external network access.
 
-## Install
+## Current product flow
+
+The primary UI is a persistent-map, five-step split-canvas explorer:
+
+1. **Campaign profile** — product information, target audience, sector and objective.
+2. **Timing & budget** — daypart, budget and flight dates. A default-profile shortcut can skip directly from Step 1 to Step 3.
+3. **Recommended package** — one three-zone package. Selecting a zone focuses the map; **View delivery story** deliberately opens the causal explanation.
+4. **Choose outcome** — review RFQ, upload customer inventory, or fine-tune the package.
+5. **Fine-tune** — include/swap/remove faces or replace zones, inspect deterministic trade-offs, Undo/Reset, then apply and review the RFQ.
+
+The planner reducer/service remains the single state path for original, applied and
+draft plans; the explorer is presentation/workflow, not a second planning engine.
+
+## Install and run
 
 ```bash
 pnpm install
+pnpm dev          # development server on http://127.0.0.1:3000
+pnpm build        # production build
+pnpm start        # start the production build
 ```
 
-## Run
+## Verification
+
+`pnpm verify` is the deterministic repository gate:
 
 ```bash
-pnpm dev          # start the dev server at http://127.0.0.1:3000
-pnpm build        # production build
-pnpm test         # unit + component tests (Vitest)
-pnpm test:e2e     # end-to-end tests (Playwright — requires running server)
-pnpm lint         # ESLint
-pnpm typecheck    # TypeScript --noEmit
-pnpm golden:build # rebuild and verify golden plan/RFQ outputs
-pnpm tsx scripts/verify-client-secrets.ts  # scan .next/static for leaked keys
+pnpm verify
+```
+
+It runs lint, TypeScript, unit/component tests, frozen-bundle reproducibility,
+golden-output reproducibility, the production build, and the client-secret scan.
+
+Browser verification is intentionally separate:
+
+```bash
+pnpm exec playwright install --with-deps chromium
+pnpm exec playwright test \
+  tests/e2e/seeded-fmcg.spec.ts \
+  tests/e2e/sector-presets.spec.ts \
+  tests/e2e/network-disabled.spec.ts
+pnpm exec playwright test tests/e2e/visual-accessibility.spec.ts
+```
+
+GitHub Actions runs the deterministic `verify` job, core Chromium paths, and a
+permanent visual/accessibility job against checked-in Linux Chromium baselines.
+The visual suite covers Step 1, Step 3, focused Step 3, dirty Step 5, and a
+390px mobile viewport, and runs axe accessibility checks.
+
+Useful individual commands:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:e2e
+pnpm bundle:check
+pnpm bundle:verify
+pnpm golden:build
+pnpm golden:check
+pnpm verify:secrets
+pnpm tsx scripts/benchmark-planner.ts
 ```
 
 ## Seeded mode
 
-The app ships with a frozen Lagos bundle (`src/demo/lagos-v1/bundle.json`)
-that contains all sites, zones, evidence profiles, and target universes needed
-to produce a deterministic recommendation. In seeded mode the wizard makes
-**zero external network requests** — every delivery claim, map tile, and RFQ
-line is derived from the bundle alone.
+The frozen Lagos bundle at `src/demo/lagos-v1/bundle.json` contains the sites,
+zones, evidence profiles, target universes and model inputs needed for the demo.
+Seeded planning makes **zero external network requests**. Its spatial display uses
+local/synthetic planning context rather than a navigation basemap, and all delivery
+claims and RFQ lines are derived from governed local inputs.
+
+`tests/e2e/network-disabled.spec.ts` aborts every non-localhost request and proves
+the core seeded flow still completes.
+
+## Evidence and claims
+
+The UI separates recommendation scoring from the audience-delivery causal chain.
+The delivery explanation uses the six causal stages:
+
+**Location → Places → Movement → OTS → Target → Unique**
+
+Planning Fit A/C/P/E are recommendation-score inputs and are not presented as
+causal delivery stages. Delivery/evidence claims degrade when required provenance
+or calibration inputs are unavailable rather than being silently promoted.
+
+### Evidence D
+
+Evidence D is an assumed scenario, not a calibrated measurement. Low/Base/High
+are assumption-driven scenario bounds, not P10/P50/P90 statistical quantiles.
+
+### Evidence C
+
+P10/P50/P90 is only appropriate when the required measurement chain and compatible
+calibration bundle support a calibrated interval. The UI and RFQ preserve the
+actual evidence state and source/replay information.
+
+## Customer inventory upload
+
+From Step 4 choose **Upload customer inventory**.
+
+1. Select a `.csv`, `.tsv`, or `.xlsx` file; parsing stays local.
+2. Confirm ambiguous column mappings when required.
+3. Review accepted/quarantined/rejected rows and select up to 50.
+4. Use **Use uploaded facts as context** for the offline path, or optionally run **Review enrichment** before a provider call.
+5. Review/correct coordinates and apply the reviewed facts as context.
+
+Applied customer inventory is shown back in Step 3 as a transparent comparison:
+nearest selected zone, format fit, indicative rate delta versus the selected-face
+median, and metadata completeness.
+
+Uploaded/provider data is always **context-only**. It does not receive calibrated
+reach, Planning Fit, or an evidence upgrade merely because it was uploaded or
+geocoded.
 
 ## Optional live geocoding
 
-Live Google Geocoding API v4 enrichment is opt-in and requires:
+Live geocoding is **off by default** and is not required for the seeded demo.
+Application-side live enablement fails closed unless the required flags, secrets,
+provider key, and upstream quota mode are configured.
 
-- `GOOGLE_GEOCODING_API_KEY` — server-side only; never exposed to the client.
-- Legal and commercial approval for Places Aggregate and Routes capabilities.
+Relevant settings are documented in `.env.example`, including:
 
-Provider candidates are always **context-only** and separately reviewable.
-Customer-captured and open-licensed coordinates work offline without any
-provider call.
+- `LIVE_ENRICHMENT_ENABLED=true`
+- `GOOGLE_GEOCODING_V4_ENABLED=true`
+- server-only `GOOGLE_GEOCODING_API_KEY`
+- `ENRICHMENT_PREFLIGHT_SECRET`
+- `ENRICHMENT_ACCESS_GRANT_SECRET`
+- `ENRICHMENT_QUOTA_ENFORCEMENT=upstream`
 
-## The four-minute demo path
+The API requires a short-lived signed upstream access grant and binds preflight
+approval to the caller/grant plus the submitted rows. Provider candidates remain
+context-only and separately reviewable.
 
-1. Click **Build campaign** — three zone cards appear with a scenario target
-   reach claim labelled **Evidence D**.
-2. Click a zone card to open the causal drawer — navigate the six stages
-   (Location → Places → Movement → OTS → Target → Unique) to see how each
-   delivery estimate was derived.
-3. Adjust the campaign (objective, time, budget, include/swap/remove faces) —
-   the package strip shows **Unapplied changes**.
-4. Click **Apply & review RFQ** — fill in buyer contact and response deadline,
-   then click **Generate RFQ**.
+**Deployment boundary:** the repository does not pretend an in-process map is a
+production quota/billing authority. Before internet-facing live enrichment is
+enabled, a trusted upstream authentication/quota service and durable replay/
+idempotency policy are still required.
 
-The generated RFQ carries a **DEMO — DO NOT SEND** watermark and
-`draft_unbooked_unsent` status. It is a verification request, not a booking.
+## RFQ boundary
 
-## The upload vignette
+The generated supplier RFQ is a verification request, not a booking. It carries:
 
-1. Click **Upload spreadsheet** — select a `.csv`, `.tsv`, or `.xlsx` file.
-2. Review accepted and quarantined rows; select up to 50.
-3. Click **Use uploaded facts as context** — no network call is made.
-4. Optionally click **Review enrichment** → **Enrich locations** to request
-   provider geocode candidates (requires preflight and network).
-5. Confirm or correct coordinates, then click **Use reviewed facts as context**.
+- `DEMO — DO NOT SEND`
+- `draft_unbooked_unsent`
+- supplier-isolated lines and notes
+- requested identity/orientation, dimensions, availability, rate, production,
+  installation, tax, lead-time, permit, proof and measurement confirmations.
 
-Uploaded context is always **context-only** — it never upgrades the delivery
-claim above the seeded evidence ceiling. A calibration bundle mismatch
-(`CALIBRATION_BUNDLE_MISMATCH`) is shown when uploaded coordinates do not
-match the frozen bundle's calibration envelope.
+Internal RFQ audit data records the governed target definition, evidence basis,
+model/replay versions and context revision. Supplier-facing copy keeps the buyer's
+original target-audience wording and does not leak internal budget/evidence data.
 
-## Evidence-D and booking-status disclaimers
+## Deterministic artifacts and performance guardrail
 
-- **Evidence D** means the delivery claim is an assumed scenario, not a
-  calibrated measurement. The Low/Base/High range reflects scenario
-  assumptions, not statistical quantiles.
-- **DEMO — DO NOT SEND** and `draft_unbooked_unsent` appear on every generated
-  RFQ. The output is for internal review only.
+`pnpm bundle:verify` and `pnpm golden:check` rebuild their checked-in artifacts and
+require byte-for-byte reproducibility.
 
-## Why Low/Base/High is not P10/P50/P90
+`scripts/benchmark-planner.ts` exercises the full bounded optimizer against expanded
+50- and 100-site synthetic inventories. The committed benchmark is a regression
+guardrail (100 sites ≤ 2,000 ms and ≤ 256 MB heap delta), **not** a production or
+browser SLA.
 
-- **Scenario range (Low / Base / High)** — assumption-driven bounds used when
-  the overlap model or schedule is assumed. Labelled Evidence D.
-- **Quantile range (P10 / P50 / P90)** — calibrated statistical intervals
-  produced only when the full measurement chain (movement, orientation, view
-  zone, schedule, target universe, target allocation, overlap model) is
-  available and the calibration bundle is inside the envelope. Labelled
-  Evidence C.
+## Release status / known external gates
 
-## Provider feature flags and required approvals
+Machine-verifiable seeded-demo gates are now represented in CI: deterministic
+verification, core browser paths, network-disabled execution, visual baselines,
+and axe checks.
 
-| Capability | Product | Status | Required approval |
-|---|---|---|---|
-| Geocoding | Google Geocoding API v4 | Opt-in | API key + legal review |
-| Places Aggregate | google.places-aggregate.v1 | Disabled | `LEGAL_AND_COMMERCIAL_APPROVAL_REQUIRED` |
-| Routes | google.routes.v1 | Disabled | `DISPLAY_CONTEXT_APPROVAL_REQUIRED` |
+Two boundaries remain intentionally external rather than fabricated in code:
 
-## Network-disabled verification
+- the real three-viewer comprehension protocol in `docs/demo-comprehension-check.md` requires actual human observations;
+- live paid enrichment remains blocked on a deployment-grade upstream auth/quota
+  issuer and durable replay/idempotency enforcement.
 
-The seeded flow makes no external request. The E2E test
-`tests/e2e/network-disabled.spec.ts` aborts every non-localhost request and
-confirms the package strip renders with an empty external-call list.
-
-## Golden outputs
-
-`pnpm golden:build` regenerates `src/demo/lagos-v1/golden-outputs.json` for
-all three sector presets (FMCG, Real Estate, Bank / Fintech). The unit test
-`tests/unit/demo/goldenOutputs.test.ts` verifies that the checked-in file
-rebuilds byte-for-byte from the frozen bundle.
+Those gates should remain explicit rather than being marked complete by fixtures or
+in-memory substitutes.
