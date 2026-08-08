@@ -24,13 +24,14 @@ export function StepCard({
   };
 }) {
   useEffect(() => {
-    if (!onBack) return;
+    const back = onBack;
+    if (!back) return;
     function handleEscape(event: KeyboardEvent) {
       if (event.key !== "Escape" || event.defaultPrevented) return;
       // Dialogs own Escape while open; never close a modal and navigate the
       // underlying workflow in the same key press.
       if (document.querySelector('[role="dialog"]')) return;
-      onBack();
+      back();
     }
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
