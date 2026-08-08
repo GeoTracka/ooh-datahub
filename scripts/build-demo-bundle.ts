@@ -37,12 +37,16 @@ const targetSeeds = {
 
 const dayparts = ["all_day", "am", "midday", "pm", "evening"] as const;
 const sectors = ["fmcg", "real_estate", "bank_fintech"] as const;
+const exposureGeometrySourceId =
+  "exposure-geometry:lagos-synthetic-exposure-geometry-v1";
 
 export function buildDemoBundle(): FrozenBundle {
   const sites = zones.flatMap((zone, zoneIndex) =>
     [0, 1].map((faceIndex) => {
       const index = zoneIndex * 2 + faceIndex;
       const base = 48_000 + index * 7_500;
+      const visibility = 0.44 + (index % 4) * 0.06;
+      const orientationFactor = 0.8;
       return {
         id: zone.id + "-face-" + (faceIndex + 1),
         zoneId: zone.id,
@@ -61,7 +65,13 @@ export function buildDemoBundle(): FrozenBundle {
           pm: base * 1.18,
           evening: base * 0.88,
         },
-        visibility: 0.44 + (index % 4) * 0.06,
+        visibility,
+        exposureGeometry: {
+          orientationDeg: (15 + index * 37) % 360,
+          orientationFactor,
+          viewZoneFactor: visibility / orientationFactor,
+          sourceId: exposureGeometrySourceId,
+        },
         deliverySchedule: {
           availabilityStart: "2026-01-01",
           availabilityEnd: "2027-12-31",
@@ -143,6 +153,49 @@ export function buildDemoBundle(): FrozenBundle {
     })),
   );
 
+  const technicalSources = [
+    {
+      id: "feature:lagos-synthetic-features-v1",
+      kind: "context_snapshot" as const,
+    },
+    {
+      id: "movement-model:conditional-poisson-demo-v1",
+      kind: "model" as const,
+    },
+    {
+      id: "schedule-model:inclusive-daily-daypart-v1",
+      kind: "model" as const,
+    },
+    {
+      id: exposureGeometrySourceId,
+      kind: "exposure_geometry" as const,
+    },
+    {
+      id: "panel:weighted-panel-v1",
+      kind: "panel" as const,
+    },
+    {
+      id: "overlap-model:conditional-poisson-weighted-panel-v1",
+      kind: "model" as const,
+    },
+    {
+      id: "replicate-set:scenario-low-base-high-v1",
+      kind: "replicate_set" as const,
+    },
+    {
+      id: "influence-linkage:conditional-independence-within-target-cell-v1",
+      kind: "assumption" as const,
+    },
+    {
+      id: "influence-sensitivity:coherent-exposure-scaling-low-base-high-v1",
+      kind: "assumption" as const,
+    },
+  ].map((source) => ({
+    ...source,
+    sector: null,
+    productScope: "all" as const,
+  }));
+
   return validateFrozenBundle({
     manifest: {
       id: "lagos-demo-v1",
@@ -155,6 +208,7 @@ export function buildDemoBundle(): FrozenBundle {
       modelVersion: "conditional-poisson-demo-v1",
       featureSnapshotId: "lagos-synthetic-features-v1",
       featureSchemaCompatibilityId: "lagos-context-feature-schema-v1",
+      exposureGeometryVersion: "lagos-synthetic-exposure-geometry-v1",
       targetUniverseVersion: "lagos-target-universe-v1",
       panelVersion: "weighted-panel-v1",
       replicateSetId: "scenario-low-base-high-v1",
@@ -198,6 +252,7 @@ export function buildDemoBundle(): FrozenBundle {
     ],
     sourceManifest: [
       { id: "lagos-demo-synthetic-v1", kind: "inventory" as const, sector: null, productScope: "all" as const },
+      ...technicalSources,
       ...sectors.flatMap((sector) => [
         { id: "synthetic-" + sector + "-influence-v1", kind: "influence" as const, sector, productScope: sector },
         { id: "synthetic-" + sector + "-target-universe-v1", kind: "target_universe" as const, sector, productScope: sector },

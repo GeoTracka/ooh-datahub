@@ -47,8 +47,31 @@ export function validateFrozenBundle(input: unknown): FrozenBundle {
     throw new Error("Scenario propensity shape must remain fixed for coherent delivery ranges");
   }
   verifyFeatureRegistry(bundle.featureRegistry);
-  const sourceIds = new Set(bundle.sourceManifest.map((source) => source.id));
+  const sourceIds = new Set<string>();
+  for (const source of bundle.sourceManifest) {
+    if (sourceIds.has(source.id)) throw new Error("Duplicate source manifest ID: " + source.id);
+    sourceIds.add(source.id);
+  }
   const sourceById = new Map(bundle.sourceManifest.map((source) => [source.id, source]));
+
+  const requiredTechnicalSources = [
+    ["feature:" + bundle.manifest.featureSnapshotId, "context_snapshot"],
+    ["movement-model:" + bundle.manifest.modelVersion, "model"],
+    ["schedule-model:" + bundle.manifest.scheduleModelVersion, "model"],
+    ["exposure-geometry:" + bundle.manifest.exposureGeometryVersion, "exposure_geometry"],
+    ["panel:" + bundle.manifest.panelVersion, "panel"],
+    ["overlap-model:conditional-poisson-weighted-panel-v1", "model"],
+    ["replicate-set:" + bundle.manifest.replicateSetId, "replicate_set"],
+    ["influence-linkage:" + bundle.manifest.influenceLinkageAssumptionId, "assumption"],
+    ["influence-sensitivity:" + bundle.manifest.influenceSensitivityId, "assumption"],
+  ] as const;
+  for (const [sourceId, kind] of requiredTechnicalSources) {
+    const source = sourceById.get(sourceId);
+    if (!source || source.kind !== kind) {
+      throw new Error("Missing technical source record: " + sourceId);
+    }
+  }
+
   const targetKeys = new Set<string>();
   for (const target of bundle.targets) {
     const targetKey = target.sector + "/" + target.cellId;
@@ -93,6 +116,16 @@ export function validateFrozenBundle(input: unknown): FrozenBundle {
     }
   }
   for (const site of bundle.sites) {
+    const geometrySource = sourceById.get(site.exposureGeometry.sourceId);
+    if (!geometrySource || geometrySource.kind !== "exposure_geometry") {
+      throw new Error("Dangling exposure geometry source: " + site.id);
+    }
+    const effectiveVisibility =
+      site.exposureGeometry.orientationFactor * site.exposureGeometry.viewZoneFactor;
+    if (Math.abs(effectiveVisibility - site.visibility) > 1e-9) {
+      throw new Error("Exposure geometry does not reconcile to visibility: " + site.id);
+    }
+
     for (const sector of ["fmcg", "real_estate", "bank_fintech"] as const) {
       const allocationSourceId = bundle.targetAllocationSourceIds[sector];
       const allocationSource = sourceById.get(allocationSourceId);

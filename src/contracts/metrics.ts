@@ -154,6 +154,7 @@ export type ReplayEnvelope = {
   modelVersion: string;
   featureSnapshotId: string;
   featureSchemaCompatibilityId: string;
+  exposureGeometryVersion: string;
   evidenceProfileVersion: string;
   scheduleModelVersion: string;
   influenceLinkageAssumptionId: string;

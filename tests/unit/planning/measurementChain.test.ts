@@ -27,6 +27,8 @@ describe("estimatePackage", () => {
       "location", "places", "movement", "ots", "target", "unique",
     ]);
     expect(result.stages[0]).toMatchObject({ id: "location", state: "assumed" });
+    expect(result.stages.find((stage) => stage.id === "places"))
+      .toMatchObject({ valueText: expect.stringMatching(/per-feature values not materialized/) });
   });
 
   it("degrades to target OTS when panel scaling is outside its envelope", () => {
@@ -54,10 +56,21 @@ describe("estimatePackage", () => {
       bundleId: "lagos-demo-v1",
       modelVersion: "conditional-poisson-demo-v1",
       featureSnapshotId: "lagos-synthetic-features-v1",
+      exposureGeometryVersion: "lagos-synthetic-exposure-geometry-v1",
       overlapMethodId: "conditional-poisson-weighted-panel-v1",
       replicateSetId: "scenario-low-base-high-v1",
       seed: 260803,
     });
+  });
+
+  it("makes every displayed technical source resolvable from the manifest", () => {
+    const result = estimatePackage(frozenLagosBundle, request);
+    const manifestIds = new Set(frozenLagosBundle.sourceManifest.map((source) => source.id));
+    const sourceIds = new Set([
+      ...result.claim.sourceIds,
+      ...(result.influence?.sourceIds ?? []),
+    ]);
+    expect([...sourceIds].every((sourceId) => manifestIds.has(sourceId))).toBe(true);
   });
 
   it("fingerprints every governed panel value while keeping reach comparability semantic", () => {
@@ -125,6 +138,19 @@ describe("estimatePackage", () => {
       scenario.serviceableReach === null &&
       scenario.averageFrequency === null
     )).toBe(true);
+  });
+
+  it("degrades missing exposure geometry to movement instead of assuming it", () => {
+    const missingGeometry = structuredClone(frozenLagosBundle);
+    const site = missingGeometry.sites.find((item) => item.id === request.siteIds[0])!;
+    Reflect.deleteProperty(site as unknown as Record<string, unknown>, "exposureGeometry");
+    const result = estimatePackage(missingGeometry, request);
+    expect(result.claim.kind).toBe("movement");
+    expect(result.influence).toBeNull();
+    expect(result.stages.find((stage) => stage.id === "ots")).toMatchObject({
+      state: "unavailable",
+      recoveryAction: expect.stringMatching(/orientation|view zone/i),
+    });
   });
 
   it("degrades an unavailable flight schedule to movement", () => {

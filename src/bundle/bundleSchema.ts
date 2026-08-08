@@ -31,6 +31,7 @@ export const FrozenBundleSchema = z.object({
     modelVersion: z.literal("conditional-poisson-demo-v1"),
     featureSnapshotId: z.literal("lagos-synthetic-features-v1"),
     featureSchemaCompatibilityId: z.string().min(1),
+    exposureGeometryVersion: z.literal("lagos-synthetic-exposure-geometry-v1"),
     targetUniverseVersion: z.literal("lagos-target-universe-v1"),
     panelVersion: z.literal("weighted-panel-v1"),
     replicateSetId: z.literal("scenario-low-base-high-v1"),
@@ -56,7 +57,15 @@ export const FrozenBundleSchema = z.object({
     format: z.enum(["static", "dooh"]),
     rateNgn: z.number().positive(),
     baseMovement: z.record(DaypartSchema, z.number().positive()),
+    // Retained as the exact effective factor used by historical golden outputs.
+    // The explicit geometry factors below must reconcile to this value.
     visibility: z.number().min(0).max(1),
+    exposureGeometry: z.object({
+      orientationDeg: z.number().min(0).lt(360),
+      orientationFactor: z.number().min(0).max(1),
+      viewZoneFactor: z.number().min(0).max(1),
+      sourceId: z.string().min(1),
+    }),
     deliverySchedule: z.object({
       availabilityStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       availabilityEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -123,6 +132,12 @@ export const FrozenBundleSchema = z.object({
       "target_allocation",
       "influence",
       "serviceability",
+      "context_snapshot",
+      "model",
+      "exposure_geometry",
+      "panel",
+      "replicate_set",
+      "assumption",
     ]),
     sector: SectorSchema.nullable(),
     geographyId: z.literal("lagos-demo-v1"),
