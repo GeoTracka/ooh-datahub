@@ -21,6 +21,7 @@ import {
   selectVisiblePlan,
   selectZoneCards,
 } from "@/application/plannerSelectors";
+import { selectUploadedContextComparisons } from "@/application/uploadContextSelectors";
 import { ActionDock } from "@/features/ActionDock";
 import { AdjustmentsPanel } from "@/features/AdjustmentsPanel";
 import { CausalDrawer } from "@/features/CausalDrawer";
@@ -31,6 +32,7 @@ import { RecommendationCarousel } from "@/features/RecommendationCarousel";
 import { RfqDrawer } from "@/features/RfqDrawer";
 import { StepCard } from "@/features/StepCard";
 import { UploadDialog } from "@/features/UploadDialog";
+import { UploadedContextPanel } from "@/features/UploadedContextPanel";
 import { projectMapLibreScene } from "@/maps/projectScene";
 import { siteDeliveryCompatible } from "@/planning/movement";
 
@@ -76,6 +78,9 @@ export function PlannerPage() {
   const dirty = selectIsDirty(state);
   const cards = visible ? selectZoneCards(bundle, state) : [];
   const deltas = selectPlanDeltas(state);
+  const uploadedContextRows = visible
+    ? selectUploadedContextComparisons(bundle, visible)
+    : [];
   const drawerView = drawer && visible
     ? selectCausalDrawerViewModel(bundle, visible, drawer.target)
     : null;
@@ -392,6 +397,9 @@ export function PlannerPage() {
                 <span>{visible.contextRevision.claimResolution.reasonCode}</span>
                 <span>{dirty ? "Unapplied context change" : "Applied plan context"}</span>
               </aside>
+            )}
+            {visible.contextRevision && (
+              <UploadedContextPanel rows={uploadedContextRows} />
             )}
           </StepCard>
         )}
