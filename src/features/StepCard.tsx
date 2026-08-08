@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, type ReactNode } from "react";
 
 export function StepCard({
   step,
@@ -21,15 +23,25 @@ export function StepCard({
     disabled?: boolean;
   };
 }) {
+  useEffect(() => {
+    if (!onBack) return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      // Dialogs own Escape while open; never close a modal and navigate the
+      // underlying workflow in the same key press.
+      if (document.querySelector('[role="dialog"]')) return;
+      onBack();
+    }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onBack]);
+
   return (
     <section
       className="explorer-step-card"
       role="region"
       aria-label={`Step ${step} of ${total}: ${title}`}
       aria-live="polite"
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && onBack) onBack();
-      }}
     >
       <header className="explorer-step-header">
         <div>
