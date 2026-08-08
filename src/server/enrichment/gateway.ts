@@ -13,7 +13,12 @@ type Dependencies = {
   signingSecret: string;
 };
 
-type Preflight = {
+type CallerBinding = {
+  principalId: string | null;
+  grantId: string | null;
+};
+
+type Preflight = CallerBinding & {
   id: string;
   expiresAt: string;
   rowHash: string;
@@ -28,12 +33,28 @@ function contentHash(value: string): string {
 
 type SignedPreflight = Omit<Preflight, "id">;
 
+function normalizeBinding(input: {
+  principalId?: string | null;
+  grantId?: string | null;
+}): CallerBinding {
+  const principalId = input.principalId ?? null;
+  const grantId = input.grantId ?? null;
+  if ((principalId === null) !== (grantId === null)) {
+    throw new Error("PREFLIGHT_CALLER_BINDING_INVALID");
+  }
+  return { principalId, grantId };
+}
+
 function signPreflight(payload: SignedPreflight, secret: string): string {
   const encoded = Buffer.from(canonicalJson(payload), "utf8").toString(
     "base64url",
   );
   const signature = createHmac("sha256", secret).update(encoded).digest("base64url");
   return encoded + "." + signature;
+}
+
+function validNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
 }
 
 function verifyPreflight(token: string, secret: string): SignedPreflight {
@@ -51,19 +72,33 @@ function verifyPreflight(token: string, secret: string): SignedPreflight {
   ) {
     throw new Error("PREFLIGHT_TOKEN_INVALID");
   }
-  const parsed = JSON.parse(
-    Buffer.from(encoded, "base64url").toString("utf8"),
-  ) as Partial<SignedPreflight>;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+  } catch {
+    throw new Error("PREFLIGHT_TOKEN_INVALID");
+  }
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("PREFLIGHT_TOKEN_INVALID");
+  }
+  const value = parsed as Partial<SignedPreflight>;
   if (
-    typeof parsed.rowHash !== "string" ||
-    typeof parsed.expiresAt !== "string" ||
-    typeof parsed.maximumCalls !== "number" ||
-    !Array.isArray(parsed.providerProducts) ||
-    !Array.isArray(parsed.transmittedFields)
+    typeof value.rowHash !== "string" ||
+    typeof value.expiresAt !== "string" ||
+    typeof value.maximumCalls !== "number" ||
+    !Array.isArray(value.providerProducts) ||
+    !Array.isArray(value.transmittedFields) ||
+    !validNullableString(value.principalId) ||
+    !validNullableString(value.grantId) ||
+    ((value.principalId === null) !== (value.grantId === null))
   ) {
     throw new Error("PREFLIGHT_TOKEN_INVALID");
   }
-  return parsed as SignedPreflight;
+  return value as SignedPreflight;
+}
+
+function bindingKey(binding: CallerBinding): string {
+  return (binding.principalId ?? "offline") + "\u0000" + (binding.grantId ?? "offline");
 }
 
 export function createEnrichmentGateway(dependencies: Dependencies) {
@@ -72,7 +107,11 @@ export function createEnrichmentGateway(dependencies: Dependencies) {
     { rowHash: string; expiresAt: number; result: GeocodeResponse[] }
   >();
 
-  function preflight(input: { rows: EnrichmentRow[] }): Preflight {
+  function preflight(input: {
+    rows: EnrichmentRow[];
+    principalId?: string | null;
+    grantId?: string | null;
+  }): Preflight {
     if (!dependencies.enabled) throw new Error("LIVE_ENRICHMENT_DISABLED");
     if (dependencies.signingSecret.length < 32)
       throw new Error("PREFLIGHT_SECRET_MISSING");
@@ -80,10 +119,12 @@ export function createEnrichmentGateway(dependencies: Dependencies) {
     if (input.rows.some((row) => row.spatialRights === "unknown")) {
       throw new Error("SPATIAL_RIGHTS_REQUIRED");
     }
+    const binding = normalizeBinding(input);
     const maximumCalls = input.rows.filter((row) => Boolean(row.address)).length;
     if (maximumCalls > dependencies.maxCalls) throw new Error("MAX_CALLS");
     const rowHash = contentHash(canonicalJson(input.rows));
     const unsigned: SignedPreflight = {
+      ...binding,
       rowHash,
       expiresAt: new Date(
         dependencies.now().getTime() + 5 * 60_000,
@@ -100,20 +141,30 @@ export function createEnrichmentGateway(dependencies: Dependencies) {
     rows: EnrichmentRow[];
     authorized: boolean;
     idempotencyKey: string;
+    principalId?: string | null;
+    grantId?: string | null;
   }): Promise<GeocodeResponse[]> {
     if (!input.authorized) throw new Error("AUTHORIZATION_REQUIRED");
+    const binding = normalizeBinding(input);
     const approved = verifyPreflight(input.preflightId, dependencies.signingSecret);
     if (new Date(approved.expiresAt) <= dependencies.now())
       throw new Error("PREFLIGHT_EXPIRED");
+    if (
+      approved.principalId !== binding.principalId ||
+      approved.grantId !== binding.grantId
+    ) {
+      throw new Error("PREFLIGHT_CALLER_MISMATCH");
+    }
     const rowHash = contentHash(canonicalJson(input.rows));
     if (approved.rowHash !== rowHash) {
       throw new Error("PREFLIGHT_MISMATCH");
     }
-    const prior = completed.get(input.idempotencyKey);
+    const completedKey = bindingKey(binding) + "\u0000" + input.idempotencyKey;
+    const prior = completed.get(completedKey);
     if (prior && prior.expiresAt <= dependencies.now().getTime()) {
-      completed.delete(input.idempotencyKey);
+      completed.delete(completedKey);
     }
-    const current = completed.get(input.idempotencyKey);
+    const current = completed.get(completedKey);
     if (current && current.rowHash !== rowHash)
       throw new Error("IDEMPOTENCY_MISMATCH");
     if (current) return current.result;
@@ -132,7 +183,7 @@ export function createEnrichmentGateway(dependencies: Dependencies) {
         });
       }),
     );
-    completed.set(input.idempotencyKey, {
+    completed.set(completedKey, {
       rowHash,
       result: results,
       expiresAt: dependencies.now().getTime() + 5 * 60_000,
