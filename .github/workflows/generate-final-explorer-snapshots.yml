@@ -1,0 +1,45 @@
+name: Generate accessible final explorer snapshots
+
+on:
+  push:
+    branches: [agent/explorer-visual-baselines]
+
+permissions:
+  contents: write
+
+jobs:
+  snapshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/explorer-visual-baselines
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.32.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Apply WCAG AA contrast corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/app/explorer.css')
+          text = path.read_text()
+          if '#8a92a3' not in text or '#9a7420' not in text:
+              raise SystemExit('expected explorer contrast colors not found')
+          text = text.replace('#8a92a3', '#667085')
+          text = text.replace('#9a7420', '#765314')
+          path.write_text(text)
+          PY
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test tests/e2e/visual-accessibility.spec.ts --update-snapshots
+      - name: Commit validated CSS, Linux baselines, and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/explorer.css tests/e2e/visual-accessibility.spec.ts-snapshots
+          git rm .github/workflows/generate-final-explorer-snapshots.yml
+          git commit -m "test: commit accessible final explorer visual baselines"
+          git push origin HEAD:agent/explorer-visual-baselines
