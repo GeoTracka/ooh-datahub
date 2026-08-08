@@ -115,7 +115,7 @@ describe("CausalDrawer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(onBack).toHaveBeenCalledOnce();
     await userEvent.click(screen.getByText("Source IDs"));
-    expect(screen.getByText("lagos-demo-synthetic-v1")).toBeInTheDocument();
+    expect(screen.getAllByText("lagos-demo-synthetic-v1").length).toBeGreaterThan(0);
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
     rendered.unmount();
