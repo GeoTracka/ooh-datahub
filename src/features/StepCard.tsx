@@ -31,7 +31,7 @@ export function StepCard({
       // Dialogs own Escape while open; never close a modal and navigate the
       // underlying workflow in the same key press.
       if (document.querySelector('[role="dialog"]')) return;
-      back();
+      back?.();
     }
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
