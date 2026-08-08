@@ -1,0 +1,42 @@
+name: Patch immediate map lens fallback
+
+on:
+  push:
+    branches: [agent/visual-a11y-fixes]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/visual-a11y-fixes
+      - name: Resolve unavailable Influence before map projection
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/features/PlannerPage.tsx')
+          text = path.read_text()
+          old = '''  const drawerView = drawer && visible\n    ? selectCausalDrawerViewModel(bundle, visible, drawer.target)\n    : null;\n  const scene = useMemo(\n    () => projectMapLibreScene(selectLensFeatures(bundle, state, lens)),\n    [state, lens],\n  );'''
+          new = '''  const drawerView = drawer && visible\n    ? selectCausalDrawerViewModel(bundle, visible, drawer.target)\n    : null;\n  const influenceAvailable = Boolean(visible?.measurement?.influence);\n  const resolvedLens: MapLens = lens === "influence" && !influenceAvailable\n    ? "plan"\n    : lens;\n  const scene = useMemo(\n    () => projectMapLibreScene(selectLensFeatures(bundle, state, resolvedLens)),\n    [state, resolvedLens],\n  );'''
+          if old not in text:
+              raise SystemExit('scene derivation pattern not found')
+          text = text.replace(old, new, 1)
+          old = '''            influenceAvailable={Boolean(visible.measurement?.influence)}'''
+          new = '''            influenceAvailable={influenceAvailable}'''
+          if old not in text:
+              raise SystemExit('lens availability pattern not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - name: Remove temporary workflow and commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/PlannerPage.tsx
+          git rm .github/workflows/patch-lens-projection.yml
+          git commit -m "fix: resolve unavailable influence before map projection"
+          git push origin HEAD:agent/visual-a11y-fixes
