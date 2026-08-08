@@ -11,6 +11,13 @@ const labels = {
   unique: "Unique",
 } as const;
 
+const pillarDescriptions = {
+  A: "Audience / objective alignment",
+  C: "Conversion context",
+  P: "Portfolio coverage",
+  E: "Relative economics",
+} as const;
+
 export function CausalDrawer({
   measurement,
   target,
@@ -53,7 +60,9 @@ export function CausalDrawer({
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   useEffect(() => {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
@@ -66,6 +75,40 @@ export function CausalDrawer({
       returnFocusRef.current?.focus();
     };
   }, []);
+
+  if (target.kind === "pillar" && target.id !== "D") {
+    const description = pillarDescriptions[target.id];
+    return (
+      <aside role="dialog" aria-modal="true" aria-label="How delivery was estimated">
+        <button ref={closeRef} type="button" onClick={onClose}>Close</button>
+        <nav aria-label="Explanation breadcrumb">
+          {ancestors.map((ancestor, index) => (
+            <button key={ancestor.kind + "/" + ("id" in ancestor ? ancestor.id : "package")} type="button" onClick={() => onAncestor(index)}>
+              {ancestor.kind === "package"
+                ? "Recommended package"
+                : ancestor.kind + " " + ("id" in ancestor ? ancestor.id : "")}
+            </button>
+          ))}
+          <span aria-current="page">{entityLabel}</span>
+          {ancestors.length > 0 && <button type="button" onClick={onBack}>Back</button>}
+        </nav>
+        <h1>Planning Fit · {target.id} pillar</h1>
+        <p>{description}</p>
+        <dl>
+          <div><dt>Role</dt><dd>Recommendation score input</dd></div>
+          <div><dt>Delivery chain</dt><dd>Not applicable — only D · Delivery enters the audience-delivery causal chain.</dd></div>
+          <div><dt>Current MVP source</dt><dd>Frozen site-level `planningScoresBySector` values.</dd></div>
+          <div><dt>Evidence state</dt><dd>Assumed / seeded demo input.</dd></div>
+        </dl>
+        <p>
+          Feature-level decomposition for this pillar is not materialized in the current bundle.
+          The UI therefore does not present Location → Unique as an explanation for this score.
+        </p>
+        <p>{scopeNote}</p>
+      </aside>
+    );
+  }
+
   const stage = measurement.stages.find((item) => item.id === activeStage);
   if (!stage) return null;
   return (

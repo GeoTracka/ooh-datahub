@@ -98,6 +98,35 @@ describe("versioned enrichment snapshots", () => {
     expect(draft.claimResolution.recoveryAction).toBeTruthy();
   });
 
+  it("preserves commercial inventory fields into the planning context", () => {
+    const commercialRow: EnrichmentRow = {
+      rowId: "UP-001",
+      assetId: "UP-001",
+      address: "Herbert Macaulay Way Yaba Lagos",
+      latitude: 6.5158,
+      longitude: 3.3717,
+      coordinateAccuracyM: 25,
+      supplier: "Upload Media",
+      format: "static",
+      rateNgn: 3_200_000,
+      orientation: "northbound",
+      spatialRights: "customer_captured",
+      spatialLicenseId: "customer-coordinate-attestation-1",
+      sourceArtifactId: "upload-fixture-1",
+    };
+    const snapshot = createLocalEnrichmentSnapshot([commercialRow], nowIso);
+    const draft = applyUploadToDraft(snapshot, [commercialRow.rowId]);
+    expect(draft.selectedRows[0]).toMatchObject({
+      assetId: "UP-001",
+      supplier: "Upload Media",
+      format: "static",
+      rateNgn: 3_200_000,
+      orientation: "northbound",
+      address: "Herbert Macaulay Way Yaba Lagos",
+    });
+    expect(draft.selectedRows[0].coordinate?.value).toEqual([3.3717, 6.5158]);
+  });
+
   it("creates a usable local snapshot before any provider response", () => {
     const localRow = {
       ...row,

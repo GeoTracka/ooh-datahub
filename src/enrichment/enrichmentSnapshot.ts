@@ -274,6 +274,7 @@ export function applyUploadToDraft(
       address: item.row.address ?? null,
       format: item.row.format ?? null,
       rateNgn: item.row.rateNgn ?? null,
+      orientation: item.row.orientation ?? null,
       coordinate: selectedContextCoordinate(item),
     }))
     .sort((left, right) => left.rowId.localeCompare(right.rowId));

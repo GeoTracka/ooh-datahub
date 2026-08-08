@@ -21,7 +21,7 @@ const plan = buildPlan(bundle, {
 });
 
 describe("CausalDrawer", () => {
-  it("exposes a complete package → pillar → zone → site → evidence route", () => {
+  it("exposes a complete package → D pillar → zone → site → evidence route", () => {
     const packageView = selectCausalDrawerViewModel(bundle, plan, {
       kind: "package", metric: "reach",
     });
@@ -38,6 +38,31 @@ describe("CausalDrawer", () => {
     )!;
     expect([packageView.target.kind, pillar.kind, zone.kind, site.kind, evidence.kind])
       .toEqual(["package", "pillar", "zone", "site", "evidence"]);
+  });
+
+  it("does not misrepresent non-delivery Planning Fit pillars as causal reach stages", () => {
+    const target: DrawerTarget = { kind: "pillar", id: "E", metric: "reach" };
+    const view = selectCausalDrawerViewModel(bundle, plan, target);
+    render(<CausalDrawer
+      measurement={view.measurement}
+      target={target}
+      entityLabel={view.label}
+      scopeNote={view.scopeNote}
+      activeStage="unique"
+      ancestors={[{ kind: "package", metric: "reach" }]}
+      nextTargets={view.nextTargets}
+      sourceRecord={view.sourceRecord}
+      onStage={() => undefined}
+      onNavigate={() => undefined}
+      onAncestor={() => undefined}
+      onBack={() => undefined}
+      onClose={() => undefined}
+    />);
+    expect(screen.getByRole("heading", { name: "Planning Fit · E pillar" }))
+      .toBeInTheDocument();
+    expect(screen.getByText(/only D · Delivery enters/)).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Causal stages" }))
+      .not.toBeInTheDocument();
   });
 
   it("keeps two site identities and causal reruns distinct", () => {

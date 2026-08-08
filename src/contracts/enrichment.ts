@@ -51,6 +51,7 @@ export type EnrichmentRow = {
   supplier?: string;
   format?: string;
   rateNgn?: number;
+  orientation?: string;
 };
 
 export type GeocodeCandidate = {

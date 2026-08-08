@@ -13,8 +13,11 @@
     "test:e2e": "playwright test",
     "bundle:build": "tsx scripts/build-demo-bundle.ts",
     "bundle:check": "tsx scripts/validate-frozen-bundle.ts",
+    "bundle:verify": "pnpm bundle:build && git diff --exit-code -- src/demo/lagos-v1/bundle.json",
     "golden:build": "tsx scripts/build-golden-outputs.ts",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "golden:check": "pnpm golden:build && git diff --exit-code -- src/demo/lagos-v1/golden-outputs.json",
+    "verify:secrets": "tsx scripts/verify-client-secrets.ts",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm bundle:verify && pnpm golden:check && pnpm build && pnpm verify:secrets"
   },
   "keywords": [],
   "author": "",
@@ -48,14 +51,14 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
-    "eslint": "^10.8.0",
+    "eslint": "^9.0.0",
     "eslint-config-next": "^16.3.0",
     "exceljs": "^4.4.0",
     "fast-check": "^4.9.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "tsx": "^4.23.5",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.10"
   }
 }

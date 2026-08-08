@@ -26,6 +26,27 @@ describe("validateMappedRows", () => {
     expect(result.accepted[0].mapLibreEligible).toBe(false);
   });
 
+  it("normalizes invalid runtime spatial-rights values to unknown", () => {
+    const result = validateMappedRows([{
+      assetId: "P-2B",
+      address: "Commercial media site",
+      spatialRights: "mystery_source" as never,
+    }]);
+    expect(result.accepted[0].spatialRights).toBe("unknown");
+    expect(result.accepted[0].warningCodes).toContain("INVALID_SPATIAL_RIGHTS_VALUE");
+    expect(result.accepted[0].warningCodes).toContain("UNKNOWN_SPATIAL_PROVENANCE");
+  });
+
+  it("rejects duplicate asset IDs explicitly", () => {
+    const result = validateMappedRows([
+      { assetId: "DUP-1", address: "Site one", spatialRights: "unknown" },
+      { assetId: "DUP-1", address: "Site two", spatialRights: "unknown" },
+    ]);
+    expect(result.accepted).toHaveLength(1);
+    expect(result.rejected).toHaveLength(1);
+    expect(result.rejected[0].reasonCodes).toContain("DUPLICATE_ASSET_ID");
+  });
+
   it("requires a license or attestation ID for MapLibre and never auto-promotes model use", () => {
     const withoutId = validateMappedRows([{
       assetId: "P-3",

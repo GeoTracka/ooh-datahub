@@ -4,6 +4,10 @@ import type {
   PlanContextRevision,
   PlanningResult,
 } from "@/contracts/domain";
+import {
+  applyResolvedAudience,
+  resolveBriefAudience,
+} from "@/planning/briefNormalization";
 import { estimatePackage } from "@/planning/engine";
 import { siteDeliveryCompatible } from "@/planning/movement";
 import {
@@ -20,7 +24,13 @@ export function applyUploadContextToPlan(
   basis: PlanningResult,
   contextRevision: PlanContextRevision,
 ): PlanningResult {
-  const measurement = estimatePackage(bundle, {
+  const resolvedAudience = resolveBriefAudience(bundle, basis.brief);
+  const planningBundle = applyResolvedAudience(
+    bundle,
+    basis.brief.sector,
+    resolvedAudience,
+  );
+  const measurement = estimatePackage(planningBundle, {
     sector: basis.brief.sector,
     daypart: basis.brief.daypart,
     siteIds: basis.recommended.siteIds,

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import MapView, { Marker } from "@vis.gl/react-maplibre";
 import type { MapLibreScene } from "@/contracts/renderer";
 import { mapLibreStyle } from "@/maps/mapLibreStyle";
@@ -26,26 +25,24 @@ export function MapLibreRenderer({
   selectedFeatureId?: string | null;
   onFeatureSelect?(featureId: string): void;
 }) {
-  const [camera, setCamera] = useState({
-    longitude: 3.39,
-    latitude: 6.53,
-    zoom: 10.5,
-  });
-  useEffect(() => {
-    const selected = scene.features.find((feature) => feature.id === selectedFeatureId);
-    if (selected) {
-      setCamera({
+  const selected = scene.features.find((feature) => feature.id === selectedFeatureId);
+  const initialViewState = selected
+    ? {
         longitude: selected.coordinate[0],
         latitude: selected.coordinate[1],
         zoom: 12.5,
-      });
-    }
-  }, [scene, selectedFeatureId]);
+      }
+    : {
+        longitude: 3.39,
+        latitude: 6.53,
+        zoom: 10.5,
+      };
+
   return (
     <div data-testid="maplibre-renderer" className="map-surface">
       <MapView
-        {...camera}
-        onMove={(event) => setCamera(event.viewState)}
+        key={selectedFeatureId ?? "all"}
+        initialViewState={initialViewState}
         mapStyle={mapLibreStyle}
         reuseMaps={false}
       >

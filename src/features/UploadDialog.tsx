@@ -16,7 +16,7 @@ import {
   type UploadPlanningDraft,
 } from "@/enrichment/enrichmentSnapshot";
 import { requestPreflight, runEnrichment } from "@/enrichment/enrichmentClient";
-import { mapHeaders } from "@/import/mapHeaders";
+import { mapHeaders, type CanonicalHeader } from "@/import/mapHeaders";
 import { readLocalSpreadsheet, type LocalSheet } from "@/import/readLocalSpreadsheet";
 import {
   selectRowsForEnrichment,
@@ -31,6 +31,24 @@ import {
   projectMapLibreScene,
 } from "@/maps/projectScene";
 
+type HeaderMapping = ReturnType<typeof mapHeaders>[number];
+
+const mappingOptions: CanonicalHeader[] = [
+  "assetId",
+  "address",
+  "latitude",
+  "longitude",
+  "coordinateAccuracyM",
+  "supplier",
+  "format",
+  "rate",
+  "orientation",
+  "spatialRights",
+  "spatialLicenseId",
+  "sourceArtifactId",
+  "personName",
+];
+
 function valueFor(target: string, value: unknown): unknown {
   if (["latitude", "longitude", "coordinateAccuracyM", "rate"].includes(target)) {
     const numeric = Number(value);
@@ -39,9 +57,15 @@ function valueFor(target: string, value: unknown): unknown {
   return typeof value === "string" ? value.trim() : String(value ?? "");
 }
 
-function mapSheet(sheet: LocalSheet): MappedInventoryRow[] {
+function headerMappingsFor(sheet: LocalSheet): HeaderMapping[] {
   const headers = (sheet.rows[0] ?? []).map((value) => String(value ?? ""));
-  const mappings = mapHeaders(headers);
+  return mapHeaders(headers);
+}
+
+function mapSheet(
+  sheet: LocalSheet,
+  mappings: HeaderMapping[],
+): MappedInventoryRow[] {
   return sheet.rows.slice(1).map((values) => {
     const row: MappedInventoryRow = { extras: {} };
     mappings.forEach((mapping, index) => {
@@ -59,6 +83,7 @@ function mapSheet(sheet: LocalSheet): MappedInventoryRow[] {
 function toEnrichmentRows(rows: ValidatedInventoryRow[]): EnrichmentRow[] {
   return rows.map((row) => ({
     rowId: row.assetId,
+    assetId: row.assetId,
     address: row.address,
     latitude: row.latitude,
     longitude: row.longitude,
@@ -66,6 +91,10 @@ function toEnrichmentRows(rows: ValidatedInventoryRow[]): EnrichmentRow[] {
     spatialLicenseId: row.spatialLicenseId,
     sourceArtifactId: row.sourceArtifactId,
     spatialRights: row.spatialRights,
+    supplier: row.supplier,
+    format: row.format,
+    rateNgn: row.rate,
+    orientation: row.orientation,
   }));
 }
 
@@ -79,11 +108,12 @@ export function UploadDialog({
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const [accepted, setAccepted] = useState<ValidatedInventoryRow[]>([]);
   const [sheets, setSheets] = useState<LocalSheet[]>([]);
   const [sheetIndex, setSheetIndex] = useState(0);
+  const [headerMappings, setHeaderMappings] = useState<HeaderMapping[]>([]);
   const [quarantineCount, setQuarantineCount] = useState(0);
+  const [rejectedCount, setRejectedCount] = useState(0);
   const [selected, setSelected] = useState(new Set<string>());
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -94,6 +124,9 @@ export function UploadDialog({
     string,
     { latitude: string; longitude: string }
   >>({});
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   useEffect(() => {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
@@ -153,10 +186,11 @@ export function UploadDialog({
     };
   }, [snapshot, selected]);
 
-  function inspectSheet(sheet: LocalSheet) {
-    const validated = validateMappedRows(mapSheet(sheet));
+  function applyMappedSheet(sheet: LocalSheet, mappings: HeaderMapping[]) {
+    const validated = validateMappedRows(mapSheet(sheet, mappings));
     setAccepted(validated.accepted);
     setQuarantineCount(validated.quarantined.length);
+    setRejectedCount(validated.rejected.length);
     setSelected(new Set(validated.accepted.slice(0, 50).map((row) => row.assetId)));
     setPreflight(null);
     setEnrichmentError(null);
@@ -164,6 +198,33 @@ export function UploadDialog({
       toEnrichmentRows(validated.accepted.slice(0, 50)),
       new Date().toISOString(),
     ));
+  }
+
+  function inspectSheet(sheet: LocalSheet) {
+    const mappings = headerMappingsFor(sheet);
+    setHeaderMappings(mappings);
+    setPreflight(null);
+    setEnrichmentError(null);
+    const ambiguous = mappings.some((mapping) => mapping.target && !mapping.confirmed);
+    if (ambiguous) {
+      setAccepted([]);
+      setQuarantineCount(0);
+      setRejectedCount(0);
+      setSelected(new Set());
+      setSnapshot(null);
+      return;
+    }
+    applyMappedSheet(sheet, mappings);
+  }
+
+  function confirmMappings() {
+    const sheet = sheets[sheetIndex];
+    if (!sheet) return;
+    const confirmed = headerMappings.map((mapping) =>
+      mapping.target ? { ...mapping, confirmed: true } : mapping,
+    );
+    setHeaderMappings(confirmed);
+    applyMappedSheet(sheet, confirmed);
   }
 
   async function selectFile(file: File) {
@@ -178,6 +239,7 @@ export function UploadDialog({
       setParseError(error instanceof Error ? error.message : "SPREADSHEET_PARSE_FAILED");
       setAccepted([]);
       setSelected(new Set());
+      setHeaderMappings([]);
     } finally {
       setParsing(false);
     }
@@ -266,6 +328,10 @@ export function UploadDialog({
     );
   }
 
+  const pendingMappingReview = headerMappings.some(
+    (mapping) => mapping.target && !mapping.confirmed,
+  );
+
   return (
     <aside role="dialog" aria-modal="true" aria-label="Upload inventory">
       <button ref={closeRef} type="button" onClick={onClose}>Close</button>
@@ -281,31 +347,63 @@ export function UploadDialog({
       }}>{sheets.map((sheet, index) => (
         <option key={sheet.name} value={index}>{sheet.name}</option>
       ))}</select></label>}
+      {pendingMappingReview && <section aria-label="Review column mappings">
+        <h2>Confirm spreadsheet columns</h2>
+        <p>Some columns were recognized approximately. Confirm or correct them before the rows are used.</p>
+        {headerMappings.map((mapping, index) => mapping.target && !mapping.confirmed ? (
+          <label key={mapping.source}>
+            {mapping.source}
+            <select
+              aria-label={"Map " + mapping.source}
+              value={mapping.target ?? ""}
+              onChange={(event) => setHeaderMappings((current) => current.map(
+                (item, itemIndex) => itemIndex === index
+                  ? {
+                      ...item,
+                      target: (event.target.value || null) as CanonicalHeader | null,
+                      confirmed: false,
+                    }
+                  : item,
+              ))}
+            >
+              <option value="">Ignore column</option>
+              {mappingOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+        ) : null)}
+        <button type="button" onClick={confirmMappings}>Confirm mappings</button>
+      </section>}
       <p>{parsing
         ? "Reading spreadsheet locally…"
-        : accepted.length + " accepted · " + quarantineCount + " quarantined"}</p>
+        : accepted.length + " accepted · " + quarantineCount + " quarantined · " + rejectedCount + " rejected"}</p>
       {parseError && <p role="alert">{parseError}</p>}
       {enrichmentError && <p role="alert">{enrichmentError}. Uploaded facts remain usable offline.</p>}
-      <UploadPreview
+      {!pendingMappingReview && <UploadPreview
         rows={accepted}
         selected={selected}
         onToggle={(assetId) => setSelected((current) => {
           const next = new Set(current);
-          next.has(assetId) ? next.delete(assetId) : next.add(assetId);
+          if (next.has(assetId)) {
+            next.delete(assetId);
+          } else {
+            next.add(assetId);
+          }
           if (next.size > 50) return current;
           return next;
         })}
-      />
+      />}
       <button
         type="button"
-        disabled={parsing || selected.size === 0}
+        disabled={parsing || pendingMappingReview || selected.size === 0}
         onClick={useUploadedFacts}
       >
         Use uploaded facts as context
       </button>
       <button
         type="button"
-        disabled={parsing || selected.size === 0}
+        disabled={parsing || pendingMappingReview || selected.size === 0}
         onClick={() => void reviewEnrichment()}
       >
         Review enrichment
@@ -340,6 +438,11 @@ export function UploadDialog({
         {snapshot.rows.filter((item) => selected.has(item.row.rowId)).map((item) => (
           <article key={item.row.rowId}>
             <h3>{item.row.address ?? item.row.rowId}</h3>
+            <p>
+              {[item.row.supplier, item.row.format, item.row.orientation]
+                .filter(Boolean).join(" · ")}
+              {item.row.rateNgn === undefined ? "" : " · ₦" + item.row.rateNgn.toLocaleString("en")}
+            </p>
             {item.candidates.length === 0 && <p>No provider candidate returned.</p>}
             {item.candidates.map((candidate) => (
               <button

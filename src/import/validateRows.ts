@@ -29,10 +29,34 @@ export type ValidatedInventoryRow = MappedInventoryRow & {
   warningCodes: string[];
 };
 
+const spatialRightsValues = new Set<SpatialRights>([
+  "customer_captured",
+  "open_licensed",
+  "provider_derived",
+  "unknown",
+]);
+
+function normalizeSpatialRights(row: MappedInventoryRow): {
+  value: SpatialRights;
+  invalid: boolean;
+} {
+  const raw = String(
+    (row as MappedInventoryRow & { spatialRights?: unknown }).spatialRights ?? "unknown",
+  )
+    .trim()
+    .toLocaleLowerCase("en")
+    .replace(/[^a-z]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return spatialRightsValues.has(raw as SpatialRights)
+    ? { value: raw as SpatialRights, invalid: false }
+    : { value: "unknown", invalid: raw.length > 0 && raw !== "unknown" };
+}
+
 export function validateMappedRows(rows: MappedInventoryRow[]) {
   const accepted: ValidatedInventoryRow[] = [];
   const rejected: { row: MappedInventoryRow; reasonCodes: string[] }[] = [];
   const quarantined: { row: MappedInventoryRow; reasonCodes: string[] }[] = [];
+  const seenAssetIds = new Set<string>();
 
   for (const row of rows) {
     const sensitiveExtra = Object.keys(row.extras ?? {}).some((key) =>
@@ -48,14 +72,19 @@ export function validateMappedRows(rows: MappedInventoryRow[]) {
       Number.isFinite(row.latitude) &&
       Number.isFinite(row.longitude);
     const hasAddress = Boolean(row.address?.trim());
+    const assetId = row.assetId?.trim() ?? "";
     const reasons: string[] = [];
-    if (!row.assetId?.trim()) reasons.push("MISSING_ASSET_ID");
+    if (!assetId) reasons.push("MISSING_ASSET_ID");
     if (!hasCoordinate && !hasAddress) reasons.push("MISSING_LOCATION");
+    if (assetId && seenAssetIds.has(assetId)) reasons.push("DUPLICATE_ASSET_ID");
     if (reasons.length > 0) {
       rejected.push({ row, reasonCodes: reasons });
       continue;
     }
-    const spatialRights = row.spatialRights ?? "unknown";
+    seenAssetIds.add(assetId);
+
+    const normalizedRights = normalizeSpatialRights(row);
+    const spatialRights = normalizedRights.value;
     const eligibleCustomerSpatial =
       spatialRights === "customer_captured" ||
       spatialRights === "open_licensed";
@@ -63,7 +92,7 @@ export function validateMappedRows(rows: MappedInventoryRow[]) {
     const sourceArtifactId = row.sourceArtifactId?.trim();
     accepted.push({
       ...row,
-      assetId: row.assetId!.trim(),
+      assetId,
       spatialRights,
       spatialLicenseId,
       sourceArtifactId,
@@ -71,6 +100,7 @@ export function validateMappedRows(rows: MappedInventoryRow[]) {
       mapLibreEligible: eligibleCustomerSpatial && hasCoordinate &&
         Boolean(spatialLicenseId) && Boolean(sourceArtifactId),
       warningCodes: [
+        ...(normalizedRights.invalid ? ["INVALID_SPATIAL_RIGHTS_VALUE"] : []),
         ...(spatialRights === "unknown" ? ["UNKNOWN_SPATIAL_PROVENANCE"] : []),
         ...(eligibleCustomerSpatial && hasCoordinate && !spatialLicenseId
           ? ["SPATIAL_LICENSE_OR_ATTESTATION_REQUIRED"]
