@@ -67,12 +67,13 @@ describe("explorer components", () => {
     expect(onExplain).toHaveBeenCalledWith("yaba");
   });
 
-  it("routes each package outcome independently", async () => {
+  it("routes each valid package outcome independently", async () => {
     const onReviewRfq = vi.fn();
     const onUpload = vi.fn();
     const onFineTune = vi.fn();
     render(
       <ActionDock
+        canReviewRfq={true}
         onReviewRfq={onReviewRfq}
         onUpload={onUpload}
         onFineTune={onFineTune}
@@ -84,5 +85,19 @@ describe("explorer components", () => {
     expect(onReviewRfq).toHaveBeenCalledOnce();
     expect(onUpload).toHaveBeenCalledOnce();
     expect(onFineTune).toHaveBeenCalledOnce();
+  });
+
+  it("disables only the RFQ outcome when the package is invalid", () => {
+    render(
+      <ActionDock
+        canReviewRfq={false}
+        onReviewRfq={() => undefined}
+        onUpload={() => undefined}
+        onFineTune={() => undefined}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Review RFQ/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Upload customer inventory/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Fine-tune package/ })).toBeEnabled();
   });
 });
