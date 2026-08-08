@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ModalFocusContainment } from "@/features/ModalFocusContainment";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import "./explorer.css";
@@ -11,7 +12,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ModalFocusContainment />
+        {children}
+      </body>
     </html>
   );
 }

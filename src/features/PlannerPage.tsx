@@ -358,7 +358,11 @@ export function PlannerPage() {
             total={5}
             title="Recommended package"
             onBack={() => setStep(2)}
-            primaryAction={{ label: "This package works", onClick: () => setStep(4) }}
+            primaryAction={{
+              label: "This package works",
+              onClick: () => setStep(4),
+              disabled: !visible.recommended.valid,
+            }}
           >
             <RecommendationCarousel
               cards={cards}
@@ -375,6 +379,12 @@ export function PlannerPage() {
               onExplain={(metric) => openDrawer({ kind: "package", metric })}
               onReviewRfq={reviewRfq}
             />
+            {!visible.recommended.valid && (
+              <section role="alert" aria-label="Package constraints">
+                <strong>Package needs repair before acceptance</strong>
+                {visible.recommended.invalidReasonCodes.map((reason) => <p key={reason}>{reason}</p>)}
+              </section>
+            )}
             {visible.contextRevision && (
               <aside className="explorer-context-status" aria-label="Uploaded planning status">
                 <strong>Customer inventory · context only</strong>
@@ -394,6 +404,7 @@ export function PlannerPage() {
             onBack={() => setStep(3)}
           >
             <ActionDock
+              canReviewRfq={visible.recommended.valid}
               onReviewRfq={reviewRfq}
               onUpload={() => setUploadOpen(true)}
               onFineTune={() => setStep(5)}
