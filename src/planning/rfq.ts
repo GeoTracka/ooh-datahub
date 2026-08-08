@@ -7,6 +7,7 @@ import {
   type RfqRange,
   type SupplierRfqLine,
 } from "@/contracts/rfq";
+import { resolveBriefAudience } from "@/planning/briefNormalization";
 import { canonicalJson } from "@/shared/canonicalJson";
 
 const requested = {
@@ -82,6 +83,7 @@ export function generateRfq(
       [...appliedPlan.replay.controls.siteIds].sort().join("|")
   ) throw new Error("STALE_APPLIED_PLAN");
   const review = parseReview(rawReview);
+  const resolvedAudience = resolveBriefAudience(bundle, appliedPlan.brief);
   const activeSites = appliedPlan.recommended.siteIds.map((siteId) => {
     const site = bundle.sites.find((candidate) => candidate.id === siteId);
     if (!site) throw new Error("UNKNOWN_ASSET");
@@ -144,7 +146,7 @@ export function generateRfq(
   const audiencePlanningBasis: AudiencePlanningBasis = {
     estimateValidity,
     targetReach: reachClaim,
-    targetDefinition: appliedPlan.brief.targetAudience,
+    targetDefinition: resolvedAudience.label,
     targetUniverse: reachClaim?.universe ?? null,
     targetReachSharePercent: reachClaim
       ? reachShareRange(reachClaim.range, reachClaim.universe)
