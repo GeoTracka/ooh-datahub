@@ -22,15 +22,18 @@ export function LensTabs({
       reason: influenceAvailable ? undefined : "Influence profile not configured",
     },
   ];
+  const effectiveActive = active === "influence" && !influenceAvailable
+    ? "plan"
+    : active;
 
   useEffect(() => {
-    if (active === "influence" && !influenceAvailable) onChange("plan");
-  }, [active, influenceAvailable, onChange]);
+    if (active !== effectiveActive) onChange(effectiveActive);
+  }, [active, effectiveActive, onChange]);
 
   return (
     <>
       <Tabs.Root
-        value={active}
+        value={effectiveActive}
         onValueChange={(value) => onChange(value as MapLens)}
         activationMode="automatic"
       >
