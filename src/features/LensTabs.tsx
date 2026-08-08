@@ -43,6 +43,16 @@ export function LensTabs({
           </Tabs.Trigger>
         ))}
       </Tabs.List>
+      {lenses.map((lens) => (
+        <Tabs.Content
+          key={lens.id}
+          value={lens.id}
+          forceMount
+          className="sr-only"
+        >
+          {lens.label} map lens
+        </Tabs.Content>
+      ))}
     </Tabs.Root>
   );
 }
