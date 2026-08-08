@@ -84,9 +84,13 @@ export function PlannerPage() {
   const drawerView = drawer && visible
     ? selectCausalDrawerViewModel(bundle, visible, drawer.target)
     : null;
+  const influenceAvailable = Boolean(visible?.measurement?.influence);
+  const resolvedLens: MapLens = lens === "influence" && !influenceAvailable
+    ? "plan"
+    : lens;
   const scene = useMemo(
-    () => projectMapLibreScene(selectLensFeatures(bundle, state, lens)),
-    [state, lens],
+    () => projectMapLibreScene(selectLensFeatures(bundle, state, resolvedLens)),
+    [state, resolvedLens],
   );
 
   function changeBrief(change: Partial<Brief>) {
@@ -226,7 +230,7 @@ export function PlannerPage() {
           <LensTabs
             active={lens}
             onChange={setLens}
-            influenceAvailable={Boolean(visible.measurement?.influence)}
+            influenceAvailable={influenceAvailable}
           />
         </div>
       )}
