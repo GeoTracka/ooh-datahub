@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OOH Datahub · Step 3 replica</title>
+  <style>
+    :root {
+      --shell: #faf8f5;
+      --map: #f2efe9;
+      --card: #fff;
+      --soft: #fbfbfa;
+      --text: #1c2026;
+      --body: #5c6272;
+      --caption: #667085;
+      --teal: #0f5b4e;
+      --teal-soft: #edf5f2;
+      --gold: #c7982c;
+      --gold-text: #765314;
+      --gold-soft: #fdf6e3;
+      --border: #e3e4e7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background: var(--shell);
+      color: var(--text);
+      font: 14px/1.5 Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    .map {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: var(--map);
+    }
+    .water {
+      position: absolute;
+      right: -8%;
+      bottom: -20%;
+      width: 58%;
+      height: 72%;
+      border-radius: 48% 0 0 0;
+      background: #e6ecea;
+    }
+    .corridor {
+      position: absolute;
+      height: 4px;
+      border-top: 3px dashed #aebbb6;
+      transform-origin: left;
+      opacity: .9;
+    }
+    .c1 { left: 38%; top: 31%; width: 42%; transform: rotate(8deg); }
+    .c2 { left: 49%; top: 57%; width: 34%; transform: rotate(-16deg); }
+    .c3 { left: 35%; top: 72%; width: 38%; transform: rotate(-4deg); }
+    .marker {
+      position: absolute;
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+    }
+    .marker button {
+      width: 44px;
+      height: 44px;
+      border: 4px solid #fff;
+      border-radius: 999px;
+      background: var(--teal);
+      color: #fff;
+      box-shadow: 0 5px 18px rgba(28,32,38,.16);
+      font-weight: 750;
+    }
+    .marker.primary button { background: var(--gold); color: #34280d; }
+    .marker span {
+      max-width: 130px;
+      padding: 4px 8px;
+      overflow: hidden;
+      border: 1px solid rgba(28,32,38,.07);
+      border-radius: 999px;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 2px 8px rgba(28,32,38,.08);
+      font-size: 10px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .m1 { left: 60%; top: 26%; }
+    .m2 { left: 73%; top: 48%; }
+    .m3 { left: 53%; top: 68%; }
+    .lens {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      display: flex;
+      gap: 2px;
+      padding: 4px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 4px 18px rgba(28,32,38,.09);
+    }
+    .lens span { padding: 7px 12px; border-radius: 8px; color: #6a7180; font-size: 12px; font-weight: 650; }
+    .lens .active { background: #e7f1ee; color: var(--teal); }
+    .legend {
+      position: fixed;
+      right: 18px;
+      bottom: 44px;
+      display: grid;
+      gap: 2px;
+      max-width: 230px;
+      padding: 10px 12px;
+      border: 1px solid rgba(28,32,38,.06);
+      border-radius: 11px;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 4px 18px rgba(28,32,38,.08);
+    }
+    .legend strong { font-size: 12px; }
+    .legend span, .legend small { color: var(--body); font-size: 10px; }
+    .rail {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      width: min(440px,38vw);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .step {
+      width: 100%;
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      padding: 22px;
+      border: 1px solid rgba(28,32,38,.05);
+      border-radius: 18px;
+      background: var(--card);
+      box-shadow: 0 1px 2px rgba(28,32,38,.05), 0 10px 36px rgba(28,32,38,.10);
+    }
+    .eyebrow { color: var(--caption); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+    h1 { margin: 3px 0 12px; font-size: 24px; line-height: 1.12; letter-spacing: -.02em; }
+    .progress { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; margin-bottom: 18px; }
+    .progress i { height: 3px; border-radius: 999px; background: #e8e9ec; }
+    .progress i:nth-child(-n+3) { background: var(--teal); }
+    .zones { display: flex; gap: 10px; overflow: hidden; }
+    .zone {
+      flex: 0 0 84%;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--card);
+    }
+    .zone.selected { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(199,152,44,.12); }
+    .rank { color: var(--gold-text); font-size: 11px; font-weight: 750; text-transform: uppercase; }
+    .zone h2 { margin: 4px 0 0; font-size: 16px; }
+    .role { color: #343a46; font-size: 12px; font-weight: 650; }
+    .metric { display: block; margin-top: 8px; color: var(--body); font-size: 12px; }
+    .value { display: block; color: var(--text); font-size: 20px; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .evidence { display: inline-block; margin-top: 7px; padding: 4px 8px; border-radius: 999px; background: var(--gold-soft); color: var(--gold-text); font-size: 11px; font-weight: 750; }
+    .why { margin: 10px 0 0; color: var(--body); font-size: 12px; }
+    .links { display: flex; gap: 12px; margin-top: 8px; color: var(--teal); font-size: 12px; font-weight: 700; }
+    .package { display: grid; gap: 8px; margin-top: 14px; }
+    .package > div { display: grid; gap: 3px; padding: 10px 11px; border: 1px solid #e5e6e9; border-radius: 10px; background: var(--soft); }
+    .package strong { font-size: 13px; }
+    .package span { color: var(--body); font-size: 11px; }
+    .headroom { color: var(--teal) !important; font-weight: 700; }
+    .cta {
+      width: 100%;
+      margin-top: 16px;
+      padding: 11px 15px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--teal);
+      color: #fff;
+      font-weight: 750;
+    }
+    @media (max-width: 767px) {
+      body { overflow: auto; }
+      .map { position: absolute; height: 32vh; }
+      .lens { top: 8px; left: 8px; right: auto; }
+      .legend { right: 8px; bottom: auto; top: 105px; max-width: 170px; }
+      .legend small { display: none; }
+      .rail { position: absolute; top: 28vh; width: 100%; min-height: 72vh; padding: 10px; align-items: stretch; }
+      .step { max-height: none; min-height: 70vh; border-radius: 18px 18px 0 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Static design reference only. Production behavior lives in React/MapLibre. -->
+  <div class="map" aria-hidden="true">
+    <div class="water"></div>
+    <div class="corridor c1"></div><div class="corridor c2"></div><div class="corridor c3"></div>
+    <div class="marker primary m1"><button>24k</button><span>Yaba / Akoka</span></div>
+    <div class="marker m2"><button>18k</button><span>Lekki corridor</span></div>
+    <div class="marker m3"><button>12k</button><span>Ikeja axis</span></div>
+  </div>
+  <div class="lens"><span class="active">Plan</span><span>Activity</span><span>Reach</span><span>Influence</span></div>
+  <aside class="legend"><strong>Recommendation rank</strong><span>Evidence D</span><small>Marker number/size shows the active lens value. Labels identify zones.</small></aside>
+  <main class="rail">
+    <section class="step">
+      <span class="eyebrow">Step 3 of 5</span>
+      <h1>Recommended package</h1>
+      <div class="progress"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="zones">
+        <article class="zone selected">
+          <span class="rank">#1 · Primary</span>
+          <h2>Yaba / Akoka</h2>
+          <span class="role">Lead delivery zone</span>
+          <span class="metric">Marginal target reach</span>
+          <strong class="value">24,000 people</strong>
+          <span class="metric">Activity Potential 84/100</span>
+          <span class="evidence">Evidence D</span>
+          <p class="why">Lead delivery zone. The figure is this zone's incremental contribution to the selected package.</p>
+          <div class="links"><span>View delivery story</span><span>View full package</span></div>
+        </article>
+      </div>
+      <div class="package">
+        <div><strong>Recommended package</strong><span>3 sites · ₦15M planned of ₦18M budget</span><span class="headroom">₦3M budget headroom</span></div>
+        <div><span>Scenario target reach · people · Evidence D 58/100</span><strong>132k</strong></div>
+        <div><span>Planning Fit</span><strong>82/100</strong><span>Recommendation evidence D · 62/100</span></div>
+      </div>
+      <button class="cta">This package works</button>
+    </section>
+  </main>
+</body>
+</html>
