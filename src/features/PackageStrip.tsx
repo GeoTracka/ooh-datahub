@@ -51,12 +51,20 @@ export function PackageStrip({
   );
   const reachEvidenceScore = plan.measurement.evidence.permittedClaim.score;
   const influenceEvidenceScore = plan.measurement.evidence.influence?.score ?? null;
+  const budgetDelta = plan.brief.budgetNgn - plan.recommended.costNgn;
 
   return (
     <section className="package-strip" data-testid="package-strip">
       <div>
         <strong>Recommended package</strong>
-        <span>{plan.recommended.siteIds.length} sites · ₦{compact(plan.recommended.costNgn)}</span>
+        <span>
+          {plan.recommended.siteIds.length} sites · ₦{compact(plan.recommended.costNgn)} planned of ₦{compact(plan.brief.budgetNgn)} budget
+        </span>
+        <span className={budgetDelta >= 0 ? "budget-headroom" : "budget-overrun"}>
+          {budgetDelta >= 0
+            ? `₦${compact(budgetDelta)} budget headroom`
+            : `₦${compact(Math.abs(budgetDelta))} over budget`}
+        </span>
         <span>
           Audience basis · {audience.label}
           {audience.mode === "focused" ? " · focused" : " · sector preset"}
