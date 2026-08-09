@@ -49,7 +49,52 @@ const initialBrief: Brief = {
   flightEnd: "2026-09-28",
 };
 
+type CampaignProfile = Pick<
+  Brief,
+  "productName" | "productDescription" | "targetAudience" | "sector" | "objective"
+>;
+
 type ExplorerStep = 1 | 2 | 3 | 4 | 5;
+
+const campaignPresets: Array<{
+  id: string;
+  label: string;
+  profile: CampaignProfile;
+}> = [
+  {
+    id: "fmcg-broad-reach",
+    label: "FMCG · Broad reach",
+    profile: {
+      productName: "Demo Spark",
+      productDescription: "Affordable on-the-go refreshment launch",
+      targetAudience: "Students, young workers, and convenience shoppers",
+      sector: "fmcg",
+      objective: "broad_reach",
+    },
+  },
+  {
+    id: "real-estate-influential-core",
+    label: "Real Estate · Influential core",
+    profile: {
+      productName: "Harbour Residences",
+      productDescription: "Premium Lagos residential development for buyers and investors",
+      targetAudience: "Affluent professionals, property investors, and diaspora buyers",
+      sector: "real_estate",
+      objective: "influential_core",
+    },
+  },
+  {
+    id: "bank-fintech-near-conversion",
+    label: "Bank / Fintech · Near conversion",
+    profile: {
+      productName: "SwiftPay Business",
+      productDescription: "Digital banking and payments for everyday business transactions",
+      targetAudience: "SME owners, merchants, and salaried professionals",
+      sector: "bank_fintech",
+      objective: "near_conversion",
+    },
+  },
+];
 
 const daypartChoices: Array<{ value: Brief["daypart"]; label: string }> = [
   { value: "all_day", label: "All day" },
@@ -60,6 +105,27 @@ const daypartChoices: Array<{ value: Brief["daypart"]; label: string }> = [
 ];
 
 const budgetChoices = [15_000_000, 18_000_000, 20_000_000, 25_000_000];
+
+function profileMatches(brief: Brief, profile: CampaignProfile): boolean {
+  return brief.productName === profile.productName &&
+    brief.productDescription === profile.productDescription &&
+    brief.targetAudience === profile.targetAudience &&
+    brief.sector === profile.sector &&
+    brief.objective === profile.objective;
+}
+
+function briefsMatch(left: Brief, right: Brief): boolean {
+  return left.productName === right.productName &&
+    left.productDescription === right.productDescription &&
+    left.targetAudience === right.targetAudience &&
+    left.sector === right.sector &&
+    left.objective === right.objective &&
+    left.daypart === right.daypart &&
+    left.budgetNgn === right.budgetNgn &&
+    left.normalizationBudgetNgn === right.normalizationBudgetNgn &&
+    left.flightStart === right.flightStart &&
+    left.flightEnd === right.flightEnd;
+}
 
 export function PlannerPage() {
   const [brief, setBrief] = useState(initialBrief);
@@ -88,6 +154,9 @@ export function PlannerPage() {
   const resolvedLens: MapLens = lens === "influence" && !influenceAvailable
     ? "plan"
     : lens;
+  const selectedPresetId = campaignPresets.find((preset) =>
+    profileMatches(brief, preset.profile)
+  )?.id ?? null;
   const scene = useMemo(
     () => projectMapLibreScene(selectLensFeatures(bundle, state, resolvedLens)),
     [state, resolvedLens],
@@ -95,18 +164,26 @@ export function PlannerPage() {
 
   function changeBrief(change: Partial<Brief>) {
     setBrief((current) => ({ ...current, ...change }));
-    if (visible) {
-      dispatch({
-        type: "drafted",
-        plan: recalculatePlan(bundle, visible, change),
-        reason: "Brief change · " + Object.keys(change).sort().join(", "),
-      });
-    }
+  }
+
+  function applyPreset(profile: CampaignProfile) {
+    setBrief((current) => ({ ...current, ...profile }));
   }
 
   function showRecommendations() {
-    const plan = visible ?? buildPlan(bundle, brief);
-    if (!visible) dispatch({ type: "loaded", plan });
+    let plan = visible;
+    if (!visible) {
+      plan = buildPlan(bundle, brief);
+      dispatch({ type: "loaded", plan });
+    } else if (!briefsMatch(visible.brief, brief)) {
+      plan = recalculatePlan(bundle, visible, brief);
+      dispatch({
+        type: "drafted",
+        plan,
+        reason: "Campaign brief updated",
+      });
+    }
+    if (!plan) return;
     setSelectedZoneId(plan.selectedZoneIds[0] ?? null);
     setLens("plan");
     setStep(3);
@@ -244,15 +321,16 @@ export function PlannerPage() {
             primaryAction={{ label: "Continue to timing", onClick: () => setStep(2) }}
           >
             <div className="explorer-preset-grid" aria-label="Campaign presets">
-              <button type="button" onClick={() => changeBrief({ sector: "fmcg", objective: "broad_reach" })}>
-                FMCG · Broad reach
-              </button>
-              <button type="button" onClick={() => changeBrief({ sector: "real_estate", objective: "influential_core" })}>
-                Real Estate · Influential core
-              </button>
-              <button type="button" onClick={() => changeBrief({ sector: "bank_fintech", objective: "near_conversion" })}>
-                Bank / Fintech · Near conversion
-              </button>
+              {campaignPresets.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  aria-pressed={selectedPresetId === preset.id}
+                  onClick={() => applyPreset(preset.profile)}
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
             <div className="explorer-fields">
               <label>

@@ -8,20 +8,20 @@ function deliveryFor(
 ) {
   if (objective === "influential_core") {
     return {
-      label: "Influence-weighted reach",
+      label: "Marginal influence-weighted reach",
       value: card.marginalInfluenceMass,
       suffix: " weighted people",
     };
   }
   if (objective === "near_conversion") {
     return {
-      label: "Serviceable reach",
+      label: "Marginal serviceable reach",
       value: card.marginalServiceableReach,
       suffix: " people",
     };
   }
   return {
-    label: "Target reach",
+    label: "Marginal target reach",
     value: card.marginalReach,
     suffix: " people",
   };
