@@ -77,7 +77,7 @@ function AuditPlan({
 }) {
   return (
     <section aria-label={`${label} audit basis`}>
-      <h4>{label}</h4>
+      <h2>{label}</h2>
       <dl>
         <div><dt>Cost</dt><dd>NGN {number(summary.costNgn)}</dd></div>
         <div><dt>Planning Fit</dt><dd>{number(summary.planningFit)}</dd></div>
@@ -150,7 +150,7 @@ export function AdjustmentsPanel({
 
       <div className="adjustment-actions-grid">
         <section>
-          <h3>Add a compatible face</h3>
+          <h2>Add a compatible face</h2>
           <p>Add one eligible face inside a zone already in the package.</p>
           <select aria-label="Face to add" value={addSiteId} onChange={(event) => setAddSiteId(event.target.value)}>
             <option value="">Choose a face</option>
@@ -163,7 +163,7 @@ export function AdjustmentsPanel({
         </section>
 
         <section>
-          <h3>Swap a face</h3>
+          <h2>Swap a face</h2>
           <p>Choose the current face, then a compatible replacement in the same zone.</p>
           <select aria-label="Current face to swap" value={swapSiteId} onChange={(event) => {
             setSwapSiteId(event.target.value);
@@ -184,7 +184,7 @@ export function AdjustmentsPanel({
         </section>
 
         <section>
-          <h3>Replace a zone</h3>
+          <h2>Replace a zone</h2>
           <p>Choose the zone to remove and the eligible outside zone you want to test.</p>
           <select aria-label="Current zone to replace" value={replaceZoneId} onChange={(event) => setReplaceZoneId(event.target.value)}>
             <option value="">Choose current zone</option>
@@ -202,7 +202,7 @@ export function AdjustmentsPanel({
         </section>
 
         <section>
-          <h3>Remove a face</h3>
+          <h2>Remove a face</h2>
           <p>Remove a specific selected face and inspect the resulting delivery trade-off.</p>
           <select aria-label="Face to remove" value={removeSiteId} onChange={(event) => setRemoveSiteId(event.target.value)}>
             <option value="">Choose a face</option>
