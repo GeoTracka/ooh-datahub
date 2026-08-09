@@ -167,6 +167,7 @@ export function generateRfq(
       dataRevision: appliedPlan.contextRevision.dataRevision,
       decisionUse: "context_only",
       reasonCode: appliedPlan.contextRevision.claimResolution.reasonCode,
+      selectedRows: appliedPlan.contextRevision.selectedRows,
     } : null,
     evidence: {
       recommendation: appliedPlan.recommended.evidenceGrade,
