@@ -96,12 +96,12 @@
   background: #fbfbfa;
 }
 
-.adjustment-actions-grid h3,
+.adjustment-actions-grid h2,
 .adjustment-actions-grid p {
   margin: 0;
 }
 
-.adjustment-actions-grid h3 {
+.adjustment-actions-grid h2 {
   color: #1c2026;
   font-size: 13px;
 }
