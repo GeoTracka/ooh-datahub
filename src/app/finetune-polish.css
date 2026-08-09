@@ -1,0 +1,134 @@
+.adjustment-header {
+  display: grid;
+  gap: 10px;
+}
+
+.adjustment-header > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.adjustment-header span {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.adjustment-header strong {
+  color: #1c2026;
+  font-size: 15px;
+}
+
+.adjustment-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adjustment-summary {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #d9e6e2;
+  border-radius: 12px;
+  background: #f7fbfa;
+}
+
+.adjustment-summary header {
+  display: grid;
+  gap: 3px;
+}
+
+.adjustment-summary header > span {
+  color: #0f5b4e;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.adjustment-summary header p {
+  margin: 0;
+  color: #5c6272;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.adjustment-impact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.adjustment-impact-grid > div {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.adjustment-impact-grid dt {
+  color: #667085;
+  font-size: 10px;
+}
+
+.adjustment-impact-grid dd {
+  margin: 0;
+  color: #1c2026;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.adjustment-actions-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.adjustment-actions-grid > section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e3e4e7;
+  border-radius: 12px;
+  background: #fbfbfa;
+}
+
+.adjustment-actions-grid h2,
+.adjustment-actions-grid p {
+  margin: 0;
+}
+
+.adjustment-actions-grid h2 {
+  color: #1c2026;
+  font-size: 13px;
+}
+
+.adjustment-actions-grid p {
+  color: #5c6272;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.adjustment-actions-grid select {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid #d9dce2;
+  border-radius: 8px;
+  background: #fff;
+  color: #1c2026;
+  font: inherit;
+  font-size: 12px;
+}
+
+.adjustment-actions-grid button {
+  justify-self: start;
+}
+
+@media (max-width: 420px) {
+  .adjustment-impact-grid {
+    grid-template-columns: 1fr;
+  }
+}

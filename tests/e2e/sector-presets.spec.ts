@@ -30,10 +30,11 @@ test("fine-tune blocks an invalid removal until Undo restores the package", asyn
   await page.getByRole("button", { name: "This package works" }).click();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
 
-  await page.getByRole("button", { name: /^Remove / }).first().click();
+  await page.getByLabel("Face to remove").selectOption({ index: 1 });
+  await page.getByRole("button", { name: "Remove selected face" }).click();
   const apply = page.getByRole("button", { name: "Apply & review RFQ" });
   await expect(apply).toBeDisabled();
 
-  await page.getByRole("button", { name: "Undo" }).click();
+  await page.getByRole("button", { name: "Undo last change" }).click();
   await expect(page.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
 });
