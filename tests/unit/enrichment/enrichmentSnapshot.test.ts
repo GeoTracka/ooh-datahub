@@ -153,4 +153,26 @@ describe("versioned enrichment snapshots", () => {
     expect(merged.rows[0].candidates).toHaveLength(1);
     expect(merged.id).not.toBe(local.id);
   });
+
+  it("canonicalizes explicitly undefined optional upload fields deterministically", () => {
+    const sparse: EnrichmentRow = {
+      rowId: "sparse-1",
+      assetId: "sparse-1",
+      address: "10 Broad Street",
+      supplier: "Supplier A",
+      format: "48 Sheet",
+      rateNgn: 1_200_000,
+      spatialRights: "customer_captured",
+      latitude: undefined,
+      longitude: undefined,
+      coordinateAccuracyM: undefined,
+      spatialLicenseId: undefined,
+      sourceArtifactId: undefined,
+      orientation: undefined,
+    };
+    const first = createLocalEnrichmentSnapshot([sparse], nowIso);
+    const second = createLocalEnrichmentSnapshot([sparse], nowIso);
+    expect(first.id).toBe(second.id);
+    expect(first.rows[0].uploadedCoordinate).toBeNull();
+  });
 });
