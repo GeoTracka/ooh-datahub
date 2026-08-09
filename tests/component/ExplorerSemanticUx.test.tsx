@@ -23,11 +23,12 @@ const zoneCard = {
 };
 
 describe("semantic explorer UX", () => {
-  it("labels zone contribution metrics as marginal rather than total delivery", () => {
+  it("labels zone contribution metrics as marginal and surfaces role/evidence", () => {
     render(
       <RecommendationCarousel
         cards={[zoneCard]}
         objective="broad_reach"
+        evidenceLabel="Evidence D"
         selectedZoneId="yaba"
         onSelect={() => undefined}
         onExplain={() => undefined}
@@ -36,6 +37,9 @@ describe("semantic explorer UX", () => {
 
     expect(screen.getByText("Marginal target reach")).toBeInTheDocument();
     expect(screen.queryByText(/^Target reach$/)).not.toBeInTheDocument();
+    expect(screen.getAllByText("Lead delivery zone").length).toBeGreaterThan(0);
+    expect(screen.getByText("Evidence D")).toBeInTheDocument();
+    expect(screen.getByText(/incremental contribution to the selected package/)).toBeInTheDocument();
   });
 
   it("applies coherent campaign-profile presets and exposes persistent selection state", async () => {
@@ -46,6 +50,12 @@ describe("semantic explorer UX", () => {
     await user.click(preset);
 
     expect(preset).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Campaign profile summary" }))
+      .toHaveTextContent("Harbour Residences");
+    expect(screen.getByRole("region", { name: "Campaign profile summary" }))
+      .toHaveTextContent("Affluent professionals, property investors, and diaspora buyers");
+
+    await user.click(screen.getByText("Edit campaign details"));
     expect(screen.getByLabelText("Product name")).toHaveValue("Harbour Residences");
     expect(screen.getByLabelText("Product information"))
       .toHaveValue("Premium Lagos residential development for buyers and investors");
