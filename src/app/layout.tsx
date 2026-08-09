@@ -3,6 +3,7 @@ import { ModalFocusContainment } from "@/features/ModalFocusContainment";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import "./explorer.css";
+import "./explorer-polish.css";
 
 export const metadata: Metadata = {
   title: "OOH Promotion Wizard",
