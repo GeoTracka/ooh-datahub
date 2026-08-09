@@ -25,7 +25,7 @@ describe("explorer components", () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
-  it("keeps zone focus separate from explanation", async () => {
+  it("keeps zone focus separate from explanation and supports a full-package reset", async () => {
     const onSelect = vi.fn();
     const onExplain = vi.fn();
     const cards = [{
@@ -67,6 +67,8 @@ describe("explorer components", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "View delivery story" }));
     expect(onExplain).toHaveBeenCalledWith("yaba");
+    await userEvent.click(screen.getByRole("button", { name: "View full package" }));
+    expect(onSelect).toHaveBeenCalledWith(null);
   });
 
   it("routes each valid package outcome independently", async () => {
