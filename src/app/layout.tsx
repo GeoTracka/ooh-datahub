@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import "./explorer.css";
 import "./explorer-polish.css";
+import "./finetune-polish.css";
 
 export const metadata: Metadata = {
   title: "OOH Promotion Wizard",
