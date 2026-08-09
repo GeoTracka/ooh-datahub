@@ -30,12 +30,14 @@ function deliveryFor(
 export function RecommendationCarousel({
   cards,
   objective,
+  evidenceLabel,
   selectedZoneId,
   onSelect,
   onExplain,
 }: {
   cards: ZoneCard[];
   objective: "broad_reach" | "influential_core" | "near_conversion";
+  evidenceLabel: string;
   selectedZoneId: string | null;
   onSelect(zoneId: string): void;
   onExplain(zoneId: string): void;
@@ -61,6 +63,7 @@ export function RecommendationCarousel({
                 #{card.rank} · {card.rank === 1 ? "Primary" : card.rank === 2 ? "Booster" : "Cover"}
               </span>
               <strong>{card.label}</strong>
+              <span className="recommendation-role">{card.role}</span>
               <span>{delivery.label}</span>
               <b>
                 {delivery.value === null
@@ -68,15 +71,22 @@ export function RecommendationCarousel({
                   : `${Math.round(delivery.value).toLocaleString("en")}${delivery.suffix}`}
               </b>
               <span>Activity Potential {card.activityPotential?.toFixed(0) ?? "Unavailable"}/100</span>
+              <span className="recommendation-evidence">{evidenceLabel}</span>
             </button>
             {selected && (
-              <button
-                type="button"
-                className="explorer-link-button recommendation-story"
-                onClick={() => onExplain(card.zoneId)}
-              >
-                View delivery story
-              </button>
+              <div className="recommendation-selected-detail">
+                <p>
+                  {card.role}. The delivery figure above is this zone&apos;s incremental
+                  contribution to the selected package, not a standalone total.
+                </p>
+                <button
+                  type="button"
+                  className="explorer-link-button recommendation-story"
+                  onClick={() => onExplain(card.zoneId)}
+                >
+                  View delivery story
+                </button>
+              </div>
             )}
           </article>
         );
