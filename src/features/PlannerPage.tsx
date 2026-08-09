@@ -8,9 +8,10 @@ import type { DrawerTarget, MapLens } from "@/contracts/renderer";
 import {
   applyUploadContextToPlan,
   buildPlan,
-  promoteAlternativeZone,
+  listAdjustmentOptions,
   recalculatePlan,
   recalculateSelectedSites,
+  replaceZoneWithZone,
 } from "@/application/plannerService";
 import { initialPlannerState, plannerReducer } from "@/application/plannerReducer";
 import {
@@ -34,7 +35,6 @@ import { StepCard } from "@/features/StepCard";
 import { UploadDialog } from "@/features/UploadDialog";
 import { UploadedContextPanel } from "@/features/UploadedContextPanel";
 import { projectMapLibreScene } from "@/maps/projectScene";
-import { siteDeliveryCompatible } from "@/planning/movement";
 
 const initialBrief: Brief = {
   productName: "Demo Spark",
@@ -156,6 +156,7 @@ export function PlannerPage() {
   const dirty = selectIsDirty(state);
   const cards = visible ? selectZoneCards(bundle, state) : [];
   const deltas = selectPlanDeltas(state);
+  const adjustmentOptions = visible ? listAdjustmentOptions(bundle, visible) : null;
   const uploadedContextRows = visible
     ? selectUploadedContextComparisons(bundle, visible)
     : [];
@@ -210,41 +211,29 @@ export function PlannerPage() {
     });
   }
 
-  function includeFace() {
-    if (!visible) return;
-    const addition = bundle.sites.find((site) =>
-      visible.selectedZoneIds.includes(site.zoneId) &&
-      !visible.recommended.siteIds.includes(site.id) &&
-      siteDeliveryCompatible(site, visible.brief.flightStart, visible.brief.flightEnd),
-    );
-    if (addition) draftSites(
-      [...visible.recommended.siteIds, addition.id],
-      "Include compatible face · " + addition.id,
+  function addSite(siteId: string) {
+    if (!visible || visible.recommended.siteIds.includes(siteId)) return;
+    draftSites(
+      [...visible.recommended.siteIds, siteId],
+      "Add face · " + siteId,
     );
   }
 
-  function swapFirstFace() {
-    if (!visible) return;
-    const first = bundle.sites.find((site) => site.id === visible.recommended.siteIds[0]);
-    if (!first) return;
-    const replacement = bundle.sites.find((site) =>
-      site.zoneId === first.zoneId &&
-      !visible.recommended.siteIds.includes(site.id) &&
-      siteDeliveryCompatible(site, visible.brief.flightStart, visible.brief.flightEnd),
-    );
-    if (replacement) draftSites(
-      [replacement.id, ...visible.recommended.siteIds.slice(1)],
-      "Swap face · " + first.id + " → " + replacement.id,
+  function swapSite(siteId: string, replacementSiteId: string) {
+    if (!visible || siteId === replacementSiteId) return;
+    draftSites(
+      visible.recommended.siteIds.map((id) => id === siteId ? replacementSiteId : id),
+      "Swap face · " + siteId + " → " + replacementSiteId,
     );
   }
 
-  function replaceZone(zoneId: string) {
+  function replaceZone(zoneId: string, replacementZoneId: string) {
     if (!visible) return;
-    const next = promoteAlternativeZone(bundle, visible, zoneId);
+    const next = replaceZoneWithZone(bundle, visible, zoneId, replacementZoneId);
     dispatch({
       type: "drafted",
       plan: next,
-      reason: "Replace zone · " + zoneId,
+      reason: "Replace zone · " + zoneId + " → " + replacementZoneId,
     });
     setSelectedZoneId(next.selectedZoneIds[0] ?? null);
   }
@@ -547,22 +536,23 @@ export function PlannerPage() {
               onExplain={(metric) => openDrawer({ kind: "package", metric })}
               onReviewRfq={reviewRfq}
             />
-            <AdjustmentsPanel
-              isDirty={dirty}
-              siteIds={visible.recommended.siteIds}
-              zoneIds={visible.selectedZoneIds}
-              deltas={deltas}
-              invalidReasons={visible.recommended.invalidReasonCodes}
-              onInclude={includeFace}
-              onRemove={(siteId) => draftSites(
-                visible.recommended.siteIds.filter((id) => id !== siteId),
-                "Remove face · " + siteId,
-              )}
-              onSwap={swapFirstFace}
-              onReplaceZone={replaceZone}
-              onUndo={undoDraft}
-              onReset={resetDraft}
-            />
+            {adjustmentOptions && (
+              <AdjustmentsPanel
+                isDirty={dirty}
+                options={adjustmentOptions}
+                deltas={deltas}
+                invalidReasons={visible.recommended.invalidReasonCodes}
+                onAdd={addSite}
+                onRemove={(siteId) => draftSites(
+                  visible.recommended.siteIds.filter((id) => id !== siteId),
+                  "Remove face · " + siteId,
+                )}
+                onSwap={swapSite}
+                onReplaceZone={replaceZone}
+                onUndo={undoDraft}
+                onReset={resetDraft}
+              />
+            )}
           </StepCard>
         )}
       </div>
