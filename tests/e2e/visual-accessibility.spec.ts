@@ -6,6 +6,25 @@ async function assertAccessible(page: import("@playwright/test").Page) {
   expect(results.violations).toEqual([]);
 }
 
+test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+});
+
+async function makeExplicitSwap(page: import("@playwright/test").Page) {
+  const currentFace = page.getByLabel("Current face to swap");
+  const replacementFace = page.getByLabel("Replacement face");
+  const candidateCount = await currentFace.locator("option").count();
+  for (let index = 1; index < candidateCount; index += 1) {
+    await currentFace.selectOption({ index });
+    if (await replacementFace.locator("option").count() > 1) {
+      await replacementFace.selectOption({ index: 1 });
+      await page.getByRole("button", { name: "Swap selected face" }).click();
+      return;
+    }
+  }
+  throw new Error("NO_FINE_TUNE_SWAP_AVAILABLE");
+}
+
 test("locks the split-canvas explorer hierarchy and interaction states", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("region", { name: /Step 1 of 5:/ })).toBeVisible();
@@ -24,7 +43,7 @@ test("locks the split-canvas explorer hierarchy and interaction states", async (
 
   await page.getByRole("button", { name: "This package works" }).click();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
-  await page.getByRole("button", { name: "Swap first face in its zone" }).click();
+  await makeExplicitSwap(page);
   await expect(page.getByText("Unapplied changes")).toBeVisible();
   await expect(page).toHaveScreenshot("explorer-step5-dirty.png", { animations: "disabled" });
   await assertAccessible(page);
