@@ -150,12 +150,28 @@ describe("generateRfq", () => {
       .toBe("CONTEXT_SHORTLIST_ONLY");
   });
 
-  it("keeps applied upload provenance internal without changing seeded delivery claims", () => {
+  it("keeps selected upload commercial/provenance rows internal without changing seeded delivery claims", () => {
+    const selectedRows = [{
+      rowId: "UP-001",
+      assetId: "CUSTOMER-ASSET-PRIVATE-001",
+      supplier: "CUSTOMER-SUPPLIER-PRIVATE",
+      address: "CUSTOMER-CONTEXT-ADDRESS-PRIVATE",
+      format: "CUSTOMER-FORMAT-PRIVATE",
+      rateNgn: 3_200_123,
+      orientation: "northbound-private",
+      coordinate: {
+        value: [3.3717, 6.5158] as [number, number],
+        provider: "customer" as const,
+        accuracy: "customer-accuracy-25m",
+        license: "customer-coordinate-attestation-private",
+        sourceArtifactId: "upload-fixture-private-1",
+      },
+    }];
     const applied = applyUploadContextToPlan(bundle, plan, {
       mode: "context_shortlist" as const,
       decisionUse: "context_only" as const,
       selectedRowIds: ["UP-001"],
-      selectedRows: [],
+      selectedRows,
       enrichmentSnapshotId: "snapshot-upload-1",
       dataRevision: "upload-context-v1",
       fingerprint: "test-context-fingerprint",
@@ -171,19 +187,28 @@ describe("generateRfq", () => {
     expect(applied.measurement!.fingerprint).toBe(plan.measurement!.fingerprint);
     expect(applied.dataRevision).toBe("upload-context-v1");
     expect(applied.contextRevision?.enrichmentSnapshotId).toBe("snapshot-upload-1");
+
     const rfq = generateRfq(bundle, applied, deterministicReview);
-    expect(rfq.internalRequest.audiencePlanningBasis).toMatchObject({
-      estimateValidity: "EXACT_APPLIED_PLAN",
-      contextRevision: {
-        enrichmentSnapshotId: "snapshot-upload-1",
-        dataRevision: "upload-context-v1",
-        decisionUse: "context_only",
-        reasonCode: "CALIBRATION_BUNDLE_MISMATCH",
-      },
+    expect(rfq.internalRequest.audiencePlanningBasis.contextRevision).toMatchObject({
+      enrichmentSnapshotId: "snapshot-upload-1",
+      dataRevision: "upload-context-v1",
+      decisionUse: "context_only",
+      reasonCode: "CALIBRATION_BUNDLE_MISMATCH",
+      selectedRows,
     });
+    const internalDownload = buildInternalDownload(rfq);
+    expect(internalDownload).toContain("CUSTOMER-ASSET-PRIVATE-001");
+    expect(internalDownload).toContain("CUSTOMER-SUPPLIER-PRIVATE");
+    expect(internalDownload).toContain("customer-coordinate-attestation-private");
+
     const supplierCopy = JSON.stringify(rfq.supplierMessages);
     expect(supplierCopy).not.toContain("snapshot-upload-1");
     expect(supplierCopy).not.toContain("upload-context-v1");
+    expect(supplierCopy).not.toContain("CUSTOMER-ASSET-PRIVATE-001");
+    expect(supplierCopy).not.toContain("CUSTOMER-SUPPLIER-PRIVATE");
+    expect(supplierCopy).not.toContain("CUSTOMER-CONTEXT-ADDRESS-PRIVATE");
+    expect(supplierCopy).not.toContain("3200123");
+    expect(supplierCopy).not.toContain("upload-fixture-private-1");
   });
 
   it("is deterministic, watermarked, and contains no transactional guarantee", () => {

@@ -11,12 +11,25 @@ const labels = {
   unique: "Unique",
 } as const;
 
+const stageExplanations = {
+  location: "Starts with the exact selected site or package geography used by the plan.",
+  places: "Connects that geography to the governed context available for this Evidence-D planning scenario.",
+  movement: "Estimates the movement opportunity associated with the selected sites for the campaign time window.",
+  ots: "Applies the available orientation, view-zone and delivery inputs to estimate opportunities to see.",
+  target: "Maps opportunities to the governed target audience definition used for this campaign.",
+  unique: "Combines overlapping opportunities into the package-level delivery claim shown to the planner.",
+} as const;
+
 const pillarDescriptions = {
   A: "Audience / objective alignment",
   C: "Conversion context",
   P: "Portfolio coverage",
   E: "Relative economics",
 } as const;
+
+function targetKey(target: DrawerTarget): string {
+  return target.kind + "/" + ("id" in target ? target.id : "package");
+}
 
 export function CausalDrawer({
   measurement,
@@ -79,11 +92,17 @@ export function CausalDrawer({
   if (target.kind === "pillar" && target.id !== "D") {
     const description = pillarDescriptions[target.id];
     return (
-      <aside role="dialog" aria-modal="true" aria-label="How delivery was estimated">
-        <button ref={closeRef} type="button" onClick={onClose}>Close</button>
+      <aside className="causal-drawer" role="dialog" aria-modal="true" aria-label="How delivery was estimated">
+        <header className="causal-drawer-header">
+          <button ref={closeRef} type="button" onClick={onClose}>Close</button>
+          <div>
+            <span>Recommendation explanation</span>
+            <h1>Planning Fit · {target.id} pillar</h1>
+          </div>
+        </header>
         <nav aria-label="Explanation breadcrumb">
           {ancestors.map((ancestor, index) => (
-            <button key={ancestor.kind + "/" + ("id" in ancestor ? ancestor.id : "package")} type="button" onClick={() => onAncestor(index)}>
+            <button key={targetKey(ancestor)} type="button" onClick={() => onAncestor(index)}>
               {ancestor.kind === "package"
                 ? "Recommended package"
                 : ancestor.kind + " " + ("id" in ancestor ? ancestor.id : "")}
@@ -92,112 +111,144 @@ export function CausalDrawer({
           <span aria-current="page">{entityLabel}</span>
           {ancestors.length > 0 && <button type="button" onClick={onBack}>Back</button>}
         </nav>
-        <h1>Planning Fit · {target.id} pillar</h1>
-        <p>{description}</p>
-        <dl>
-          <div><dt>Role</dt><dd>Recommendation score input</dd></div>
-          <div><dt>Delivery chain</dt><dd>Not applicable — only D · Delivery enters the audience-delivery causal chain.</dd></div>
-          <div><dt>Current MVP source</dt><dd>Frozen site-level `planningScoresBySector` values.</dd></div>
-          <div><dt>Evidence state</dt><dd>Assumed / seeded demo input.</dd></div>
-        </dl>
-        <p>
-          Feature-level decomposition for this pillar is not materialized in the current bundle.
-          The UI therefore does not present Location → Unique as an explanation for this score.
-        </p>
-        <p>{scopeNote}</p>
+        <section className="causal-explanation-card">
+          <span>What this means</span>
+          <strong>{description}</strong>
+          <p>This pillar contributes to recommendation fit. It is not a delivery or reach stage.</p>
+          <p>{scopeNote}</p>
+        </section>
+        <section className="causal-boundary-note">
+          <strong>Delivery chain boundary</strong>
+          <p>Only D · Delivery enters Location → Places → Movement → OTS → Target → Unique.</p>
+        </section>
+        <details className="causal-audit-details">
+          <summary>Audit / calculation details</summary>
+          <dl>
+            <div><dt>Role</dt><dd>Recommendation score input</dd></div>
+            <div><dt>Current MVP source</dt><dd>Frozen site-level `planningScoresBySector` values.</dd></div>
+            <div><dt>Evidence state</dt><dd>Assumed / seeded demo input.</dd></div>
+            <div><dt>Feature decomposition</dt><dd>Not materialized in the current bundle.</dd></div>
+          </dl>
+        </details>
       </aside>
     );
   }
 
   const stage = measurement.stages.find((item) => item.id === activeStage);
   if (!stage) return null;
+  const sourceIds = [...new Set([
+    ...measurement.claim.sourceIds,
+    ...(measurement.influence?.sourceIds ?? []),
+  ])].sort();
   return (
-    <aside role="dialog" aria-modal="true" aria-label="How delivery was estimated">
-      <button ref={closeRef} type="button" onClick={onClose}>Close</button>
+    <aside className="causal-drawer" role="dialog" aria-modal="true" aria-label="How delivery was estimated">
+      <header className="causal-drawer-header">
+        <button ref={closeRef} type="button" onClick={onClose}>Close</button>
+        <div>
+          <span>Delivery explanation</span>
+          <h1>{target.metric === "influence" ? "Influence" : "Reach"} · {entityLabel}</h1>
+          <p>{scopeNote}</p>
+        </div>
+      </header>
       <nav aria-label="Explanation breadcrumb">
         {ancestors.map((ancestor, index) => (
-          <button key={ancestor.kind + "/" + ("id" in ancestor ? ancestor.id : "package")} type="button" onClick={() => onAncestor(index)}>
+          <button key={targetKey(ancestor)} type="button" onClick={() => onAncestor(index)}>
             {ancestor.kind === "package"
               ? "Recommended package"
               : ancestor.kind + " " + ("id" in ancestor ? ancestor.id : "")}
           </button>
         ))}
         <span aria-current="page">{entityLabel}</span>
-        {ancestors.length > 0 && (
-          <button type="button" onClick={onBack}>Back</button>
-        )}
+        {ancestors.length > 0 && <button type="button" onClick={onBack}>Back</button>}
       </nav>
-      <h1>{target.metric === "influence" ? "Influence" : "Reach"} · {entityLabel}</h1>
-      <p>{scopeNote}</p>
-      <nav aria-label="Causal stages">
-        {measurement.stages.map((stage) => (
+      <nav className="causal-stage-nav" aria-label="Causal stages">
+        {measurement.stages.map((item) => (
           <button
-            key={stage.id}
-            aria-current={activeStage === stage.id ? "step" : undefined}
-            onClick={() => onStage(stage.id as keyof typeof labels)}
+            key={item.id}
+            aria-current={activeStage === item.id ? "step" : undefined}
+            onClick={() => onStage(item.id as keyof typeof labels)}
           >
-            {labels[stage.id as keyof typeof labels]}
+            {labels[item.id as keyof typeof labels]}
           </button>
         ))}
       </nav>
-      <section>
-        <h2>{labels[activeStage]}</h2>
-        <strong>{stage.valueText}</strong>
+      <section className="causal-explanation-card">
+        <span>{labels[activeStage]} · what this means</span>
+        <p>{stageExplanations[activeStage]}</p>
+        <strong className="causal-stage-value">{stage.valueText}</strong>
+        <dl className="causal-stage-summary">
+          <div><dt>Evidence state</dt><dd>{stage.state}</dd></div>
+          <div><dt>Evidence source</dt><dd>{stage.sourceLabel}</dd></div>
+        </dl>
+        {stage.caveats.length > 0 && (
+          <div className="causal-caveats">
+            <strong>What to keep in mind</strong>
+            {stage.caveats.map((caveat) => <p key={caveat}>{caveat}</p>)}
+          </div>
+        )}
+        {stage.recoveryAction && (
+          <p className="causal-recovery"><strong>To strengthen this stage:</strong> {stage.recoveryAction}</p>
+        )}
+      </section>
+
+      {activeStage === "unique" && target.metric === "influence" && measurement.influence && (
+        <section className="causal-boundary-note">
+          <strong>Influence interpretation</strong>
+          <p>Influence-weighted exposure coverage; not persuasion or perception.</p>
+        </section>
+      )}
+
+      {nextTargets.length > 0 && (
+        <section className="causal-supporting-detail" aria-label="Drill deeper">
+          <h2>View supporting detail</h2>
+          <div>
+            {nextTargets.map((next) => (
+              <button
+                key={targetKey(next)}
+                type="button"
+                onClick={() => onNavigate(next)}
+              >
+                {next.kind === "pillar"
+                  ? next.id + " pillar"
+                  : next.kind === "zone"
+                    ? "Zone " + next.id
+                    : next.kind === "site"
+                      ? "Site " + next.id
+                      : next.kind === "evidence"
+                        ? "Evidence " + next.id
+                        : "Recommended package"}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <details className="causal-audit-details">
+        <summary>Audit / calculation details</summary>
         <dl>
           <div><dt>Entity</dt><dd>{target.kind} · {"id" in target ? target.id : "package"}</dd></div>
-          <div><dt>Evidence state</dt><dd>{stage.state}</dd></div>
-          <div><dt>Source</dt><dd>{stage.sourceLabel}</dd></div>
           <div><dt>Freshness / revision</dt><dd>{stage.freshnessLabel}</dd></div>
           <div><dt>Transformation</dt><dd>{stage.transformation}</dd></div>
           <div><dt>Next mapping</dt><dd>{stage.nextMapping}</dd></div>
         </dl>
-        {stage.caveats.map((caveat) => <p key={caveat}>{caveat}</p>)}
-        {stage.recoveryAction && <p>Recovery: {stage.recoveryAction}</p>}
         <details>
           <summary>Source IDs</summary>
-          <ul>{[...new Set([
-            ...measurement.claim.sourceIds,
-            ...(measurement.influence?.sourceIds ?? []),
-          ])].sort().map((sourceId) => <li key={sourceId}>{sourceId}</li>)}</ul>
+          <ul>{sourceIds.map((sourceId) => <li key={sourceId}>{sourceId}</li>)}</ul>
         </details>
-        {target.kind === "evidence" && sourceRecord && <section>
-          <h3>Source record</h3>
-          <dl>
-            <div><dt>ID</dt><dd>{sourceRecord.id}</dd></div>
-            <div><dt>Kind</dt><dd>{sourceRecord.kind}</dd></div>
-            <div><dt>Sector / product</dt><dd>{sourceRecord.sector ?? "all"} / {sourceRecord.productScope}</dd></div>
-            <div><dt>Geography</dt><dd>{sourceRecord.geographyId}</dd></div>
-            <div><dt>Effective period</dt><dd>{sourceRecord.periodStart} → {sourceRecord.periodEnd}</dd></div>
-            <div><dt>Provenance / use</dt><dd>{sourceRecord.provenance} / {sourceRecord.modelUse}</dd></div>
-          </dl>
-        </section>}
-        {activeStage === "unique" && target.metric === "influence" && measurement.influence && (
+        {target.kind === "evidence" && sourceRecord && (
           <section>
-            <h3>Influence</h3>
-            <p>Influence-weighted exposure coverage; not persuasion or perception.</p>
+            <h3>Source record</h3>
+            <dl>
+              <div><dt>ID</dt><dd>{sourceRecord.id}</dd></div>
+              <div><dt>Kind</dt><dd>{sourceRecord.kind}</dd></div>
+              <div><dt>Sector / product</dt><dd>{sourceRecord.sector ?? "all"} / {sourceRecord.productScope}</dd></div>
+              <div><dt>Geography</dt><dd>{sourceRecord.geographyId}</dd></div>
+              <div><dt>Effective period</dt><dd>{sourceRecord.periodStart} → {sourceRecord.periodEnd}</dd></div>
+              <div><dt>Provenance / use</dt><dd>{sourceRecord.provenance} / {sourceRecord.modelUse}</dd></div>
+            </dl>
           </section>
         )}
-        {nextTargets.length > 0 && <section aria-label="Drill deeper">
-          <h3>View supporting detail</h3>
-          {nextTargets.map((next) => (
-            <button
-              key={next.kind + "/" + ("id" in next ? next.id : "package")}
-              type="button"
-              onClick={() => onNavigate(next)}
-            >
-              {next.kind === "pillar"
-                ? next.id + " pillar"
-                : next.kind === "zone"
-                  ? "Zone " + next.id
-                  : next.kind === "site"
-                    ? "Site " + next.id
-                    : next.kind === "evidence"
-                      ? "Evidence " + next.id
-                      : "Recommended package"}
-            </button>
-          ))}
-        </section>}
-      </section>
+      </details>
     </aside>
   );
 }
