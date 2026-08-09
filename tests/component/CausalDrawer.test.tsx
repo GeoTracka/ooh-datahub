@@ -60,9 +60,10 @@ describe("CausalDrawer", () => {
     />);
     expect(screen.getByRole("heading", { name: "Planning Fit · E pillar" }))
       .toBeInTheDocument();
-    expect(screen.getByText(/only D · Delivery enters/)).toBeInTheDocument();
+    expect(screen.getByText(/Only D · Delivery enters/)).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Causal stages" }))
       .not.toBeInTheDocument();
+    expect(screen.getByText("Relative economics")).toBeInTheDocument();
   });
 
   it("keeps two site identities and causal reruns distinct", () => {
@@ -82,7 +83,7 @@ describe("CausalDrawer", () => {
     expect(first.measurement.fingerprint).not.toBe(second.measurement.fingerprint);
   });
 
-  it("renders entity identity, a back action, sources, and distinct metric focus", async () => {
+  it("renders human stage meaning first and keeps technical sources under audit detail", async () => {
     const siteId = plan.recommended.siteIds[0];
     const target: DrawerTarget = { kind: "site", id: siteId, metric: "reach" };
     const view = selectCausalDrawerViewModel(bundle, plan, target);
@@ -111,9 +112,11 @@ describe("CausalDrawer", () => {
       onClose={onClose}
     />);
     expect(screen.getByRole("heading", { name: /Reach ·/ })).toBeInTheDocument();
+    expect(screen.getByText(/Starts with the exact selected site/)).toBeInTheDocument();
     expect(screen.getByText(new RegExp(siteId))).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(onBack).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByText("Audit / calculation details"));
     await userEvent.click(screen.getByText("Source IDs"));
     expect(screen.getAllByText("lagos-demo-synthetic-v1").length).toBeGreaterThan(0);
     await userEvent.keyboard("{Escape}");
