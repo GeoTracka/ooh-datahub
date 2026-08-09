@@ -49,6 +49,36 @@ const mappingOptions: CanonicalHeader[] = [
   "personName",
 ];
 
+const mappingLabels: Record<CanonicalHeader, string> = {
+  assetId: "Asset / site ID",
+  address: "Site address",
+  latitude: "Latitude",
+  longitude: "Longitude",
+  coordinateAccuracyM: "Coordinate accuracy (metres)",
+  supplier: "Supplier",
+  format: "Media format",
+  rate: "Indicative rate (NGN)",
+  orientation: "Orientation",
+  spatialRights: "Location data rights",
+  spatialLicenseId: "Location licence ID",
+  sourceArtifactId: "Source file / record ID",
+  personName: "Contact / person name",
+};
+
+function uploadErrorMessage(code: string): string {
+  if (code === "SELECT_AT_LEAST_ONE_ROW") return "Choose at least one accepted row first.";
+  if (code === "PREFLIGHT_REQUIRED") return "Review enrichment before starting a provider lookup.";
+  if (code === "CORRECTION_COORDINATE_REQUIRED") return "Enter both latitude and longitude for the corrected location.";
+  if (code === "CORRECTION_COORDINATE_INVALID") return "Enter a valid latitude and longitude.";
+  if (code.includes("UNAUTHORIZED") || code.includes("GRANT")) {
+    return "Live enrichment is not authorized for this session. Uploaded facts still work offline.";
+  }
+  if (code.includes("QUOTA")) {
+    return "The live enrichment allowance is exhausted. Uploaded facts still work offline.";
+  }
+  return "This step could not be completed. Uploaded facts remain usable offline.";
+}
+
 function valueFor(target: string, value: unknown): unknown {
   if (["latitude", "longitude", "coordinateAccuracyM", "rate"].includes(target)) {
     const numeric = Number(value);
@@ -124,9 +154,11 @@ export function UploadDialog({
     string,
     { latitude: string; longitude: string }
   >>({});
+
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
   useEffect(() => {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
@@ -139,6 +171,7 @@ export function UploadDialog({
       returnFocusRef.current?.focus();
     };
   }, []);
+
   const uploadScenes = useMemo(() => {
     const selectedRows = snapshot?.rows.filter(
       (item) => selected.has(item.row.rowId),
@@ -333,26 +366,37 @@ export function UploadDialog({
   );
 
   return (
-    <aside role="dialog" aria-modal="true" aria-label="Upload inventory">
-      <button ref={closeRef} type="button" onClick={onClose}>Close</button>
-      <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {
-        const file = event.target.files?.[0];
-        if (file) void selectFile(file);
-        event.target.value = "";
-      }} />
-      {sheets.length > 1 && <label>Worksheet<select value={sheetIndex} onChange={(event) => {
-        const index = Number(event.target.value);
-        setSheetIndex(index);
-        inspectSheet(sheets[index]);
-      }}>{sheets.map((sheet, index) => (
-        <option key={sheet.name} value={index}>{sheet.name}</option>
-      ))}</select></label>}
-      {pendingMappingReview && <section aria-label="Review column mappings">
-        <h2>Confirm spreadsheet columns</h2>
-        <p>Some columns were recognized approximately. Confirm or correct them before the rows are used.</p>
+    <aside className="upload-dialog" role="dialog" aria-modal="true" aria-label="Upload inventory">
+      <header className="upload-dialog-header">
+        <button ref={closeRef} type="button" onClick={onClose}>Close</button>
+        <div>
+          <span>Customer inventory · context only</span>
+          <h1>Upload inventory</h1>
+          <p>Bring customer-owned or supplier inventory into the planning workspace without upgrading its delivery evidence.</p>
+        </div>
+      </header>
+
+      <section className="upload-step" aria-labelledby="upload-file-heading">
+        <header><span>1</span><div><h2 id="upload-file-heading">Upload file</h2><p>CSV, TSV or XLSX is read locally before any optional provider request.</p></div></header>
+        <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void selectFile(file);
+          event.target.value = "";
+        }} />
+        {sheets.length > 1 && <label>Worksheet<select value={sheetIndex} onChange={(event) => {
+          const index = Number(event.target.value);
+          setSheetIndex(index);
+          inspectSheet(sheets[index]);
+        }}>{sheets.map((sheet, index) => (
+          <option key={sheet.name} value={index}>{sheet.name}</option>
+        ))}</select></label>}
+      </section>
+
+      {pendingMappingReview && <section className="upload-step" aria-label="Review column mappings">
+        <header><span>2</span><div><h2>Map columns</h2><p>Some headings were recognized approximately. Confirm what each column means before rows are used.</p></div></header>
         {headerMappings.map((mapping, index) => mapping.target && !mapping.confirmed ? (
           <label key={mapping.source}>
-            {mapping.source}
+            Spreadsheet column · {mapping.source}
             <select
               aria-label={"Map " + mapping.source}
               value={mapping.target ?? ""}
@@ -368,61 +412,89 @@ export function UploadDialog({
             >
               <option value="">Ignore column</option>
               {mappingOptions.map((option) => (
-                <option key={option} value={option}>{option}</option>
+                <option key={option} value={option}>{mappingLabels[option]}</option>
               ))}
             </select>
           </label>
         ) : null)}
         <button type="button" onClick={confirmMappings}>Confirm mappings</button>
       </section>}
-      <p>{parsing
-        ? "Reading spreadsheet locally…"
-        : accepted.length + " accepted · " + quarantineCount + " quarantined · " + rejectedCount + " rejected"}</p>
-      {parseError && <p role="alert">{parseError}</p>}
-      {enrichmentError && <p role="alert">{enrichmentError}. Uploaded facts remain usable offline.</p>}
-      {!pendingMappingReview && <UploadPreview
-        rows={accepted}
-        selected={selected}
-        onToggle={(assetId) => setSelected((current) => {
-          const next = new Set(current);
-          if (next.has(assetId)) {
-            next.delete(assetId);
-          } else {
-            next.add(assetId);
-          }
-          if (next.size > 50) return current;
-          return next;
-        })}
-      />}
-      <button
-        type="button"
-        disabled={parsing || pendingMappingReview || selected.size === 0}
-        onClick={useUploadedFacts}
-      >
-        Use uploaded facts as context
-      </button>
-      <button
-        type="button"
-        disabled={parsing || pendingMappingReview || selected.size === 0}
-        onClick={() => void reviewEnrichment()}
-      >
-        Review enrichment
-      </button>
-      {preflight && <section aria-label="Enrichment preflight">
-        <pre>{JSON.stringify(preflight, null, 2)}</pre>
+
+      <section className="upload-step" aria-labelledby="upload-review-heading">
+        <header><span>3</span><div><h2 id="upload-review-heading">Review rows</h2><p>Accepted rows can be selected now; rows needing attention remain counted for follow-up.</p></div></header>
+        <p className="upload-row-status">{parsing
+          ? "Reading spreadsheet locally…"
+          : accepted.length + " accepted · " + quarantineCount + " need attention · " + rejectedCount + " rejected"}</p>
+        {parseError && <div role="alert" className="upload-error">
+          <p>We could not read this spreadsheet.</p>
+          <details><summary>Technical code</summary><code>{parseError}</code></details>
+        </div>}
+        {enrichmentError && <div role="alert" className="upload-error">
+          <p>{uploadErrorMessage(enrichmentError)}</p>
+          <details><summary>Technical code</summary><code>{enrichmentError}</code></details>
+        </div>}
+        {!pendingMappingReview && <UploadPreview
+          rows={accepted}
+          selected={selected}
+          onToggle={(assetId) => setSelected((current) => {
+            const next = new Set(current);
+            if (next.has(assetId)) {
+              next.delete(assetId);
+            } else {
+              next.add(assetId);
+            }
+            if (next.size > 50) return current;
+            return next;
+          })}
+        />}
+      </section>
+
+      <section className="upload-step" aria-labelledby="upload-use-heading">
+        <header><span>4</span><div><h2 id="upload-use-heading">Use as context</h2><p>Choose the offline path immediately, or review an optional live geocoding request first. Provider results remain context-only.</p></div></header>
+        <div className="upload-path-choices">
+          <button
+            type="button"
+            disabled={parsing || pendingMappingReview || selected.size === 0}
+            onClick={useUploadedFacts}
+          >
+            <strong>Use uploaded facts as context</strong>
+            <span>Offline · no provider call</span>
+          </button>
+          <button
+            type="button"
+            disabled={parsing || pendingMappingReview || selected.size === 0}
+            onClick={() => void reviewEnrichment()}
+          >
+            <strong>Review enrichment</strong>
+            <span>Optional live provider lookup · authorization required</span>
+          </button>
+        </div>
+      </section>
+
+      {preflight && <section className="upload-step upload-preflight" aria-label="Enrichment preflight">
+        <header><span>5</span><div><h2>Confirm live enrichment</h2><p>The provider request has been prepared but has not yet been run from this action.</p></div></header>
+        <dl>
+          <div><dt>Selected rows</dt><dd>{selected.size}</dd></div>
+          <div><dt>Decision use</dt><dd>Context only</dd></div>
+          <div><dt>Provider action</dt><dd>Geocode review</dd></div>
+        </dl>
         <button type="button" onClick={() => void enrichLocations()}>
           Enrich locations
         </button>
+        <details>
+          <summary>Technical preflight details</summary>
+          <pre>{JSON.stringify(preflight, null, 2)}</pre>
+        </details>
       </section>}
-      {snapshot && <section aria-label="Geocode review">
-        <h2>Review locations</h2>
-        <p>Customer/open coordinates work offline. Provider candidates remain optional, context-only, and separately reviewable.</p>
+
+      {snapshot && <section className="upload-step upload-location-review" aria-label="Geocode review">
+        <header><span>{preflight ? "6" : "5"}</span><div><h2>Review locations</h2><p>Customer/open coordinates work offline. Provider candidates remain optional, context-only, and separately reviewable.</p></div></header>
         {uploadScenes.local.features.length > 0 && <div className="upload-map">
-          <h3>Uploaded coordinates · offline MapLibre preview</h3>
+          <h3>Uploaded coordinates · offline preview</h3>
           <MapCanvas scene={uploadScenes.local} />
         </div>}
         {uploadScenes.provider.features.length > 0 && <div className="upload-map">
-          <h3>Provider candidates · Google review</h3>
+          <h3>Provider candidates · review only</h3>
           <MapCanvas
             scene={uploadScenes.provider}
             onFeatureSelect={(featureId) => setSnapshot((current) => {
@@ -436,13 +508,15 @@ export function UploadDialog({
           />
         </div>}
         {snapshot.rows.filter((item) => selected.has(item.row.rowId)).map((item) => (
-          <article key={item.row.rowId}>
-            <h3>{item.row.address ?? item.row.rowId}</h3>
-            <p>
-              {[item.row.supplier, item.row.format, item.row.orientation]
-                .filter(Boolean).join(" · ")}
-              {item.row.rateNgn === undefined ? "" : " · ₦" + item.row.rateNgn.toLocaleString("en")}
-            </p>
+          <article className="upload-location-card" key={item.row.rowId}>
+            <header>
+              <h3>{item.row.address ?? item.row.rowId}</h3>
+              <p>
+                {[item.row.supplier, item.row.format, item.row.orientation]
+                  .filter(Boolean).join(" · ")}
+                {item.row.rateNgn === undefined ? "" : " · ₦" + item.row.rateNgn.toLocaleString("en")}
+              </p>
+            </header>
             {item.candidates.length === 0 && <p>No provider candidate returned.</p>}
             {item.candidates.map((candidate) => (
               <button
@@ -457,36 +531,33 @@ export function UploadDialog({
                 Confirm {candidate.formattedAddress.value} · {candidate.granularity.value}
               </button>
             ))}
-            <label>
-              Correct latitude
-              <input
-                inputMode="decimal"
-                value={corrections[item.row.rowId]?.latitude ?? ""}
-                onChange={(event) => updateCorrection(
-                  item.row.rowId,
-                  "latitude",
-                  event.target.value,
-                )}
-              />
-            </label>
-            <label>
-              Correct longitude
-              <input
-                inputMode="decimal"
-                value={corrections[item.row.rowId]?.longitude ?? ""}
-                onChange={(event) => updateCorrection(
-                  item.row.rowId,
-                  "longitude",
-                  event.target.value,
-                )}
-              />
-            </label>
-            <button type="button" onClick={() => applyCorrection(item.row.rowId)}>
-              Use customer coordinate
-            </button>
+            <details>
+              <summary>Correct coordinates manually</summary>
+              <div className="upload-coordinate-correction">
+                <label>
+                  Correct latitude
+                  <input
+                    inputMode="decimal"
+                    value={corrections[item.row.rowId]?.latitude ?? ""}
+                    onChange={(event) => updateCorrection(item.row.rowId, "latitude", event.target.value)}
+                  />
+                </label>
+                <label>
+                  Correct longitude
+                  <input
+                    inputMode="decimal"
+                    value={corrections[item.row.rowId]?.longitude ?? ""}
+                    onChange={(event) => updateCorrection(item.row.rowId, "longitude", event.target.value)}
+                  />
+                </label>
+                <button type="button" onClick={() => applyCorrection(item.row.rowId)}>
+                  Use customer coordinate
+                </button>
+              </div>
+            </details>
           </article>
         ))}
-        <button type="button" onClick={() => onDraft(
+        <button type="button" className="primary" onClick={() => onDraft(
           applyUploadToDraft(snapshot, [...selected]),
           snapshot,
         )}>
