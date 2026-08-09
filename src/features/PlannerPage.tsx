@@ -106,6 +106,18 @@ const daypartChoices: Array<{ value: Brief["daypart"]; label: string }> = [
 
 const budgetChoices = [15_000_000, 18_000_000, 20_000_000, 25_000_000];
 
+const sectorLabels: Record<Brief["sector"], string> = {
+  fmcg: "FMCG",
+  real_estate: "Real Estate",
+  bank_fintech: "Bank / Fintech",
+};
+
+const objectiveLabels: Record<Brief["objective"], string> = {
+  broad_reach: "Broad reach",
+  influential_core: "Influential core",
+  near_conversion: "Near conversion",
+};
+
 function profileMatches(brief: Brief, profile: CampaignProfile): boolean {
   return brief.productName === profile.productName &&
     brief.productDescription === profile.productDescription &&
@@ -289,6 +301,9 @@ export function PlannerPage() {
   }
 
   const stepTwoValid = brief.budgetNgn > 0 && brief.flightStart <= brief.flightEnd;
+  const evidenceLabel = !visible?.measurement || visible.measurement.claim.evidence === "unavailable"
+    ? "Evidence unavailable"
+    : `Evidence ${visible.measurement.claim.evidence}`;
 
   return (
     <main className="explorer-shell">
@@ -332,38 +347,47 @@ export function PlannerPage() {
                 </button>
               ))}
             </div>
-            <div className="explorer-fields">
-              <label>
-                Product name
-                <input value={brief.productName} onChange={(event) => changeBrief({ productName: event.target.value })} />
-              </label>
-              <label>
-                Product information
-                <textarea value={brief.productDescription} onChange={(event) => changeBrief({ productDescription: event.target.value })} />
-              </label>
-              <label>
-                Target audience
-                <textarea value={brief.targetAudience} onChange={(event) => changeBrief({ targetAudience: event.target.value })} />
-              </label>
-              <div className="explorer-field-pair">
+            <section className="campaign-profile-summary" aria-label="Campaign profile summary">
+              <span className="campaign-profile-kicker">Current campaign</span>
+              <strong>{brief.productName}</strong>
+              <span>{brief.targetAudience}</span>
+              <span>{sectorLabels[brief.sector]} · {objectiveLabels[brief.objective]}</span>
+            </section>
+            <details className="campaign-edit-details">
+              <summary>Edit campaign details</summary>
+              <div className="explorer-fields">
                 <label>
-                  Sector
-                  <select value={brief.sector} onChange={(event) => changeBrief({ sector: event.target.value as Brief["sector"] })}>
-                    <option value="fmcg">FMCG</option>
-                    <option value="real_estate">Real Estate</option>
-                    <option value="bank_fintech">Bank / Fintech</option>
-                  </select>
+                  Product name
+                  <input value={brief.productName} onChange={(event) => changeBrief({ productName: event.target.value })} />
                 </label>
                 <label>
-                  Objective
-                  <select value={brief.objective} onChange={(event) => changeBrief({ objective: event.target.value as Brief["objective"] })}>
-                    <option value="broad_reach">Broad reach</option>
-                    <option value="influential_core">Influential core</option>
-                    <option value="near_conversion">Near conversion</option>
-                  </select>
+                  Product information
+                  <textarea value={brief.productDescription} onChange={(event) => changeBrief({ productDescription: event.target.value })} />
                 </label>
+                <label>
+                  Target audience
+                  <textarea value={brief.targetAudience} onChange={(event) => changeBrief({ targetAudience: event.target.value })} />
+                </label>
+                <div className="explorer-field-pair">
+                  <label>
+                    Sector
+                    <select value={brief.sector} onChange={(event) => changeBrief({ sector: event.target.value as Brief["sector"] })}>
+                      <option value="fmcg">FMCG</option>
+                      <option value="real_estate">Real Estate</option>
+                      <option value="bank_fintech">Bank / Fintech</option>
+                    </select>
+                  </label>
+                  <label>
+                    Objective
+                    <select value={brief.objective} onChange={(event) => changeBrief({ objective: event.target.value as Brief["objective"] })}>
+                      <option value="broad_reach">Broad reach</option>
+                      <option value="influential_core">Influential core</option>
+                      <option value="near_conversion">Near conversion</option>
+                    </select>
+                  </label>
+                </div>
               </div>
-            </div>
+            </details>
             <button
               type="button"
               className="explorer-link-button explorer-skip"
@@ -454,6 +478,7 @@ export function PlannerPage() {
             <RecommendationCarousel
               cards={cards}
               objective={visible.brief.objective}
+              evidenceLabel={evidenceLabel}
               selectedZoneId={selectedZoneId}
               onSelect={setSelectedZoneId}
               onExplain={openZoneStory}

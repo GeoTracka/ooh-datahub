@@ -45,6 +45,7 @@ describe("explorer components", () => {
       <RecommendationCarousel
         cards={cards}
         objective="broad_reach"
+        evidenceLabel="Evidence D"
         selectedZoneId={null}
         onSelect={onSelect}
         onExplain={onExplain}
@@ -58,6 +59,7 @@ describe("explorer components", () => {
       <RecommendationCarousel
         cards={cards}
         objective="broad_reach"
+        evidenceLabel="Evidence D"
         selectedZoneId="yaba"
         onSelect={onSelect}
         onExplain={onExplain}
