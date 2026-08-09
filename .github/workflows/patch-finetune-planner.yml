@@ -1,0 +1,57 @@
+name: Wire fine-tune decisions
+
+on:
+  push:
+    branches: [agent/ux-finetune-decisions]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ux-finetune-decisions
+      - name: Patch PlannerPage atomically
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/features/PlannerPage.tsx')
+          text = path.read_text()
+
+          old = '''  applyUploadContextToPlan,\n  buildPlan,\n  promoteAlternativeZone,\n  recalculatePlan,\n  recalculateSelectedSites,\n} from "@/application/plannerService";'''
+          new = '''  applyUploadContextToPlan,\n  buildPlan,\n  listAdjustmentOptions,\n  recalculatePlan,\n  recalculateSelectedSites,\n  replaceZoneWithZone,\n} from "@/application/plannerService";'''
+          if old not in text: raise SystemExit('plannerService import pattern not found')
+          text = text.replace(old, new, 1)
+
+          old = 'import { siteDeliveryCompatible } from "@/planning/movement";\n'
+          if old not in text: raise SystemExit('movement import pattern not found')
+          text = text.replace(old, '', 1)
+
+          old = '''  const cards = visible ? selectZoneCards(bundle, state) : [];\n  const deltas = selectPlanDeltas(state);'''
+          new = '''  const cards = visible ? selectZoneCards(bundle, state) : [];\n  const deltas = selectPlanDeltas(state);\n  const adjustmentOptions = visible ? listAdjustmentOptions(bundle, visible) : null;'''
+          if old not in text: raise SystemExit('selector insertion pattern not found')
+          text = text.replace(old, new, 1)
+
+          start = text.index('  function includeFace() {')
+          end = text.index('  function openDrawer(', start)
+          replacement = '''  function addSite(siteId: string) {\n    if (!visible || visible.recommended.siteIds.includes(siteId)) return;\n    draftSites(\n      [...visible.recommended.siteIds, siteId],\n      "Add face · " + siteId,\n    );\n  }\n\n  function swapSite(siteId: string, replacementSiteId: string) {\n    if (!visible || siteId === replacementSiteId) return;\n    draftSites(\n      visible.recommended.siteIds.map((id) => id === siteId ? replacementSiteId : id),\n      "Swap face · " + siteId + " → " + replacementSiteId,\n    );\n  }\n\n  function replaceZone(zoneId: string, replacementZoneId: string) {\n    if (!visible) return;\n    const next = replaceZoneWithZone(bundle, visible, zoneId, replacementZoneId);\n    dispatch({\n      type: "drafted",\n      plan: next,\n      reason: "Replace zone · " + zoneId + " → " + replacementZoneId,\n    });\n    setSelectedZoneId(next.selectedZoneIds[0] ?? null);\n  }\n\n'''
+          text = text[:start] + replacement + text[end:]
+
+          old = '''            <AdjustmentsPanel\n              isDirty={dirty}\n              siteIds={visible.recommended.siteIds}\n              zoneIds={visible.selectedZoneIds}\n              deltas={deltas}\n              invalidReasons={visible.recommended.invalidReasonCodes}\n              onInclude={includeFace}\n              onRemove={(siteId) => draftSites(\n                visible.recommended.siteIds.filter((id) => id !== siteId),\n                "Remove face · " + siteId,\n              )}\n              onSwap={swapFirstFace}\n              onReplaceZone={replaceZone}\n              onUndo={undoDraft}\n              onReset={resetDraft}\n            />'''
+          new = '''            {adjustmentOptions && (\n              <AdjustmentsPanel\n                isDirty={dirty}\n                options={adjustmentOptions}\n                deltas={deltas}\n                invalidReasons={visible.recommended.invalidReasonCodes}\n                onAdd={addSite}\n                onRemove={(siteId) => draftSites(\n                  visible.recommended.siteIds.filter((id) => id !== siteId),\n                  "Remove face · " + siteId,\n                )}\n                onSwap={swapSite}\n                onReplaceZone={replaceZone}\n                onUndo={undoDraft}\n                onReset={resetDraft}\n              />\n            )}'''
+          if old not in text: raise SystemExit('AdjustmentsPanel pattern not found')
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+      - name: Remove temporary workflow and commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/PlannerPage.tsx
+          git rm .github/workflows/patch-finetune-planner.yml
+          git commit -m "feat: wire explicit fine-tune choices"
+          git push origin HEAD:agent/ux-finetune-decisions
