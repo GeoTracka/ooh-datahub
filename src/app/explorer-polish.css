@@ -81,6 +81,12 @@
   line-height: 1.5;
 }
 
+.recommendation-focus-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .recommendation-selected-detail .recommendation-story {
   margin: 0;
 }
@@ -93,4 +99,72 @@
 .budget-overrun {
   color: #9b3a31 !important;
   font-weight: 650;
+}
+
+.map-marker-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.map-marker-caption {
+  max-width: 132px;
+  overflow: hidden;
+  padding: 3px 7px;
+  border: 1px solid rgb(28 32 38 / 7%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 92%);
+  color: #343a46;
+  box-shadow: 0 2px 8px rgb(28 32 38 / 8%);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-map-legend {
+  position: absolute;
+  right: 18px;
+  bottom: 44px;
+  z-index: 5;
+  display: grid;
+  max-width: 240px;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid rgb(28 32 38 / 6%);
+  border-radius: 11px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 4px 18px rgb(28 32 38 / 8%);
+  backdrop-filter: blur(12px);
+}
+
+.explorer-map-legend strong {
+  color: #1c2026;
+  font-size: 12px;
+}
+
+.explorer-map-legend span,
+.explorer-map-legend small {
+  color: #5c6272;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+@media (max-width: 767px) {
+  .explorer-map-legend {
+    right: 8px;
+    bottom: 34px;
+    max-width: 180px;
+    padding: 6px 8px;
+  }
+
+  .explorer-map-legend small {
+    display: none;
+  }
+
+  .map-marker-caption {
+    max-width: 90px;
+    font-size: 9px;
+  }
 }
