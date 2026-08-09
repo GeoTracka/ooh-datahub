@@ -1,0 +1,382 @@
+.rfq-drawer-header,
+.causal-drawer-header,
+.upload-dialog-header {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ececef;
+}
+
+.rfq-drawer-header > button,
+.causal-drawer-header > button,
+.upload-dialog-header > button {
+  justify-self: end;
+}
+
+.rfq-drawer-header > div,
+.causal-drawer-header > div,
+.upload-dialog-header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.rfq-drawer-header h1,
+.causal-drawer-header h1,
+.upload-dialog-header h1 {
+  font-size: 22px !important;
+  line-height: 1.15;
+}
+
+.rfq-drawer-header p,
+.causal-drawer-header p,
+.upload-dialog-header p {
+  margin: 0;
+  color: #5c6272;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rfq-watermark,
+.causal-drawer-header span,
+.upload-dialog-header span {
+  color: #765314;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rfq-summary {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px !important;
+}
+
+.rfq-summary > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fbfbfa;
+  border: 1px solid #e4e5e8;
+}
+
+.rfq-summary span,
+.causal-explanation-card > span {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rfq-summary strong {
+  color: #1c2026;
+  font-size: 12px;
+}
+
+.rfq-review-section,
+.rfq-generation,
+.rfq-output,
+.causal-explanation-card,
+.causal-boundary-note,
+.causal-supporting-detail,
+.upload-step {
+  padding: 14px;
+  border: 1px solid #e3e4e7;
+  border-radius: 12px;
+  background: #fbfbfa;
+}
+
+.rfq-review-section > h2,
+.rfq-output h2,
+.causal-supporting-detail h2,
+.upload-step h2 {
+  color: #1c2026;
+  font-size: 15px !important;
+}
+
+.rfq-review-section > p,
+.rfq-output > header p,
+.upload-step header p {
+  margin: 0;
+  color: #5c6272;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rfq-field-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rfq-revision-required,
+.upload-error {
+  padding: 10px;
+  border-radius: 9px;
+  background: #fff8e8;
+  color: #6c5522;
+}
+
+.rfq-revision-required p,
+.upload-error p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.rfq-confirmation {
+  flex-direction: row !important;
+  align-items: center;
+}
+
+.rfq-generation {
+  background: #f7fbfa;
+  border-color: #d7e7e2;
+}
+
+.rfq-generation p {
+  margin: 0;
+  color: #5c6272;
+  font-size: 12px;
+}
+
+.rfq-output > header,
+.rfq-message-card,
+.upload-location-card {
+  display: grid;
+  gap: 8px;
+}
+
+.rfq-message-card {
+  padding: 12px;
+  border: 1px solid #e2e3e6;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.rfq-message-card > header {
+  display: grid;
+  gap: 2px;
+}
+
+.rfq-message-card > header span,
+.rfq-message-card > header small {
+  color: #667085;
+  font-size: 10px;
+}
+
+.rfq-message-card > header strong {
+  color: #1c2026;
+  font-size: 13px;
+}
+
+.rfq-message-body {
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f7f8f8;
+  color: #343a46;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.rfq-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.rfq-status-footer {
+  padding-top: 10px;
+  border-top: 1px solid #ececef;
+  color: #667085;
+  font-size: 11px;
+}
+
+.causal-stage-nav {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px !important;
+}
+
+.causal-stage-nav button {
+  min-width: 0;
+  padding: 6px 4px !important;
+}
+
+.causal-stage-nav button[aria-current="step"] {
+  border-color: #98bbb3 !important;
+  background: #edf5f2 !important;
+  color: #0f5b4e;
+}
+
+.causal-explanation-card {
+  background: #fff;
+}
+
+.causal-explanation-card > p {
+  margin: 0;
+  color: #5c6272;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.causal-stage-value {
+  color: #1c2026;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.causal-stage-summary {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
+
+.causal-stage-summary > div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: #f7f8f8;
+}
+
+.causal-caveats,
+.causal-recovery,
+.causal-boundary-note {
+  color: #5c6272;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.causal-caveats p,
+.causal-recovery,
+.causal-boundary-note p {
+  margin: 0;
+}
+
+.causal-supporting-detail > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.causal-audit-details {
+  padding: 10px 12px;
+  border-top: 1px solid #ececef;
+}
+
+.causal-audit-details > summary,
+.rfq-message-card summary,
+.upload-dialog details > summary {
+  color: #0f5b4e;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.upload-step {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.upload-step > header {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.upload-step > header > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e7f1ee;
+  color: #0f5b4e;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.upload-step > header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.upload-step h2 {
+  margin: 0;
+}
+
+.upload-row-status {
+  margin: 0;
+  color: #343a46;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.upload-path-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.upload-path-choices > button {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+
+.upload-path-choices strong {
+  color: #1c2026;
+}
+
+.upload-path-choices span {
+  color: #667085;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.upload-preflight dl {
+  grid-template-columns: 1fr 1fr !important;
+}
+
+.upload-location-card {
+  padding: 11px;
+  border: 1px solid #e3e4e7;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.upload-location-card header p {
+  margin: 0;
+  color: #5c6272;
+  font-size: 11px;
+}
+
+.upload-coordinate-correction {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.upload-coordinate-correction button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+@media (max-width: 520px) {
+  .rfq-summary,
+  .rfq-field-pair,
+  .upload-path-choices,
+  .upload-coordinate-correction {
+    grid-template-columns: 1fr;
+  }
+
+  .causal-stage-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
