@@ -81,8 +81,8 @@ describe("semantic explorer UX", () => {
     await user.click(screen.getByRole("button", { name: /Fine-tune package/ }));
     expect(screen.getByText("Unapplied changes")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Undo" }));
-    expect(screen.getByText("Adjust plan")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Undo last change" }));
+    expect(screen.getByText("Fine-tune package")).toBeInTheDocument();
     expect(screen.queryByText("Unapplied changes")).not.toBeInTheDocument();
   }, 30000);
 });
