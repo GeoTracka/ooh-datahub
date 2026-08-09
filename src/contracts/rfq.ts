@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Daypart, Objective, Sector } from "@/contracts/domain";
+import type { Daypart, Objective, PlanContextRevision, Sector } from "@/contracts/domain";
 import type { MetricClaim, ReplayEnvelope } from "@/contracts/metrics";
 
 const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -106,6 +106,7 @@ export type AudiencePlanningBasis = {
     dataRevision: string;
     decisionUse: "context_only";
     reasonCode: string | null;
+    selectedRows: PlanContextRevision["selectedRows"];
   } | null;
   evidence: { recommendation: string; reach: string; influence: string | null };
   limitations: string[];
