@@ -31,7 +31,21 @@ test("five-step FMCG explorer reaches a verification RFQ", async ({ page }) => {
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
   await expect(page.getByRole("region", { name: /Step 5 of 5:/ })).toBeVisible();
-  await page.getByRole("button", { name: "Swap first face in its zone" }).click();
+
+  const currentFace = page.getByLabel("Current face to swap");
+  const replacementFace = page.getByLabel("Replacement face");
+  const candidateCount = await currentFace.locator("option").count();
+  let foundSwap = false;
+  for (let index = 1; index < candidateCount; index += 1) {
+    await currentFace.selectOption({ index });
+    if (await replacementFace.locator("option").count() > 1) {
+      await replacementFace.selectOption({ index: 1 });
+      foundSwap = true;
+      break;
+    }
+  }
+  expect(foundSwap).toBe(true);
+  await page.getByRole("button", { name: "Swap selected face" }).click();
   await expect(page.getByText("Unapplied changes")).toBeVisible();
   await page.getByRole("button", { name: "Apply & review RFQ" }).click();
 
