@@ -75,7 +75,7 @@ describe("AdjustmentsPanel", () => {
     expect(onRemove).toHaveBeenCalledWith("site-b");
   });
 
-  it("keeps technical identifiers out of the default impact summary", () => {
+  it("uses human site labels in primary choices and keeps audit fields absent before a proposal", () => {
     render(
       <AdjustmentsPanel
         isDirty={false}
@@ -91,7 +91,7 @@ describe("AdjustmentsPanel", () => {
       />,
     );
 
-    expect(screen.getByText(/Yaba Main Road/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Yaba Main Road/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Fingerprint/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Comparability/)).not.toBeInTheDocument();
   });
