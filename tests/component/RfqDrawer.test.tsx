@@ -15,7 +15,7 @@ async function completeReview() {
 afterEach(() => vi.restoreAllMocks());
 
 describe("RfqDrawer", () => {
-  it("gates generation, exposes isolated downloads, and resets after an edit", async () => {
+  it("explains what blocks generation, then exposes isolated readable requests", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const storageSpy = vi.spyOn(Storage.prototype, "setItem");
     render(<RfqDrawer
@@ -24,9 +24,16 @@ describe("RfqDrawer", () => {
       onScheduleRevision={() => undefined}
     />);
     expect(screen.getByRole("button", { name: "Generate RFQ" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Add the buyer name");
+    expect(screen.getByRole("region", { name: "RFQ package summary" }))
+      .toHaveTextContent(`${plan.recommended.siteIds.length} sites`);
+
     await completeReview();
+    expect(screen.queryByText(/Before generating:/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Generate RFQ" }));
     expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Generated supplier requests" }))
+      .toHaveTextContent("Nothing is sent or booked by this demo");
     expect(screen.getAllByRole("button", { name: /^Copy .* request$/ }).length)
       .toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: /^Download .* request$/ }).length)
@@ -77,6 +84,7 @@ describe("RfqDrawer", () => {
     await userEvent.clear(screen.getByLabelText("Flight start"));
     await userEvent.type(screen.getByLabelText("Flight start"), "2026-09-08");
     expect(screen.getByRole("button", { name: "Generate RFQ" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Recompute the plan");
     await userEvent.click(screen.getByRole("button", {
       name: "Recompute plan with these dates",
     }));
