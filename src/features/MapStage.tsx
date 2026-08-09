@@ -10,6 +10,7 @@ export function MapStage({
   selectedFeatureId: string | null;
   onFeatureSelect(featureId: string): void;
 }) {
+  const legend = scene.features.find((feature) => feature.visual)?.visual ?? null;
   return (
     <section className="explorer-map-stage" aria-label="Campaign map">
       <MapCanvas
@@ -17,6 +18,13 @@ export function MapStage({
         selectedFeatureId={selectedFeatureId}
         onFeatureSelect={onFeatureSelect}
       />
+      {legend && (
+        <aside className="explorer-map-legend" aria-label="Map lens legend">
+          <strong>{legend.metricLabel}</strong>
+          <span>{legend.evidenceLabel}</span>
+          <small>Marker number/size shows the active lens value. Labels identify zones or context sites.</small>
+        </aside>
+      )}
       <div className="explorer-map-note">
         Planning context · not navigation
       </div>

@@ -6,6 +6,13 @@ async function assertAccessible(page: import("@playwright/test").Page) {
   expect(results.violations).toEqual([]);
 }
 
+test.beforeEach(async ({ page }) => {
+  // Visual regression should capture settled spatial states rather than a
+  // mid-flight MapLibre camera frame. This exercises the same reduced-motion
+  // accessibility path supported by the production renderer.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+});
+
 test("locks the split-canvas explorer hierarchy and interaction states", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("region", { name: /Step 1 of 5:/ })).toBeVisible();
