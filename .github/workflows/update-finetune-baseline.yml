@@ -1,0 +1,36 @@
+name: Update fine-tune baseline
+
+on:
+  push:
+    branches: [agent/ux-finetune-decisions]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ux-finetune-decisions
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.32.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test tests/e2e/visual-accessibility.spec.ts --update-snapshots
+      - name: Commit baseline and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/e2e/visual-accessibility.spec.ts-snapshots/explorer-step5-dirty-chromium-linux.png
+          git checkout -- tests/e2e/visual-accessibility.spec.ts-snapshots/explorer-step1-chromium-linux.png \
+            tests/e2e/visual-accessibility.spec.ts-snapshots/explorer-step3-chromium-linux.png \
+            tests/e2e/visual-accessibility.spec.ts-snapshots/explorer-step3-focused-chromium-linux.png \
+            tests/e2e/visual-accessibility.spec.ts-snapshots/explorer-mobile-390-chromium-linux.png
+          git rm .github/workflows/update-finetune-baseline.yml
+          git commit -m "test: refresh explicit fine-tune visual baseline"
+          git push origin HEAD:agent/ux-finetune-decisions
