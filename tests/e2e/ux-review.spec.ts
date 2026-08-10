@@ -133,7 +133,7 @@ test.describe("desktop workflow review", () => {
     await page.getByLabel("Inventory spreadsheet").setInputFiles(
       path.resolve("tests/fixtures/customer-owned-inventory.csv"),
     );
-    await expect(page.getByText("1 accepted · 0 quarantined")).toBeVisible();
+    await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
     await captureUxReview(page, testInfo, "desktop-12-upload-preview", { fullPage: false });
 
     await page.getByRole("button", { name: "Use uploaded facts as context" }).click();
