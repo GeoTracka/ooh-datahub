@@ -54,6 +54,12 @@ function osmIdentity(feature: GeoJsonFeature, tags: Record<string, unknown>): {
   osmType: OsmAdvertisingCandidate["osmType"];
   osmId: string;
 } {
+  const attributeType = sourceDisplayLiteral(tags["@type"])?.toLowerCase();
+  const attributeId = sourceDisplayLiteral(tags["@id"]);
+  if (attributeId && (attributeType === "node" || attributeType === "way" || attributeType === "relation")) {
+    return { osmType: attributeType, osmId: attributeId };
+  }
+
   const raw = sourceDisplayLiteral(tags["@id"] ?? feature.id);
   if (!raw) throw new Error("OSM_ADVERTISING_ID_REQUIRED");
   const match = /^(node|way|relation)[/:](.+)$/i.exec(raw);
@@ -157,7 +163,7 @@ export function parseOsmAdvertisingGeoJsonSequence(text: string): OsmAdvertising
   const seen = new Set<string>();
   const lines = text.split(/\r?\n/u);
   for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index].trim();
+    const line = lines[index].replace(/^\u001e/u, "").trim();
     if (!line) continue;
     let raw: unknown;
     try {
