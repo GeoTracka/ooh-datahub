@@ -79,6 +79,8 @@ This is an **identity assertion**, not proof that two billboard faces are physic
 
 Automatic candidates start with `identity_status = candidate`. They can be confirmed/rejected only by an evidence-backed `site_identity` assertion.
 
+The resolution-run audit records the number of distinct persisted site entities, not the number of observation rows that contributed candidate assertions.
+
 ## Media owner / supplier identity
 
 The reviewed historical placement data does not contain a consistently authoritative media-owner field. T3 therefore does **not** infer owner identity from advertiser text or the board-quality `company` field.
@@ -91,7 +93,13 @@ Example:
 {"kind":"media_owner","siteId":"site:...","ownerName":"Verified Media Ltd.","registryNamespace":"approved-ooh-registry","registryRevision":"2026-08","evidenceSourceId":"registry:row-42","evidenceRevision":"r3","mappingMethod":"authoritative_registry","assertionStatus":"approved"}
 ```
 
-Owner identities and aliases retain registry/evidence revisions.
+A media-owner entity is stable across registry revisions by:
+
+```text
+registry namespace + normalized owner name
+```
+
+The individual alias/site assertions retain the evidence source and revision. A newer registry revision therefore adds evidence/history instead of manufacturing a second owner identity.
 
 ## Airport identity
 
@@ -110,7 +118,7 @@ A reviewed typo/name variant can be mapped with an airport override:
 {"kind":"airport_override","sourceLiteral":"Source spelling exactly as reviewed","targetAirportId":"airport:...","evidenceSourceId":"airport-review:17","evidenceRevision":"r2"}
 ```
 
-Manual overrides carry evidence and update matching FAAN airport assertions without deleting the original FAAN label.
+Manual overrides carry evidence and update matching FAAN airport assertions without deleting the original FAAN label. Reviewed aliases also have precedence during later automatic rebuilds, so a subsequent exact-name pass cannot silently undo the human/authoritative decision.
 
 ## Spatial assertions and rights
 
@@ -129,6 +137,17 @@ Every coordinate stores:
 - enrichment revision.
 
 All T3 coordinates are `planning_use = context_only`.
+
+### Source-kind / rights alignment
+
+Rights are not free-form labels. The accepted combinations are enforced in TypeScript and PostgreSQL:
+
+- `customer_captured` -> `customer_capture` or `field_survey`;
+- `open_licensed` -> `open_dataset`;
+- `provider_derived` -> `licensed_provider`; and
+- `unknown` -> never approved.
+
+This prevents a licensed-provider result from being relabelled as open data, or an open dataset from being treated as provider-derived merely by changing one field.
 
 ### Approved MapLibre coordinates
 
@@ -164,6 +183,19 @@ A site remains queued when:
 - it is confirmed but has no approved coordinate assertion.
 
 T3 does not call a paid provider during rebuild. Live Google geocoding remains behind the existing grant/quota/provider policy and must be explicitly reviewed before a returned coordinate is asserted here.
+
+## Consistent source snapshot
+
+Entity resolution is logically one read of the immutable source-observation layer even though the resolver streams several bounded queries.
+
+PostgreSQL enforces this with a source-mutation/resolution advisory lock plus a visible running resolver record:
+
+1. a new rebuild waits for any source-observation mutation transaction already in progress;
+2. once its `running` resolution row is committed, new inserts/updates/deletes to the four source observation tables fail closed;
+3. vocabulary, site and airport extraction therefore see the same source revision set; and
+4. source mutation is permitted again only after the resolver reaches `succeeded` or `failed`.
+
+This favors blocked ingestion over a mixed-snapshot resolver result. If an operator kills a resolver process before its failure handler runs, the `running` audit row must be explicitly investigated and marked failed before source writes resume; it must not be silently cleared by a timer.
 
 ## Audit and replay
 
