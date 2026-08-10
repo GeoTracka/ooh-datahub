@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { loadMigrations } from "./data/migrations";
 import { migrateDatabase } from "./db-migrate";
 import { runPsql } from "./data/psql";
 import { sqlLiteral } from "./data/persistenceFormat";
@@ -47,6 +48,17 @@ async function scalar(sql: string): Promise<number> {
 async function text(sql: string): Promise<string> {
   const result = await runPsql(databaseUrl, sql, { tuplesOnly: true });
   return result.stdout.trim();
+}
+
+async function expectSqlFailure(sql: string, expected: string): Promise<void> {
+  try {
+    await runPsql(databaseUrl, sql);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes(expected)) throw error;
+    return;
+  }
+  throw new Error(`EXPECTED_SQL_FAILURE:${expected}`);
 }
 
 async function seedFixture(): Promise<void> {
@@ -143,9 +155,11 @@ INSERT INTO ooh_data.faan_monthly_observations (
 
 async function main(): Promise<void> {
   await runPsql(databaseUrl, "DROP SCHEMA IF EXISTS ooh_data CASCADE;\n");
+  const manifest = await loadMigrations(resolve("migrations"));
+  const expectedVersions = manifest.map((migration) => migration.version);
   const migration = await migrateDatabase();
-  for (const version of ["001", "002", "003", "004", "005"]) {
-    if (!migration.applied.includes(version)) throw new Error(`MIGRATION_NOT_APPLIED:${version}`);
+  if (migration.applied.join(",") !== expectedVersions.join(",")) {
+    throw new Error(`MIGRATION_MANIFEST_APPLICATION_FAILURE:${migration.applied.join(",")}`);
   }
   await seedFixture();
 
@@ -173,6 +187,14 @@ WHERE entity_type='advertiser' AND normalized_key='acme ltd';
   if (!expectedSite) throw new Error("EXPECTED_SITE_IDENTITY_MISSING");
   const siteCount = await scalar(`SELECT count(*) FROM ooh_data.site_entities WHERE site_id=${sqlLiteral(expectedSite.siteId)};`);
   if (siteCount !== 1) throw new Error(`STRICT_SITE_GROUP_FAILURE:${siteCount}`);
+  const auditedSiteCount = await scalar(`
+SELECT (counts->>'siteEntities')::int
+FROM ooh_data.resolution_runs
+WHERE run_id=${sqlLiteral(first.runId)}::uuid;
+`);
+  if (auditedSiteCount !== siteCount) {
+    throw new Error(`RESOLUTION_SITE_COUNT_AUDIT_FAILURE:${auditedSiteCount}:${siteCount}`);
+  }
   const siteAssertions = await scalar(`SELECT count(*) FROM ooh_data.site_observation_assertions WHERE site_id=${sqlLiteral(expectedSite.siteId)};`);
   if (siteAssertions !== 2) throw new Error(`SITE_ASSERTION_FAILURE:${siteAssertions}`);
   const siteReview = await scalar(`SELECT count(*) FROM ooh_data.resolution_review_items WHERE domain='site_identity' AND reason='strict_site_key_incomplete';`);
@@ -238,6 +260,17 @@ WHERE domain='airport_identity' AND reason='state_anchor_ambiguous' AND normaliz
       assertionStatus: "approved",
     },
     {
+      kind: "media_owner",
+      siteId: expectedSite.siteId,
+      ownerName: "Verified Media Ltd",
+      registryNamespace: "fixture-registry",
+      registryRevision: "2026-09",
+      evidenceSourceId: "registry:row-2",
+      evidenceRevision: "r2",
+      mappingMethod: "authoritative_registry",
+      assertionStatus: "approved",
+    },
+    {
       kind: "airport_override",
       sourceLiteral: "Nnamdi Azikwe International Airport",
       targetAirportId,
@@ -264,6 +297,16 @@ WHERE site_id=${sqlLiteral(expectedSite.siteId)} AND assertion_status='approved'
   if (coordinateUse !== "maplibre:context_only") throw new Error(`COORDINATE_RIGHTS_FAILURE:${coordinateUse}`);
   const ownerStatus = await text(`SELECT owner_status || ':' || owner_name FROM ooh_data.site_media_owner_status WHERE site_id=${sqlLiteral(expectedSite.siteId)};`);
   if (ownerStatus !== "approved:Verified Media Ltd.") throw new Error(`MEDIA_OWNER_MAPPING_FAILURE:${ownerStatus}`);
+  const ownerEntityCount = await scalar(`
+SELECT count(*) FROM ooh_data.media_owner_entities
+WHERE registry_namespace='fixture-registry' AND normalized_key='verified media ltd';
+`);
+  if (ownerEntityCount !== 1) throw new Error(`MEDIA_OWNER_STABLE_ID_FAILURE:${ownerEntityCount}`);
+  const ownerEvidenceCount = await scalar(`
+SELECT count(*) FROM ooh_data.site_media_owner_assertions
+WHERE site_id=${sqlLiteral(expectedSite.siteId)};
+`);
+  if (ownerEvidenceCount !== 2) throw new Error(`MEDIA_OWNER_EVIDENCE_HISTORY_FAILURE:${ownerEvidenceCount}`);
 
   const correctedAirport = await text(`
 SELECT airport_id || ':' || assertion_method
@@ -274,6 +317,43 @@ WHERE source_record_id='fixture-faan:passenger:abuja-variant';
     throw new Error(`AIRPORT_OVERRIDE_FAILURE:${correctedAirport}`);
   }
 
+  await expectSqlFailure(`
+INSERT INTO ooh_data.site_coordinate_assertions (
+  assertion_id, site_id, latitude, longitude, source_kind, coordinate_source_id,
+  source_artifact_id, spatial_rights, assertion_status, renderer_eligibility,
+  planning_use, enrichment_revision
+) VALUES (
+  'coordinate:invalid-rights', ${sqlLiteral(expectedSite.siteId)}, 6.6, 3.35,
+  'licensed_provider', 'provider:x', 'provider-record:x', 'open_licensed',
+  'pending', 'none', 'context_only', 'invalid-r1'
+);
+`, "site_coordinate_assertions_source_rights_alignment_check");
+
+  const blockingRunId = "22222222-2222-4222-8222-222222222222";
+  await runPsql(databaseUrl, `
+INSERT INTO ooh_data.resolution_runs (run_id, resolver_version, run_kind, status)
+VALUES ('${blockingRunId}'::uuid, 'entity-resolver-v1', 'rebuild', 'running');
+`);
+  await expectSqlFailure(`
+INSERT INTO ooh_data.ooh_observations (
+  source_id, source_sha256, source_record_id, sheet, source_row,
+  first_ingestion_run_id, canonical_status, natural_key, advertiser,
+  state, city, address, brand, category, board_type, format_category,
+  classification, year, quarter, period, quality_flags, record_json
+) VALUES (
+  'fixture-ooh', '${"a".repeat(64)}', 'fixture-ooh:DATA:blocked', 'DATA', 99,
+  '11111111-1111-4111-8111-111111111111'::uuid, 'active', 'blocked-natural', 'Blocked',
+  'Lagos', 'Ikeja', '2 Allen Ave', 'Blocked', 'Drinks', 'Billboard', 'Large Format',
+  'Premium', 2025, 'Q1', ${json({ kind: "month", rawMonth: "January", months: [1] })},
+  '[]'::jsonb, ${json({ blocked: true })}
+);
+`, "SOURCE_MUTATION_BLOCKED_BY_ACTIVE_RESOLUTION");
+  await runPsql(databaseUrl, `
+UPDATE ooh_data.resolution_runs
+SET status='failed', completed_at=now(), error_code='fixture_recovery'
+WHERE run_id='${blockingRunId}'::uuid;
+`);
+
   const succeededRebuilds = await scalar("SELECT count(*) FROM ooh_data.resolution_runs WHERE run_kind='rebuild' AND status='succeeded';");
   const succeededImports = await scalar("SELECT count(*) FROM ooh_data.resolution_runs WHERE run_kind='assertion_import' AND status='succeeded';");
   if (succeededRebuilds !== 3 || succeededImports !== 1) {
@@ -282,12 +362,16 @@ WHERE source_record_id='fixture-faan:passenger:abuja-variant';
 
   process.stdout.write(JSON.stringify({
     ok: true,
+    migrationCount: manifest.length,
     canonicalAcmeEntities: acmeEntities,
     acmeAliases,
     siteAssertions,
     siteReview,
+    auditedSiteCount,
     airportStateAnchorDistinctIds: lagosAirportAssertions,
     airportAmbiguityReviews: abujaReview,
+    ownerEntityCount,
+    ownerEvidenceCount,
     succeededRebuilds,
     succeededImports,
   }, null, 2) + "\n");
