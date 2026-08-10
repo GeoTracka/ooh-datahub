@@ -79,8 +79,9 @@ export type CalibrationPackageFailure =
   | "MISSING_HELD_OUT_EXPOSURE_GEOMETRY_TRUTH"
   | "MISSING_HELD_OUT_TARGET_PANEL_TRUTH"
   | "MISSING_DOWNSTREAM_VALIDATION_RESULT"
-  | "MISSING_INDEPENDENT_DATE_REPLICATION_EVIDENCE"
-  | "TEST_FIXTURE_NOT_PROMOTABLE";
+  | "MISSING_INDEPENDENT_DATE_REPLICATION_EVIDENCE";
+
+export type CalibrationPromotionFailure = "TEST_FIXTURE_NOT_PROMOTABLE";
 
 export type CalibrationPromotionDecision = {
   policyVersion: typeof CALIBRATION_PROMOTION_POLICY_VERSION;
@@ -88,6 +89,7 @@ export type CalibrationPromotionDecision = {
   calibrationPassed: boolean;
   eligibleForEvidenceC: boolean;
   packageFailures: CalibrationPackageFailure[];
+  promotionFailures: CalibrationPromotionFailure[];
   calibrationFailures: CalibrationFailure[];
 };
 
@@ -181,23 +183,26 @@ export function evaluateCalibrationPromotion(input: unknown): CalibrationPromoti
       calibrationPassed: false,
       eligibleForEvidenceC: false,
       packageFailures: validation.failures,
+      promotionFailures: [],
       calibrationFailures: [],
     };
   }
 
   const report = validation.package.movementCalibrationReport satisfies MovementCalibrationReport;
   const calibration = evaluateMovementCalibration(report);
-  const packageFailures = [...validation.failures];
-  if (validation.package.evidenceEnvironment === "test_fixture") {
-    packageFailures.push("TEST_FIXTURE_NOT_PROMOTABLE");
-  }
+  const promotionFailures: CalibrationPromotionFailure[] =
+    validation.package.evidenceEnvironment === "test_fixture"
+      ? ["TEST_FIXTURE_NOT_PROMOTABLE"]
+      : [];
 
   return {
     policyVersion: CALIBRATION_PROMOTION_POLICY_VERSION,
     packageValid: validation.failures.length === 0,
     calibrationPassed: calibration.passed,
-    eligibleForEvidenceC: packageFailures.length === 0 && calibration.passed,
-    packageFailures: [...new Set(packageFailures)],
+    eligibleForEvidenceC:
+      validation.failures.length === 0 && promotionFailures.length === 0 && calibration.passed,
+    packageFailures: validation.failures,
+    promotionFailures,
     calibrationFailures: calibration.failures,
   };
 }
