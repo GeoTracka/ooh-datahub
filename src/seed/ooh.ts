@@ -60,7 +60,7 @@ export type OohBoardQualityObservation = {
   category: string;
   boardType: string;
   boardQuality: string;
-  classification: string;
+  format: string;
   annualRateNgn: number | null;
   monthlyRateNgn: number | null;
   year: number;
@@ -217,9 +217,9 @@ export function parseOohBoardQualityRow(
   const category = sourceText(row[7]);
   const boardType = sourceText(row[8]);
   const boardQuality = sourceText(row[9]);
-  const classification = sourceText(row[10]);
+  const format = sourceText(row[10]);
   const quarter = sourceText(row[14]);
-  if (!company || !state || !city || !address || !brand || !category || !boardType || !boardQuality || !classification || !quarter) {
+  if (!company || !state || !city || !address || !brand || !category || !boardType || !boardQuality || !format || !quarter) {
     return {
       kind: "quarantine",
       quarantine: { sourceId, sheet: spec.sheet, sourceRow, reason: "invalid_row_shape", raw: row },
@@ -249,7 +249,7 @@ export function parseOohBoardQualityRow(
         category,
         boardType,
         boardQuality,
-        classification,
+        format,
         spec.contextYear,
         quarter,
         period.rawMonth,
@@ -262,7 +262,7 @@ export function parseOohBoardQualityRow(
       category,
       boardType,
       boardQuality,
-      classification,
+      format,
       annualRateNgn,
       monthlyRateNgn,
       year: spec.contextYear,
