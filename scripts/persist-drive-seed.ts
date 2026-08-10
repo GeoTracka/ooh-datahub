@@ -42,7 +42,7 @@ const OOH_COLUMNS = [
 const BOARD_QUALITY_COLUMNS = [
   "source_id", "source_sha256", "source_record_id", "sheet", "source_row",
   "first_ingestion_run_id", "natural_key", "company", "state", "city", "address",
-  "brand", "category", "board_type", "board_quality", "classification",
+  "brand", "category", "board_type", "board_quality", "format",
   "annual_rate_ngn", "monthly_rate_ngn", "year", "quarter", "period",
   "quality_flags", "record_json",
 ] as const;
@@ -269,7 +269,7 @@ function boardQualityRow(
     record.category,
     record.boardType,
     record.boardQuality,
-    record.classification,
+    record.format,
     record.annualRateNgn,
     record.monthlyRateNgn,
     record.year,
