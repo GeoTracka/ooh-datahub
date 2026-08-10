@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS ooh_data.open_airport_references (
   ident text NOT NULL,
   airport_type text NOT NULL,
   name text NOT NULL,
+  normalized_name_key text NOT NULL,
   latitude double precision NOT NULL CHECK (latitude BETWEEN -90 AND 90),
   longitude double precision NOT NULL CHECK (longitude BETWEEN -180 AND 180),
   elevation_ft integer,
@@ -69,7 +70,7 @@ CREATE TABLE IF NOT EXISTS ooh_data.open_airport_references (
 );
 
 CREATE INDEX IF NOT EXISTS open_airport_references_country_name_idx
-  ON ooh_data.open_airport_references (iso_country, name);
+  ON ooh_data.open_airport_references (iso_country, normalized_name_key);
 CREATE INDEX IF NOT EXISTS open_airport_references_iata_idx
   ON ooh_data.open_airport_references (iata_code) WHERE iata_code IS NOT NULL;
 CREATE INDEX IF NOT EXISTS open_airport_references_gps_idx
