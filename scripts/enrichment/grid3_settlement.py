@@ -180,7 +180,7 @@ def polygonal_geometry(geometry: ogr.Geometry) -> tuple[ogr.Geometry, bool, bool
         if working is None or working.IsEmpty():
             fail("GRID3_SETTLEMENT_INVALID_GEOMETRY_UNREPAIRABLE")
 
-    flat_type = ogr.wkbFlatten(working.GetGeometryType())
+    flat_type = ogr.GT_Flatten(working.GetGeometryType())
     if flat_type == ogr.wkbPolygon:
         working = ogr.ForceToMultiPolygon(working)
     elif flat_type == ogr.wkbMultiPolygon:
@@ -191,7 +191,7 @@ def polygonal_geometry(geometry: ogr.Geometry) -> tuple[ogr.Geometry, bool, bool
             part = working.GetGeometryRef(index)
             if part is None:
                 continue
-            part_type = ogr.wkbFlatten(part.GetGeometryType())
+            part_type = ogr.GT_Flatten(part.GetGeometryType())
             if part_type == ogr.wkbPolygon:
                 multi.AddGeometry(part)
             elif part_type == ogr.wkbMultiPolygon:
