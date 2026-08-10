@@ -1,25 +1,14 @@
--- E3: coherent site-context read model.
+-- E3: coherent, provenance-preserving site-context consumption.
 --
--- Existing family "latest" views selected the latest row independently per
--- radius. A later snapshot with a smaller radius set could therefore leak older
--- rows into the same logical result. Select one family snapshot head per
--- site+coordinate assertion first, then expose rows only from that snapshot.
+-- Family "latest" views previously selected the latest row independently per
+-- radius. A newer snapshot with fewer radii could therefore leak older rows
+-- into the same logical result. E3 selects one snapshot head per
+-- site + coordinate assertion + family, then expands only that snapshot.
 
-CREATE INDEX IF NOT EXISTS site_vector_context_coverage_site_coordinate_idx
-  ON ooh_data.site_vector_context_coverage (site_id, coordinate_assertion_id, snapshot_id, radius_m);
-CREATE INDEX IF NOT EXISTS site_population_radius_context_site_coordinate_idx
-  ON ooh_data.site_population_radius_context (site_id, coordinate_assertion_id, snapshot_id, radius_m);
-CREATE INDEX IF NOT EXISTS site_accessible_population_context_site_coordinate_idx
-  ON ooh_data.site_accessible_population_context (
-    site_id, coordinate_assertion_id, snapshot_id, access_mode, threshold_minutes
-  );
-CREATE INDEX IF NOT EXISTS site_settlement_context_site_coordinate_idx
-  ON ooh_data.site_settlement_context (site_id, coordinate_assertion_id, snapshot_id, radius_m);
-
--- Once a coordinate assertion has produced governed context, its evidence must
--- remain stable. Governance state may still move (for example approved ->
--- revoked, with renderer eligibility removed), but changing the actual point or
--- provenance requires a new assertion ID.
+-- Once governed context references a coordinate assertion, the spatial evidence
+-- itself is immutable. Governance state may still move (for example approved ->
+-- revoked with renderer eligibility removed). Corrected evidence requires a new
+-- assertion ID so historical context keeps the exact point/provenance it used.
 CREATE OR REPLACE FUNCTION ooh_data.guard_referenced_coordinate_evidence_mutation()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -60,9 +49,9 @@ BEFORE UPDATE ON ooh_data.site_coordinate_assertions
 FOR EACH ROW
 EXECUTE FUNCTION ooh_data.guard_referenced_coordinate_evidence_mutation();
 
--- Tighten an invariant already respected by the settlement derivation: primary
--- settlement attributes describe a containing extent and therefore cannot be
--- populated when the site is outside every settlement.
+-- Tighten an invariant already respected by E2B2 derivation: primary settlement
+-- attributes describe a containing extent and cannot be populated when a site
+-- is outside every settlement extent.
 ALTER TABLE ooh_data.site_settlement_context
   DROP CONSTRAINT IF EXISTS site_settlement_primary_containment_alignment_check;
 ALTER TABLE ooh_data.site_settlement_context
@@ -194,10 +183,10 @@ JOIN ooh_data.site_settlement_context c
   USING (site_id, coordinate_assertion_id, snapshot_id)
 JOIN ooh_data.site_settlement_context_snapshots s USING (snapshot_id);
 
--- Unified read surface. Family heads are deliberately independent: each family
--- keeps its own snapshot/source lineage instead of being collapsed into a fake
--- cross-source snapshot or score. Revoked historical assertions remain visible
--- only when they have derived history, and are explicitly marked ineligible.
+-- Unified read surface. Family heads are independent and keep exact lineage;
+-- they are never collapsed into a fake cross-source snapshot or universal score.
+-- Revoked historical coordinate assertions remain auditable but are explicitly
+-- marked ineligible for current context interpretation.
 CREATE OR REPLACE VIEW ooh_data.site_context_latest AS
 WITH
 vector_head AS (
@@ -403,10 +392,13 @@ SELECT
 
   vh.snapshot_id AS vector_snapshot_id,
   CASE WHEN vs.snapshot_id IS NULL THEN NULL ELSE jsonb_build_object(
+    'snapshotId', vs.snapshot_id,
     'algorithmVersion', vs.algorithm_version,
     'inputFingerprint', vs.input_fingerprint,
-    'places', jsonb_build_object('sourceId', vs.places_source_id, 'artifactSha256', vs.places_artifact_sha256),
-    'roads', jsonb_build_object('sourceId', vs.roads_source_id, 'artifactSha256', vs.roads_artifact_sha256),
+    'sourceArtifacts', jsonb_build_array(
+      jsonb_build_object('sourceId', vs.places_source_id, 'artifactSha256', vs.places_artifact_sha256),
+      jsonb_build_object('sourceId', vs.roads_source_id, 'artifactSha256', vs.roads_artifact_sha256)
+    ),
     'radiiM', to_jsonb(vs.radii_m),
     'snapshotCreatedAt', vs.created_at
   ) END AS vector_provenance,
@@ -420,11 +412,14 @@ SELECT
 
   rh.snapshot_id AS raster_snapshot_id,
   CASE WHEN rs.snapshot_id IS NULL THEN NULL ELSE jsonb_build_object(
+    'snapshotId', rs.snapshot_id,
     'algorithmVersion', rs.algorithm_version,
     'inputFingerprint', rs.input_fingerprint,
-    'population', jsonb_build_object('sourceId', rs.population_source_id, 'artifactSha256', rs.population_artifact_sha256),
-    'walking', jsonb_build_object('sourceId', rs.walking_source_id, 'artifactSha256', rs.walking_artifact_sha256),
-    'mixed', jsonb_build_object('sourceId', rs.mixed_source_id, 'artifactSha256', rs.mixed_artifact_sha256),
+    'sourceArtifacts', jsonb_build_array(
+      jsonb_build_object('sourceId', rs.population_source_id, 'artifactSha256', rs.population_artifact_sha256),
+      jsonb_build_object('sourceId', rs.walking_source_id, 'artifactSha256', rs.walking_artifact_sha256),
+      jsonb_build_object('sourceId', rs.mixed_source_id, 'artifactSha256', rs.mixed_artifact_sha256)
+    ),
     'radiiM', to_jsonb(rs.radii_m),
     'thresholdsMinutes', to_jsonb(rs.thresholds_minutes),
     'maxSearchRadiusM', rs.max_search_radius_m,
@@ -441,9 +436,12 @@ SELECT
 
   sh.snapshot_id AS settlement_snapshot_id,
   CASE WHEN ss.snapshot_id IS NULL THEN NULL ELSE jsonb_build_object(
+    'snapshotId', ss.snapshot_id,
     'algorithmVersion', ss.algorithm_version,
     'inputFingerprint', ss.input_fingerprint,
-    'settlements', jsonb_build_object('sourceId', ss.settlement_source_id, 'artifactSha256', ss.settlement_artifact_sha256),
+    'sourceArtifacts', jsonb_build_array(
+      jsonb_build_object('sourceId', ss.settlement_source_id, 'artifactSha256', ss.settlement_artifact_sha256)
+    ),
     'fieldMapFingerprint', ss.field_map_fingerprint,
     'radiiM', to_jsonb(ss.radii_m),
     'snapshotCreatedAt', ss.created_at
