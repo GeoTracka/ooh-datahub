@@ -1,10 +1,10 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { loadMigrations } from "./data/migrations";
 import { runPsql } from "./data/psql";
-import { sqlLiteral } from "./data/persistenceFormat";
 import { migrateDatabase } from "./db-migrate";
 
 const configuredDatabaseUrl = process.env.DATABASE_URL?.trim();
@@ -29,6 +29,17 @@ function runCommand(command: string, args: string[]): Promise<{ stdout: string; 
       else reject(new Error(`COMMAND_FAILED:${command}:${code}:${stderr.trim()}`));
     });
   });
+}
+
+async function expectCommandFailure(command: string, args: string[], pattern: string): Promise<void> {
+  try {
+    await runCommand(command, args);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes(pattern)) throw error;
+    return;
+  }
+  throw new Error(`EXPECTED_COMMAND_FAILURE:${pattern}`);
 }
 
 async function scalar(sql: string): Promise<number> {
@@ -111,6 +122,11 @@ async function main(): Promise<void> {
     "102,DGAA,large_airport,Kotoka International Airport,5.6052,-0.1668,205,AF,GH,GH-AA,Accra,yes,DGAA,ACC,,,,",
   ].join("\n") + "\n", "utf8");
 
+  const rawOsmPath = join(directory, "nigeria-latest.osm.pbf");
+  const rawOsmBytes = Buffer.from("fixture-pinned-geofabrik-pbf", "utf8");
+  await writeFile(rawOsmPath, rawOsmBytes);
+  const rawOsmSha = createHash("sha256").update(rawOsmBytes).digest("hex");
+
   const osmPath = join(directory, "nigeria-advertising.geojsonseq");
   const osmFeature = {
     type: "Feature",
@@ -129,14 +145,14 @@ async function main(): Promise<void> {
     properties: { "@type": "node", "@id": 5002, amenity: "bank" },
     geometry: { type: "Point", coordinates: [3.35, 6.60] },
   };
-  await writeFile(
-    osmPath,
-    `${JSON.stringify(osmFeature)}\n${JSON.stringify(ignoredFeature)}\n`,
-    "utf8",
-  );
+  const osmText = `${JSON.stringify(osmFeature)}\n${JSON.stringify(ignoredFeature)}\n`;
+  await writeFile(osmPath, osmText, "utf8");
+  const osmDerivedSha = createHash("sha256").update(osmText, "utf8").digest("hex");
 
   const node = process.execPath;
   const importScript = ["--import", "tsx", "scripts/import-open-enrichment.ts"];
+  const registerScript = ["--import", "tsx", "scripts/register-open-artifact.ts"];
+  const linkScript = ["--import", "tsx", "scripts/link-enrichment-artifact-derivation.ts"];
   const airportArgs = [
     ...importScript,
     "--source=ourairports-airports",
@@ -146,25 +162,61 @@ async function main(): Promise<void> {
     "--storage-uri=file:///tmp/ourairports/airports.csv",
     "--retrieved-at=2026-08-10T12:00:00Z",
   ];
+  const rawOsmRegisterArgs = [
+    ...registerScript,
+    "--source=osm-geofabrik-nigeria",
+    `--input=${rawOsmPath}`,
+    "--release=fixture-2026-08-10",
+    "--access-uri=https://example.test/geofabrik/nigeria-latest.osm.pbf",
+    "--storage-uri=file:///tmp/geofabrik/nigeria-latest.osm.pbf",
+    "--retrieved-at=2026-08-10T12:00:00Z",
+    "--content-type=application/vnd.openstreetmap.data+pbf",
+    "--artifact-kind=raw_pbf",
+  ];
   const osmArgs = [
     ...importScript,
     "--source=osm-geofabrik-nigeria",
     `--input=${osmPath}`,
     "--release=fixture-2026-08-10",
-    "--access-uri=https://example.test/geofabrik/nigeria.osm.pbf",
+    "--access-uri=file:///tmp/geofabrik/nigeria-advertising.geojsonseq",
     "--storage-uri=file:///tmp/geofabrik/nigeria-advertising.geojsonseq",
     "--retrieved-at=2026-08-10T12:00:00Z",
   ];
 
   await runCommand(node, airportArgs);
   await runCommand(node, airportArgs);
+  await runCommand(node, rawOsmRegisterArgs);
+
+  // The derived file is registered by the failed import, but the database must
+  // reject its candidate rows until exact raw-PBF lineage is attached.
+  await expectCommandFailure(node, osmArgs, "OSM_ADVERTISING_DERIVATION_LINEAGE_REQUIRED");
+  await runCommand(node, [
+    ...linkScript,
+    "--child-source=osm-geofabrik-nigeria",
+    `--child-sha=${osmDerivedSha}`,
+    "--parent-source=osm-geofabrik-nigeria",
+    `--parent-sha=${rawOsmSha}`,
+    "--transform-id=osmium-advertising-reduction",
+    "--transform-version=v1",
+  ]);
   await runCommand(node, osmArgs);
   await runCommand(node, osmArgs);
 
   const artifactCount = await scalar("SELECT count(*) FROM ooh_data.enrichment_artifacts;");
-  if (artifactCount !== 2) throw new Error(`ENRICHMENT_ARTIFACT_IDEMPOTENCY_FAILURE:${artifactCount}`);
+  if (artifactCount !== 3) throw new Error(`ENRICHMENT_ARTIFACT_IDEMPOTENCY_FAILURE:${artifactCount}`);
   const succeededRuns = await scalar("SELECT count(*) FROM ooh_data.enrichment_runs WHERE status='succeeded';");
   if (succeededRuns !== 4) throw new Error(`ENRICHMENT_RUN_AUDIT_FAILURE:${succeededRuns}`);
+  const failedRuns = await scalar("SELECT count(*) FROM ooh_data.enrichment_runs WHERE status='failed';");
+  if (failedRuns !== 1) throw new Error(`ENRICHMENT_FAILED_RUN_AUDIT_FAILURE:${failedRuns}`);
+
+  const lineage = await text(`
+SELECT transform_id || ':' || transform_version
+FROM ooh_data.open_enrichment_artifact_lineage
+WHERE child_artifact_sha256='${osmDerivedSha}' AND parent_artifact_sha256='${rawOsmSha}';
+`);
+  if (lineage !== "osmium-advertising-reduction:v1") {
+    throw new Error(`OSM_DERIVATION_LINEAGE_FAILURE:${lineage}`);
+  }
 
   const airportCount = await scalar("SELECT count(*) FROM ooh_data.open_airport_references;");
   if (airportCount !== 1) throw new Error(`NIGERIA_AIRPORT_FILTER_FAILURE:${airportCount}`);
@@ -207,8 +259,11 @@ WHERE osm_type='node' AND osm_id='5001' AND site_id='site:fixture';
   if (ownerAssertions !== 0) throw new Error(`OPEN_DATA_INFERRED_MEDIA_OWNER:${ownerAssertions}`);
 
   const attribution = await text(`
-SELECT string_agg(source_id || ':' || license_id || ':' || commercial_use_status, ',' ORDER BY source_id)
-FROM ooh_data.open_enrichment_attribution;
+SELECT string_agg(source_license, ',' ORDER BY source_license)
+FROM (
+  SELECT DISTINCT source_id || ':' || license_id || ':' || commercial_use_status AS source_license
+  FROM ooh_data.open_enrichment_attribution
+) x;
 `);
   if (attribution !== "osm-geofabrik-nigeria:ODbL-1.0:permitted,ourairports-airports:Public-Domain:permitted") {
     throw new Error(`ENRICHMENT_ATTRIBUTION_FAILURE:${attribution}`);
@@ -229,6 +284,7 @@ SELECT
     migrationCount: expectedVersions.length,
     artifacts: artifactCount,
     succeededRuns,
+    failedRuns,
     airportReferences: airportCount,
     osmAdvertisingCandidates: osmCount,
     siteCandidateDistanceM: matchDistance,
