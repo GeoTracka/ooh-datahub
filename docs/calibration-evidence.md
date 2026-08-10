@@ -11,10 +11,10 @@ Evidence-C eligibility requires all of the following:
 1. a structurally valid `calibration-evidence-package-v1`;
 2. locally checksum-verified evidence artifacts;
 3. an exact binding to one immutable T4 `context_feature_snapshots` row, including source and resolution fingerprints;
-4. separate held-out movement, exposure-geometry, target/panel and downstream-validation evidence;
-5. independent-date movement evidence when the calibration report claims replication;
-6. no source artifact revision reused as both training and held-out/independent validation;
-7. a passing result from the existing `evaluateMovementCalibration()` threshold authority;
+4. explicit fitting movement evidence plus separate held-out movement, exposure-geometry, target/panel and downstream-validation evidence;
+5. independent-date movement evidence whose period begins after the declared model/threshold freeze;
+6. no source artifact revision reused across fitting, held-out or independent-date roles;
+7. an exact `movement-calibration-gate-v1` binding and a passing result from the existing `evaluateMovementCalibration()` threshold authority;
 8. `evidenceEnvironment='production_reviewed'`.
 
 `test_fixture` packages can exercise the exact same contract but are always `TEST_FIXTURE_NOT_PROMOTABLE`.
@@ -24,12 +24,15 @@ Evidence-C eligibility requires all of the following:
 The package contains:
 
 - package/model/replay versions;
+- `movementCalibrationGateVersion` and `modelFrozenAt` so an independent-date replication cannot be silently re-labelled from pre-freeze observations;
 - geography and applicability scope;
 - exact T4 context snapshot ID, feature/resolver versions and source/resolution fingerprints;
 - evidence artifacts with immutable SHA-256, kind, usage role, collection period, provenance URI, retained URI, license, rights-review reference and explicit commercial-use permission;
 - the movement calibration report consumed by the existing calibration gate.
 
 Artifact array order does not affect the package digest. Local file paths are deliberately **not** part of the package: the same retained evidence must have the same digest regardless of the machine on which it is verified.
+
+T4 snapshot and derived feature rows are also made immutable. Corrections therefore require a new feature version/snapshot instead of changing the provenance anchor of an already registered calibration package.
 
 ## Offline checksum verification
 
@@ -39,9 +42,11 @@ Create a local manifest envelope:
 {
   "package": {
     "packageVersion": "calibration-evidence-package-v1",
+    "movementCalibrationGateVersion": "movement-calibration-gate-v1",
     "evidenceEnvironment": "test_fixture",
     "modelVersion": "movement-model-v2",
     "replayVersion": "movement-replay-v2",
+    "modelFrozenAt": "2026-01-31T23:59:59Z",
     "geographyId": "nga-lagos",
     "applicabilityScope": "fixture only",
     "contextBinding": {
@@ -84,10 +89,10 @@ Registration:
 - refuses package registration when local artifact bytes do not match their declared hashes;
 - checks the T4 snapshot binding in PostgreSQL;
 - inserts package/artifact rows idempotently by package digest;
-- records every accepted or rejected attempt in `calibration_promotion_runs` with separate package, artifact, promotion-policy and numeric-calibration reason codes;
-- makes package, artifact and decision history immutable.
+- records every accepted or rejected attempt in `calibration_promotion_runs` with the exact movement-gate version and separate package, artifact, promotion-policy and numeric-calibration reason codes;
+- makes T4 snapshot/features, package, artifact and decision history immutable.
 
-A revised artifact changes the package digest and therefore creates a new evidence package rather than editing history.
+A revised artifact, model freeze, rights review or other governed package field changes the package digest and therefore creates a new evidence package rather than editing history.
 
 ## Evidence boundary
 
