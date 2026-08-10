@@ -6,9 +6,6 @@ DECLARE
   product_role text;
   product_version text;
   artifact_field_map_fingerprint text;
-  coverage_bounds jsonb;
-  coverage_basis text;
-  coverage_reference text;
   license_id_value text;
   commercial_status text;
   license_review jsonb;
@@ -17,15 +14,11 @@ BEGIN
     a.metadata->>'grid3ProductRole',
     a.metadata->>'productVersion',
     a.metadata->>'fieldMapFingerprint',
-    a.metadata->'coverageBoundsWgs84',
-    a.metadata->>'coverageBasis',
-    a.metadata->>'coverageReference',
     a.license_id,
     a.commercial_use_status,
     a.metadata->'licenseReview'
   INTO
     product_role, product_version, artifact_field_map_fingerprint,
-    coverage_bounds, coverage_basis, coverage_reference,
     license_id_value, commercial_status, license_review
   FROM ooh_data.enrichment_artifacts a
   WHERE a.source_id=NEW.settlement_source_id
@@ -38,12 +31,6 @@ BEGIN
   IF artifact_field_map_fingerprint IS NULL
      OR artifact_field_map_fingerprint <> NEW.field_map_fingerprint THEN
     RAISE EXCEPTION 'GRID3_SETTLEMENT_FIELD_MAP_FINGERPRINT_MISMATCH';
-  END IF;
-  IF jsonb_typeof(coverage_bounds) <> 'array'
-     OR jsonb_array_length(coverage_bounds) <> 4
-     OR coverage_basis IS DISTINCT FROM 'declared_coverage_bbox'
-     OR coverage_reference IS NULL OR coverage_reference = '' THEN
-    RAISE EXCEPTION 'GRID3_SETTLEMENT_DECLARED_COVERAGE_REQUIRED';
   END IF;
   IF commercial_status IS DISTINCT FROM 'permitted'
      OR license_id_value IS NULL
@@ -73,18 +60,30 @@ ALTER TABLE ooh_data.site_settlement_context
   CHECK (settled_area_m2 <= buffer_area_m2 * 1.00000001);
 
 ALTER TABLE ooh_data.site_settlement_context
-  DROP CONSTRAINT IF EXISTS site_settlement_largest_area_check;
+  DROP CONSTRAINT IF EXISTS site_settlement_largest_component_area_check;
 ALTER TABLE ooh_data.site_settlement_context
-  ADD CONSTRAINT site_settlement_largest_area_check
-  CHECK (largest_intersection_area_m2 <= settled_area_m2 * 1.00000001);
+  ADD CONSTRAINT site_settlement_largest_component_area_check
+  CHECK (largest_component_area_m2 <= settled_area_m2 * 1.00000001);
 
 ALTER TABLE ooh_data.site_settlement_context
-  DROP CONSTRAINT IF EXISTS site_settlement_patch_area_alignment_check;
+  DROP CONSTRAINT IF EXISTS site_settlement_component_area_alignment_check;
 ALTER TABLE ooh_data.site_settlement_context
-  ADD CONSTRAINT site_settlement_patch_area_alignment_check
+  ADD CONSTRAINT site_settlement_component_area_alignment_check
   CHECK (
-    (settled_area_m2 = 0 AND intersecting_settlement_count = 0 AND largest_intersection_area_m2 = 0)
-    OR (settled_area_m2 > 0 AND intersecting_settlement_count > 0 AND largest_intersection_area_m2 > 0)
+    (
+      settled_area_m2 = 0
+      AND intersecting_source_extent_count = 0
+      AND settled_component_count = 0
+      AND largest_component_area_m2 = 0
+      AND largest_component_share IS NULL
+    )
+    OR (
+      settled_area_m2 > 0
+      AND intersecting_source_extent_count > 0
+      AND settled_component_count > 0
+      AND largest_component_area_m2 > 0
+      AND largest_component_share IS NOT NULL
+    )
   );
 
 ALTER TABLE ooh_data.site_settlement_context
