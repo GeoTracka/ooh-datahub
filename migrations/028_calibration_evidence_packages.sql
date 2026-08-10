@@ -57,15 +57,22 @@ CREATE TABLE IF NOT EXISTS ooh_data.calibration_promotion_runs (
   evidence_environment text CHECK (evidence_environment IS NULL OR evidence_environment IN ('production_reviewed', 'test_fixture')),
   validation_status text NOT NULL CHECK (validation_status IN ('accepted', 'rejected')),
   package_failure_codes text[] NOT NULL DEFAULT ARRAY[]::text[],
+  promotion_failure_codes text[] NOT NULL DEFAULT ARRAY[]::text[],
   calibration_failure_codes text[] NOT NULL DEFAULT ARRAY[]::text[],
+  artifact_failure_codes text[] NOT NULL DEFAULT ARRAY[]::text[],
   eligible_for_evidence_c boolean NOT NULL DEFAULT false,
   submitted_manifest jsonb NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (NOT eligible_for_evidence_c OR validation_status = 'accepted'),
   CHECK (NOT eligible_for_evidence_c OR package_digest IS NOT NULL),
   CHECK (NOT eligible_for_evidence_c OR evidence_environment = 'production_reviewed'),
+  CHECK (NOT eligible_for_evidence_c OR cardinality(promotion_failure_codes) = 0),
+  CHECK (NOT eligible_for_evidence_c OR cardinality(calibration_failure_codes) = 0),
+  CHECK (NOT eligible_for_evidence_c OR cardinality(artifact_failure_codes) = 0),
   CHECK (
-    (validation_status = 'accepted' AND cardinality(package_failure_codes) = 0)
+    (validation_status = 'accepted'
+      AND cardinality(package_failure_codes) = 0
+      AND cardinality(artifact_failure_codes) = 0)
     OR validation_status = 'rejected'
   )
 );
