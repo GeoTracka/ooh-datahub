@@ -1,5 +1,5 @@
 export const SITE_CONTEXT_READ_MODEL_VERSION = "site-context-read-model-v1" as const;
-export const SITE_CONTEXT_COMPARISON_VERSION = "site-context-comparison-v1" as const;
+export const SITE_CONTEXT_COMPARISON_VERSION = "site-context-comparison-v2" as const;
 export const SITE_CONTEXT_SIMILAR_RELATIVE_TOLERANCE = 0.05;
 
 export type ContextCoverage = "complete" | "partial_source_coverage";
@@ -110,25 +110,24 @@ function commonByRadius<T extends { radiusM: number }>(
   left: readonly T[],
   right: readonly T[],
   usable: (value: T) => boolean,
-): [T, T] | null {
+): Array<readonly [T, T]> {
   const rightByRadius = new Map(right.filter(usable).map((item) => [item.radiusM, item]));
-  const matches = left
+  return left
     .filter(usable)
     .map((item) => [item, rightByRadius.get(item.radiusM)] as const)
     .filter((pair): pair is readonly [T, T] => Boolean(pair[1]))
-    .sort((a, b) => b[0].radiusM - a[0].radiusM);
-  return matches[0] ? [matches[0][0], matches[0][1]] : null;
+    .sort((a, b) => a[0].radiusM - b[0].radiusM);
 }
 
 function commonAccessibility(
   left: readonly AccessibilityContext[],
   right: readonly AccessibilityContext[],
-): [AccessibilityContext, AccessibilityContext] | null {
+): Array<readonly [AccessibilityContext, AccessibilityContext]> {
   const usable = (item: AccessibilityContext) => item.coverageStatus === "complete";
   const rightByKey = new Map(
     right.filter(usable).map((item) => [`${item.accessMode}:${item.thresholdMinutes}`, item]),
   );
-  const matches = left
+  return left
     .filter(usable)
     .map((item) => [item, rightByKey.get(`${item.accessMode}:${item.thresholdMinutes}`)] as const)
     .filter((pair): pair is readonly [AccessibilityContext, AccessibilityContext] => Boolean(pair[1]))
@@ -136,7 +135,6 @@ function commonAccessibility(
       if (a[0].accessMode !== b[0].accessMode) return a[0].accessMode === "walking" ? -1 : 1;
       return a[0].thresholdMinutes - b[0].thresholdMinutes;
     });
-  return matches[0] ? [matches[0][0], matches[0][1]] : null;
 }
 
 function higherContrast(
@@ -218,16 +216,22 @@ export function compareSiteContext(
 
   const contrasts: SiteContextContrast[] = [];
   if (left.coordinateCurrentlyEligible && right.coordinateCurrentlyEligible) {
-    const vector = commonByRadius(
+    for (const vector of commonByRadius(
       left.vectorContext,
       right.vectorContext,
       (item) => item.coverageStatus === "full",
-    );
-    if (vector) {
+    )) {
+      const basis = `${vector[0].radiusM} m radius`;
       if (vector[0].placeCount !== null && vector[1].placeCount !== null) {
         contrasts.push(higherContrast(
-          "vector", "destination_presence", `${vector[0].radiusM} m radius`,
+          "vector", "destination_presence", basis,
           vector[0].placeCount, vector[1].placeCount, "destination presence",
+        ));
+      }
+      if (vector[0].taxonomyEntropy !== null && vector[1].taxonomyEntropy !== null) {
+        contrasts.push(higherContrast(
+          "vector", "destination_diversity", basis,
+          vector[0].taxonomyEntropy, vector[1].taxonomyEntropy, "destination diversity",
         ));
       }
       if (vector[0].nearestMajorRoadM !== null && vector[1].nearestMajorRoadM !== null) {
@@ -236,44 +240,56 @@ export function compareSiteContext(
           vector[0].nearestMajorRoadM, vector[1].nearestMajorRoadM, "a major road",
         ));
       }
+      if (vector[0].majorRoadDensityKmPerKm2 !== null && vector[1].majorRoadDensityKmPerKm2 !== null) {
+        contrasts.push(higherContrast(
+          "vector", "major_road_density_km_per_km2", basis,
+          vector[0].majorRoadDensityKmPerKm2,
+          vector[1].majorRoadDensityKmPerKm2,
+          "major-road density",
+        ));
+      }
     }
 
-    const population = commonByRadius(
+    for (const population of commonByRadius(
       left.populationRadiusContext,
       right.populationRadiusContext,
       (item) => item.coverageStatus === "complete",
-    );
-    if (population) {
+    )) {
       contrasts.push(higherContrast(
         "raster", "resident_population", `${population[0].radiusM} m radius`,
         population[0].populationEstimate, population[1].populationEstimate, "resident population context",
       ));
     }
 
-    const access = commonAccessibility(left.accessibilityContext, right.accessibilityContext);
-    if (access) {
+    for (const access of commonAccessibility(left.accessibilityContext, right.accessibilityContext)) {
       contrasts.push(higherContrast(
         "raster", "accessible_population", `${access[0].accessMode} ${access[0].thresholdMinutes}-minute threshold`,
         access[0].populationEstimate, access[1].populationEstimate, "accessible resident-population context",
       ));
     }
 
-    const settlement = commonByRadius(
+    for (const settlement of commonByRadius(
       left.settlementContext,
       right.settlementContext,
       (item) => item.coverageStatus === "complete",
-    );
-    if (settlement) {
+    )) {
+      const basis = `${settlement[0].radiusM} m radius`;
       contrasts.push(higherContrast(
-        "settlement", "settled_area_share", `${settlement[0].radiusM} m radius`,
+        "settlement", "settled_area_share", basis,
         settlement[0].settledAreaShare, settlement[1].settledAreaShare, "settled-area share",
       ));
       if (settlement[0].coreDepthM !== null && settlement[1].coreDepthM !== null) {
         contrasts.push(higherContrast(
-          "settlement", "settlement_core_depth", `${settlement[0].radiusM} m radius`,
+          "settlement", "settlement_core_depth", basis,
           settlement[0].coreDepthM, settlement[1].coreDepthM, "settlement core depth",
         ));
       }
+      contrasts.push(higherContrast(
+        "settlement", "settlement_component_density", basis,
+        settlement[0].componentDensityPerSqkm,
+        settlement[1].componentDensityPerSqkm,
+        "settlement connected-component density",
+      ));
     }
   }
 

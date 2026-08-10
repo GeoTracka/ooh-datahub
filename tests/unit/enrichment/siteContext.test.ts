@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SITE_CONTEXT_COMPARISON_VERSION,
   SITE_CONTEXT_READ_MODEL_VERSION,
   compareSiteContext,
   type SiteContextReadModel,
@@ -99,10 +100,13 @@ describe("site context comparison", () => {
       }],
     }), context("right"));
 
+    expect(result.version).toBe(SITE_CONTEXT_COMPARISON_VERSION);
     expect(result.complete).toBe(true);
     expect(result.contrasts.find((item) => item.metric === "destination_presence")?.direction).toBe("left_higher");
+    expect(result.contrasts.find((item) => item.metric === "destination_diversity")?.direction).toBe("left_higher");
     expect(result.contrasts.find((item) => item.metric === "nearest_major_road_distance_m")?.direction).toBe("left_lower");
     expect(result.contrasts.find((item) => item.metric === "nearest_major_road_distance_m")?.text).toContain("Left site is closer");
+    expect(result.contrasts.find((item) => item.metric === "major_road_density_km_per_km2")?.direction).toBe("left_higher");
     expect(result.contrasts.find((item) => item.metric === "resident_population")?.direction).toBe("similar");
     expect(result.contrasts.find((item) => item.metric === "settled_area_share")?.direction).toBe("similar");
   });
@@ -137,7 +141,125 @@ describe("site context comparison", () => {
 
     expect(result.contrasts.find((item) => item.metric === "settled_area_share")?.direction).toBe("left_higher");
     expect(result.contrasts.find((item) => item.metric === "settlement_core_depth")?.direction).toBe("left_higher");
+    expect(result.contrasts.find((item) => item.metric === "settlement_component_density")?.direction).toBe("right_higher");
     expect(result.contrasts.find((item) => item.metric === "resident_population")?.direction).toBe("similar");
+  });
+
+  it("compares every mutually complete radius and accessibility threshold instead of hiding narrower differences", () => {
+    const left = context("left", {
+      vectorContext: [
+        {
+          radiusM: 250,
+          placesCovered: true,
+          roadsCovered: true,
+          coverageStatus: "full",
+          placeCount: 30,
+          taxonomyEntropy: 1.5,
+          nearestMajorRoadM: 30,
+          majorRoadDensityKmPerKm2: 8,
+        },
+        {
+          radiusM: 1000,
+          placesCovered: true,
+          roadsCovered: true,
+          coverageStatus: "full",
+          placeCount: 100,
+          taxonomyEntropy: 1.2,
+          nearestMajorRoadM: 90,
+          majorRoadDensityKmPerKm2: 5,
+        },
+      ],
+      populationRadiusContext: [
+        { radiusM: 250, populationEstimate: 4_000, coverageStatus: "complete" },
+        { radiusM: 1000, populationEstimate: 10_000, coverageStatus: "complete" },
+      ],
+      accessibilityContext: [
+        { accessMode: "walking", thresholdMinutes: 5, populationEstimate: 2_000, coverageStatus: "complete" },
+        { accessMode: "walking", thresholdMinutes: 15, populationEstimate: 8_000, coverageStatus: "complete" },
+      ],
+      settlementContext: [
+        {
+          radiusM: 250,
+          coverageStatus: "complete",
+          insideSettlement: true,
+          coreDepthM: 260,
+          settledAreaShare: 0.9,
+          componentDensityPerSqkm: 2,
+        },
+        {
+          radiusM: 1000,
+          coverageStatus: "complete",
+          insideSettlement: true,
+          coreDepthM: 180,
+          settledAreaShare: 0.62,
+          componentDensityPerSqkm: 4,
+        },
+      ],
+    });
+    const right = context("right", {
+      vectorContext: [
+        {
+          radiusM: 250,
+          placesCovered: true,
+          roadsCovered: true,
+          coverageStatus: "full",
+          placeCount: 10,
+          taxonomyEntropy: 0.8,
+          nearestMajorRoadM: 120,
+          majorRoadDensityKmPerKm2: 2,
+        },
+        {
+          radiusM: 1000,
+          placesCovered: true,
+          roadsCovered: true,
+          coverageStatus: "full",
+          placeCount: 100,
+          taxonomyEntropy: 1.2,
+          nearestMajorRoadM: 90,
+          majorRoadDensityKmPerKm2: 5,
+        },
+      ],
+      populationRadiusContext: [
+        { radiusM: 250, populationEstimate: 2_000, coverageStatus: "complete" },
+        { radiusM: 1000, populationEstimate: 10_000, coverageStatus: "complete" },
+      ],
+      accessibilityContext: [
+        { accessMode: "walking", thresholdMinutes: 5, populationEstimate: 2_000, coverageStatus: "complete" },
+        { accessMode: "walking", thresholdMinutes: 15, populationEstimate: 5_000, coverageStatus: "complete" },
+      ],
+      settlementContext: [
+        {
+          radiusM: 250,
+          coverageStatus: "complete",
+          insideSettlement: true,
+          coreDepthM: 120,
+          settledAreaShare: 0.5,
+          componentDensityPerSqkm: 6,
+        },
+        {
+          radiusM: 1000,
+          coverageStatus: "complete",
+          insideSettlement: true,
+          coreDepthM: 180,
+          settledAreaShare: 0.62,
+          componentDensityPerSqkm: 4,
+        },
+      ],
+    });
+
+    const result = compareSiteContext(left, right);
+    const contrast = (metric: string, basis: string) => result.contrasts.find(
+      (item) => item.metric === metric && item.basis === basis,
+    );
+
+    expect(contrast("destination_presence", "250 m radius")?.direction).toBe("left_higher");
+    expect(contrast("destination_presence", "1000 m radius")?.direction).toBe("similar");
+    expect(contrast("resident_population", "250 m radius")?.direction).toBe("left_higher");
+    expect(contrast("resident_population", "1000 m radius")?.direction).toBe("similar");
+    expect(contrast("accessible_population", "walking 5-minute threshold")?.direction).toBe("similar");
+    expect(contrast("accessible_population", "walking 15-minute threshold")?.direction).toBe("left_higher");
+    expect(contrast("settled_area_share", "250 m radius")?.direction).toBe("left_higher");
+    expect(contrast("settled_area_share", "1000 m radius")?.direction).toBe("similar");
   });
 
   it("does not collapse disagreeing families into a universal score", () => {

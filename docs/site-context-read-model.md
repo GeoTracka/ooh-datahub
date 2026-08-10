@@ -41,9 +41,17 @@ This preserves evidence history without allowing revoked coordinates to continue
 
 The comparison layer deliberately has **no winner, score, rank bonus or recommendation field**. It can say that one site has higher resident-population context while another has more destination presence, for example, without resolving that disagreement into a universal score.
 
-The current “similar” wording uses an explicit 5% relative tolerance (`site-context-comparison-v1`). That threshold is descriptive only; it is not a calibrated performance threshold.
+`site-context-comparison-v2` evaluates **every mutually complete basis shared by the two coordinates**, rather than selecting one representative radius/threshold. This matters because two sites can be similar at 1000 m but materially different at 250 m, or similar at a 5-minute walking threshold but different at 15 minutes. The comparison therefore retains radius/threshold identity on each contrast and currently surfaces:
 
-If a coordinate is not currently eligible, or a family is not derived, the comparison is marked incomplete. Partial-coverage rows are not used to manufacture a favourable contrast.
+- destination presence and destination diversity by vector radius;
+- nearest-major-road distance and major-road density by vector radius;
+- resident population by raster radius;
+- walking and mixed accessible resident population at every shared complete threshold;
+- settled-area share, settlement core depth and connected-component density by settlement radius.
+
+The current “similar” wording uses an explicit 5% relative tolerance. That threshold is descriptive only; it is not a calibrated performance threshold.
+
+If a coordinate is not currently eligible, or a family is not derived, the comparison is marked incomplete. Partial-coverage rows are not used to manufacture a favourable contrast; complete rows from another radius/family may still be described while the overall comparison remains explicitly incomplete.
 
 ## Query pattern
 
