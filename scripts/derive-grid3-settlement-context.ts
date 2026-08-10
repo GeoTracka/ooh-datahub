@@ -67,9 +67,6 @@ DO $preflight$
 DECLARE
   role_value text;
   version_value text;
-  coverage_bounds jsonb;
-  coverage_basis text;
-  coverage_reference text;
   field_map_fp text;
   commercial_status text;
   license_value text;
@@ -77,15 +74,11 @@ BEGIN
   SELECT
     a.metadata->>'grid3ProductRole',
     a.metadata->>'productVersion',
-    a.metadata->'coverageBoundsWgs84',
-    a.metadata->>'coverageBasis',
-    a.metadata->>'coverageReference',
     a.metadata->>'fieldMapFingerprint',
     a.commercial_use_status,
     a.license_id
   INTO
-    role_value, version_value, coverage_bounds, coverage_basis, coverage_reference,
-    field_map_fp, commercial_status, license_value
+    role_value, version_value, field_map_fp, commercial_status, license_value
   FROM ooh_data.enrichment_artifacts a
   WHERE a.source_id=${sqlLiteral(GRID3_SETTLEMENT_SOURCE_ID)}
     AND a.artifact_sha256=${sqlLiteral(settlementSha)};
@@ -93,16 +86,19 @@ BEGIN
   IF role_value IS DISTINCT FROM 'settlement_extents' OR version_value IS DISTINCT FROM 'v4.1' THEN
     RAISE EXCEPTION 'GRID3_SETTLEMENT_ARTIFACT_NOT_READY';
   END IF;
-  IF jsonb_typeof(coverage_bounds) <> 'array' OR jsonb_array_length(coverage_bounds) <> 4
-     OR coverage_basis IS DISTINCT FROM 'declared_coverage_bbox'
-     OR coverage_reference IS NULL OR coverage_reference = '' THEN
-    RAISE EXCEPTION 'GRID3_SETTLEMENT_DECLARED_COVERAGE_REQUIRED';
-  END IF;
   IF field_map_fp IS NULL OR field_map_fp !~ '^[0-9a-f]{64}$' THEN
     RAISE EXCEPTION 'GRID3_SETTLEMENT_FIELD_MAP_FINGERPRINT_REQUIRED';
   END IF;
   IF commercial_status IS DISTINCT FROM 'permitted' OR license_value IS NULL OR license_value = '' THEN
     RAISE EXCEPTION 'GRID3_SETTLEMENT_COMMERCIAL_LICENSE_REQUIRED';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM ooh_data.grid3_settlement_coverage c
+    WHERE c.source_id=${sqlLiteral(GRID3_SETTLEMENT_SOURCE_ID)}
+      AND c.artifact_sha256=${sqlLiteral(settlementSha)}
+      AND c.decision_use='context_only'
+  ) THEN
+    RAISE EXCEPTION 'GRID3_SETTLEMENT_EXACT_COVERAGE_REQUIRED';
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM ooh_data.enrichment_runs r
@@ -177,10 +173,18 @@ manifest AS (
         'commercialUseStatus', a.commercial_use_status,
         'metadata', a.metadata
       ),
+      'coverage', jsonb_build_object(
+        'geometryFingerprint', cov.coverage_geometry_fingerprint,
+        'evidenceSha256', cov.coverage_evidence_sha256,
+        'reference', cov.coverage_reference,
+        'storageUri', cov.coverage_storage_uri
+      ),
       'siteCoordinates', cm.coordinates
     ) AS source_manifest,
     a.metadata->>'fieldMapFingerprint' AS field_map_fingerprint
   FROM ooh_data.enrichment_artifacts a
+  JOIN ooh_data.grid3_settlement_coverage cov
+    ON cov.source_id=a.source_id AND cov.artifact_sha256=a.artifact_sha256
   CROSS JOIN coordinate_manifest cm
   WHERE a.source_id=${sqlLiteral(GRID3_SETTLEMENT_SOURCE_ID)}
     AND a.artifact_sha256=${sqlLiteral(settlementSha)}
@@ -198,7 +202,7 @@ fingerprinted AS (
           'coreDepthPolicy', 'geodesic_distance_to_primary_extent_boundary',
           'settledAreaPolicy', 'union_of_polygonal_intersections_to_avoid_overlap_double_count',
           'patchDensityPolicy', 'positive_area_intersecting_extent_count_per_buffer_sqkm',
-          'coveragePolicy', 'full_radius_buffer_inside_declared_coverage_bbox'
+          'coveragePolicy', 'full_radius_buffer_inside_exact_reviewed_coverage_geometry'
         ),
         'sourceManifest', source_manifest
       )::text,
@@ -311,17 +315,11 @@ LEFT JOIN primary_extent p USING (site_id, coordinate_assertion_id)
 LEFT JOIN nearest n USING (site_id, coordinate_assertion_id);
 
 CREATE TEMP TABLE settlement_site_radii ON COMMIT DROP AS
-WITH source_bounds AS (
-  SELECT ST_MakeEnvelope(
-    (a.metadata->'coverageBoundsWgs84'->>0)::double precision,
-    (a.metadata->'coverageBoundsWgs84'->>1)::double precision,
-    (a.metadata->'coverageBoundsWgs84'->>2)::double precision,
-    (a.metadata->'coverageBoundsWgs84'->>3)::double precision,
-    4326
-  ) AS bounds_geom
-  FROM ooh_data.enrichment_artifacts a
-  WHERE a.source_id=${sqlLiteral(GRID3_SETTLEMENT_SOURCE_ID)}
-    AND a.artifact_sha256=${sqlLiteral(settlementSha)}
+WITH coverage AS (
+  SELECT geom AS coverage_geom
+  FROM ooh_data.grid3_settlement_coverage
+  WHERE source_id=${sqlLiteral(GRID3_SETTLEMENT_SOURCE_ID)}
+    AND artifact_sha256=${sqlLiteral(settlementSha)}
 )
 SELECT
   c.site_id,
@@ -329,9 +327,9 @@ SELECT
   radius_m,
   ST_Buffer(c.site_geog, radius_m)::geometry AS buffer_geom,
   ST_Area(ST_Buffer(c.site_geog, radius_m)) AS buffer_area_m2,
-  ST_Covers(b.bounds_geom, ST_Buffer(c.site_geog, radius_m)::geometry) AS source_covered
+  ST_Covers(cov.coverage_geom, ST_Buffer(c.site_geog, radius_m)::geometry) AS source_covered
 FROM settlement_coords c
-CROSS JOIN source_bounds b
+CROSS JOIN coverage cov
 CROSS JOIN unnest(${radiiSql}) AS radius_m;
 
 CREATE TEMP TABLE settlement_radius_agg ON COMMIT DROP AS
