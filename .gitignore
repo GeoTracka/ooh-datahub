@@ -18,3 +18,7 @@ data/raw/drive/
 data/seeded/drive/
 data/seeded/.drive-*/
 data/seeded/drive.previous-*/
+
+# Open enrichment source and derived artifacts stay outside git.
+data/raw/enrichment/
+data/derived/enrichment/
