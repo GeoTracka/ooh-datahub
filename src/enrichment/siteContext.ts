@@ -85,7 +85,7 @@ export type SiteContextContrast = {
   family: "vector" | "raster" | "settlement";
   metric: string;
   basis: string;
-  direction: "left_higher" | "right_higher" | "similar";
+  direction: "left_higher" | "right_higher" | "left_lower" | "right_lower" | "similar";
   leftValue: number;
   rightValue: number;
   text: string;
@@ -100,7 +100,7 @@ export type SiteContextComparison = {
   contrasts: SiteContextContrast[];
 };
 
-function relativeDirection(left: number, right: number): SiteContextContrast["direction"] {
+function relativeDirection(left: number, right: number): "left_higher" | "right_higher" | "similar" {
   const scale = Math.max(Math.abs(left), Math.abs(right), 1e-9);
   if (Math.abs(left - right) / scale <= SITE_CONTEXT_SIMILAR_RELATIVE_TOLERANCE) return "similar";
   return left > right ? "left_higher" : "right_higher";
@@ -139,25 +139,43 @@ function commonAccessibility(
   return matches[0] ? [matches[0][0], matches[0][1]] : null;
 }
 
-function contrast(
+function higherContrast(
   family: SiteContextContrast["family"],
   metric: string,
   basis: string,
   leftValue: number,
   rightValue: number,
   label: string,
-  inverseMeaning = false,
 ): SiteContextContrast {
-  const rawDirection = relativeDirection(leftValue, rightValue);
-  const describedDirection = inverseMeaning && rawDirection !== "similar"
-    ? rawDirection === "left_higher" ? "right_higher" : "left_higher"
-    : rawDirection;
-  const text = describedDirection === "similar"
+  const direction = relativeDirection(leftValue, rightValue);
+  const text = direction === "similar"
     ? `Similar ${label} (${basis}).`
-    : describedDirection === "left_higher"
+    : direction === "left_higher"
       ? `Left site has higher ${label} (${basis}).`
       : `Right site has higher ${label} (${basis}).`;
-  return { family, metric, basis, direction: describedDirection, leftValue, rightValue, text };
+  return { family, metric, basis, direction, leftValue, rightValue, text };
+}
+
+function lowerDistanceContrast(
+  family: SiteContextContrast["family"],
+  metric: string,
+  basis: string,
+  leftValue: number,
+  rightValue: number,
+  label: string,
+): SiteContextContrast {
+  const rawDirection = relativeDirection(leftValue, rightValue);
+  const direction: SiteContextContrast["direction"] = rawDirection === "similar"
+    ? "similar"
+    : rawDirection === "left_higher"
+      ? "right_lower"
+      : "left_lower";
+  const text = direction === "similar"
+    ? `Similar ${label} (${basis}).`
+    : direction === "left_lower"
+      ? `Left site is closer to ${label} (${basis}).`
+      : `Right site is closer to ${label} (${basis}).`;
+  return { family, metric, basis, direction, leftValue, rightValue, text };
 }
 
 function familyReason(
@@ -207,15 +225,15 @@ export function compareSiteContext(
     );
     if (vector) {
       if (vector[0].placeCount !== null && vector[1].placeCount !== null) {
-        contrasts.push(contrast(
+        contrasts.push(higherContrast(
           "vector", "destination_presence", `${vector[0].radiusM} m radius`,
           vector[0].placeCount, vector[1].placeCount, "destination presence",
         ));
       }
       if (vector[0].nearestMajorRoadM !== null && vector[1].nearestMajorRoadM !== null) {
-        contrasts.push(contrast(
-          "vector", "major_road_proximity", `${vector[0].radiusM} m source-covered radius`,
-          vector[0].nearestMajorRoadM, vector[1].nearestMajorRoadM, "major-road proximity", true,
+        contrasts.push(lowerDistanceContrast(
+          "vector", "nearest_major_road_distance_m", `${vector[0].radiusM} m source-covered radius`,
+          vector[0].nearestMajorRoadM, vector[1].nearestMajorRoadM, "a major road",
         ));
       }
     }
@@ -226,7 +244,7 @@ export function compareSiteContext(
       (item) => item.coverageStatus === "complete",
     );
     if (population) {
-      contrasts.push(contrast(
+      contrasts.push(higherContrast(
         "raster", "resident_population", `${population[0].radiusM} m radius`,
         population[0].populationEstimate, population[1].populationEstimate, "resident population context",
       ));
@@ -234,7 +252,7 @@ export function compareSiteContext(
 
     const access = commonAccessibility(left.accessibilityContext, right.accessibilityContext);
     if (access) {
-      contrasts.push(contrast(
+      contrasts.push(higherContrast(
         "raster", "accessible_population", `${access[0].accessMode} ${access[0].thresholdMinutes}-minute threshold`,
         access[0].populationEstimate, access[1].populationEstimate, "accessible resident-population context",
       ));
@@ -246,12 +264,12 @@ export function compareSiteContext(
       (item) => item.coverageStatus === "complete",
     );
     if (settlement) {
-      contrasts.push(contrast(
+      contrasts.push(higherContrast(
         "settlement", "settled_area_share", `${settlement[0].radiusM} m radius`,
         settlement[0].settledAreaShare, settlement[1].settledAreaShare, "settled-area share",
       ));
       if (settlement[0].coreDepthM !== null && settlement[1].coreDepthM !== null) {
-        contrasts.push(contrast(
+        contrasts.push(higherContrast(
           "settlement", "settlement_core_depth", `${settlement[0].radiusM} m radius`,
           settlement[0].coreDepthM, settlement[1].coreDepthM, "settlement core depth",
         ));
