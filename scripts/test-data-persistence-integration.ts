@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { runPsql } from "./data/psql";
+import { loadMigrations } from "./data/migrations";
 import { migrateDatabase } from "./db-migrate";
 import { spawn } from "node:child_process";
 
@@ -184,12 +185,14 @@ async function scalar(sql: string): Promise<number> {
 
 async function main(): Promise<void> {
   await runPsql(databaseUrl, "DROP SCHEMA IF EXISTS ooh_data CASCADE;\n");
+  const manifest = await loadMigrations(resolve("migrations"));
+  const expectedVersions = manifest.map((migration) => migration.version);
   const firstMigration = await migrateDatabase();
-  if (!firstMigration.applied.includes("001") || !firstMigration.applied.includes("002")) {
-    throw new Error("REQUIRED_MIGRATIONS_NOT_APPLIED");
+  if (firstMigration.applied.join(",") !== expectedVersions.join(",")) {
+    throw new Error(`MIGRATION_MANIFEST_APPLICATION_FAILURE:${firstMigration.applied.join(",")}`);
   }
   const secondMigration = await migrateDatabase();
-  if (!secondMigration.alreadyApplied.includes("001") || !secondMigration.alreadyApplied.includes("002") || secondMigration.applied.length !== 0) {
+  if (secondMigration.applied.length !== 0 || secondMigration.alreadyApplied.join(",") !== expectedVersions.join(",")) {
     throw new Error("MIGRATION_NOT_IDEMPOTENT");
   }
 
@@ -225,12 +228,15 @@ async function main(): Promise<void> {
   if (oohAfterFailure !== 1) throw new Error(`FAILED_RUN_ATOMICITY_FAILURE:${oohAfterFailure}`);
 
   const migrationRows = await scalar("SELECT count(*) FROM ooh_data.schema_migrations;\n");
-  if (migrationRows !== 2) throw new Error(`MIGRATION_HISTORY_FAILURE:${migrationRows}`);
+  if (migrationRows !== manifest.length) {
+    throw new Error(`MIGRATION_HISTORY_FAILURE:${migrationRows}:${manifest.length}`);
+  }
 
   const report = JSON.parse(await readFile(join(valid, "seed-report.json"), "utf8")) as { catalogVersion: string };
   process.stdout.write(JSON.stringify({
     ok: true,
     catalogVersion: report.catalogVersion,
+    migrationCount: migrationRows,
     succeededRuns: succeeded,
     failedRuns: failed,
     idempotentObservationCount: oohAfterFailure,

@@ -52,6 +52,7 @@ jobs:
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - run: pnpm test:data-persistence
+      - run: pnpm test:data-resolution
 
   e2e-core:
     needs: verify
