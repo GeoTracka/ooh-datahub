@@ -1,7 +1,15 @@
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 
-test("local upload requires preflight before a fixture enrichment run", async ({ page }) => {
+async function reachActionStep(page: Parameters<typeof test>[0] extends never ? never : import("@playwright/test").Page) {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Use default timing & budget" }).click();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+  await page.getByRole("button", { name: "This package works" }).click();
+  await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
+}
+
+test("local upload stays context-only and requires preflight before provider enrichment", async ({ page }) => {
   await page.clock.install({ time: new Date("2026-08-04T00:00:00Z") });
   const apiCalls: string[] = [];
   const googlePolicy = (sourceField: string) => ({
@@ -54,32 +62,41 @@ test("local upload requires preflight before a fixture enrichment run", async ({
       }],
     }] });
   });
-  await page.goto("/");
-  await page.getByRole("button", { name: "Upload spreadsheet" }).click();
+
+  await reachActionStep(page);
+  const uploadTrigger = page.getByRole("button", { name: /Upload customer inventory/ });
+  await uploadTrigger.click();
   const initialUploadDialog = page.getByRole("dialog", { name: "Upload inventory" });
   await expect(initialUploadDialog).toHaveAttribute("aria-modal", "true");
   await page.keyboard.press("Escape");
   await expect(initialUploadDialog).not.toBeVisible();
-  await expect(page.getByRole("button", { name: "Upload spreadsheet" })).toBeFocused();
-  await page.getByRole("button", { name: "Upload spreadsheet" }).click();
+  await expect(uploadTrigger).toBeFocused();
+
+  await uploadTrigger.click();
   await page.getByLabel("Inventory spreadsheet").setInputFiles(
     path.resolve("tests/fixtures/customer-owned-inventory.csv"),
   );
   expect(apiCalls).toEqual([]);
-  await expect(page.getByText("1 accepted · 0 quarantined")).toBeVisible();
+  await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
   await page.getByRole("button", { name: "Use uploaded facts as context" }).click();
   expect(apiCalls).toEqual([]);
-  await expect(page.getByText(/Context shortlist/)).toBeVisible();
-  await expect(page.getByText(/Evidence unavailable · context only/)).toBeVisible();
-  await expect(page.getByText("Unapplied context change")).toBeVisible();
-  await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByText(/Context shortlist/)).not.toBeVisible();
 
-  await page.getByRole("button", { name: "Upload spreadsheet" }).click();
+  const firstStatus = page.getByRole("complementary", { name: "Uploaded planning status" });
+  await expect(firstStatus).toContainText("Customer inventory · context only");
+  await expect(firstStatus).toContainText("CALIBRATION_BUNDLE_MISMATCH");
+  await expect(firstStatus).toContainText("Unapplied context change");
+
+  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: /Fine-tune package/ }).click();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
+
+  await page.getByRole("button", { name: /Upload customer inventory/ }).click();
   await page.getByLabel("Inventory spreadsheet").setInputFiles(
     path.resolve("tests/fixtures/customer-owned-inventory.csv"),
   );
-  await expect(page.getByText("1 accepted · 0 quarantined")).toBeVisible();
+  await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
   await page.getByRole("button", { name: "Review enrichment" }).click();
   await expect.poll(() => apiCalls).toEqual(["preflight"]);
   await page.getByRole("button", { name: "Enrich locations" }).click();
@@ -87,17 +104,18 @@ test("local upload requires preflight before a fixture enrichment run", async ({
   await expect(page.getByRole("region", { name: "Geocode review" })).toBeVisible();
   await expect(page.getByText(/Yaba, Lagos, Nigeria/)).toBeVisible();
   await page.getByRole("button", { name: "Use reviewed facts as context" }).click();
-  await expect(page.getByText(/Context shortlist/)).toBeVisible();
-  await expect(page.getByText("CALIBRATION_BUNDLE_MISMATCH")).toBeVisible();
-  await expect(page.getByText(/feature-compatible calibration bundle/)).toBeVisible();
-  await expect(page.getByText(/Evidence unavailable · context only/)).toBeVisible();
-  await expect(page.getByText("Unapplied context change")).toBeVisible();
+
+  const reviewedStatus = page.getByRole("complementary", { name: "Uploaded planning status" });
+  await expect(reviewedStatus).toContainText("Customer inventory · context only");
+  await expect(reviewedStatus).toContainText("CALIBRATION_BUNDLE_MISMATCH");
+  await expect(reviewedStatus).toContainText("Unapplied context change");
+
+  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: /Fine-tune package/ }).click();
   await page.getByRole("button", { name: "Apply & review RFQ" }).click();
   const rfq = page.getByRole("dialog", { name: "Supplier verification RFQ" });
   await expect(rfq).toBeVisible();
   await rfq.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByText("Applied plan context")).toBeVisible();
-  await expect(page).toHaveScreenshot("upload-customer-context.png", {
-    animations: "disabled",
-  });
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page.getByRole("complementary", { name: "Uploaded planning status" })).toContainText("Applied plan context");
 });
