@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "seed:data": "tsx scripts/seed-drive-data.ts",
     "bundle:build": "tsx scripts/build-demo-bundle.ts",
     "bundle:check": "tsx scripts/validate-frozen-bundle.ts",
     "bundle:verify": "pnpm bundle:build && git diff --exit-code -- src/demo/lagos-v1/bundle.json",
