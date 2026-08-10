@@ -18,17 +18,26 @@ function relativeName(path) {
   return path.slice(root.length + 1).replaceAll("\\", "/").replace(/\.json$/, "");
 }
 
+function actionableSmallTarget(candidate) {
+  if (candidate.role === "tabpanel") return false;
+  if (candidate.tag === "a" && candidate.name === "MapLibre") return false;
+  return true;
+}
+
 const files = (await walk(root)).filter((path) => path.endsWith(".json"));
 const rows = [];
 for (const path of files) {
   const value = JSON.parse(await readFile(path, "utf8"));
   if (!value.viewport || !value.document) continue;
+  const actionableUndersized = (value.undersizedInteractiveCandidates ?? [])
+    .filter(actionableSmallTarget);
   rows.push({
     screen: relativeName(path),
     viewport: `${value.viewport.width}×${value.viewport.height}`,
     horizontalOverflowPx: value.document.horizontalOverflowPx ?? 0,
     interactive: value.visibleInteractiveCount ?? 0,
-    undersized: value.undersizedInteractiveCandidates?.length ?? 0,
+    undersized: actionableUndersized.length,
+    undersizedTargets: actionableUndersized,
     clipped: value.clippedTextCandidates?.length ?? 0,
     nestedScroll: value.nestedScrollableContainers?.length ?? 0,
     documentHeight: value.document.scrollHeight ?? 0,
@@ -54,7 +63,8 @@ const markdown = [
   "## UI / UX review evidence",
   "",
   `- Captured **${totals.screens} reviewed screen states** with screenshot + diagnostic sidecars.`,
-  `- Horizontal overflow: **${totals.horizontalOverflowScreens}** screens; clipped text candidates: **${totals.clippedTextScreens}**; undersized-target candidate screens: **${totals.undersizedCandidateScreens}**; nested-scroll screens: **${totals.nestedScrollScreens}**.`,
+  `- Horizontal overflow: **${totals.horizontalOverflowScreens}** screens; clipped text candidates: **${totals.clippedTextScreens}**; actionable undersized-target candidate screens: **${totals.undersizedCandidateScreens}**; nested-scroll screens: **${totals.nestedScrollScreens}**.`,
+  "- Known map-attribution and hidden-tab-panel sizing is excluded from the small-target triage count; raw sidecars retain every candidate.",
   "- Machine diagnostics are triage signals; review the corresponding screenshots before treating a candidate as a defect.",
   "",
   "### Highest-signal screens",
@@ -64,7 +74,7 @@ const markdown = [
   ...ranked.slice(0, 8).map((row) =>
     `| ${row.screen} | ${row.viewport} | ${row.horizontalOverflowPx}px | ${row.undersized} | ${row.clipped} | ${row.nestedScroll} |`),
   "",
-  "Download the `ui-ux-review-<run>-<attempt>` artifact for the screenshots and per-screen JSON diagnostics.",
+  "Download the `ui-ux-review-<run>-<attempt>` artifact for the screenshots, summary JSON and per-screen diagnostics.",
   "",
 ].join("\n");
 
