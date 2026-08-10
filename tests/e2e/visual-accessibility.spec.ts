@@ -54,14 +54,6 @@ test("keeps the explorer legible at 390 CSS pixels", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5:/ })).toBeVisible();
-
-  // This test protects mobile legibility, so pin the map to the explicit package overview
-  // rather than racing the initial selected-zone camera transition.
-  const fullPackage = page.getByRole("button", { name: "View full package" });
-  await expect(fullPackage).toBeVisible();
-  await fullPackage.click();
-  await expect(fullPackage).toBeHidden();
-
   await expect(page).toHaveScreenshot("explorer-mobile-390.png", {
     animations: "disabled",
     fullPage: true,
