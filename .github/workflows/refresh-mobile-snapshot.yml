@@ -1,0 +1,42 @@
+name: Refresh mobile visual baseline
+
+on:
+  push:
+    branches: [agent/grid3-accessibility-e2b1]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-mobile-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/grid3-accessibility-e2b1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.32.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Regenerate only the 390px baseline
+        run: >-
+          pnpm exec playwright test
+          tests/e2e/visual-accessibility.spec.ts
+          --grep "keeps the explorer legible at 390 CSS pixels"
+          --update-snapshots
+      - name: Commit corrected baseline
+        run: |
+          SNAPSHOT='tests/e2e/visual-accessibility.spec.ts-snapshots/explorer-mobile-390-chromium-linux.png'
+          if git diff --quiet -- "$SNAPSHOT"; then
+            echo 'Mobile baseline already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$SNAPSHOT"
+          git commit -m 'test: refresh deterministic mobile map baseline'
+          git push origin HEAD:agent/grid3-accessibility-e2b1
