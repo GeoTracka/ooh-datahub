@@ -5,8 +5,9 @@ import { runPsql } from "./data/psql";
 import { migrateDatabase } from "./db-migrate";
 import { spawn } from "node:child_process";
 
-const databaseUrl = process.env.DATABASE_URL?.trim();
-if (!databaseUrl) throw new Error("DATABASE_URL_REQUIRED");
+const configuredDatabaseUrl = process.env.DATABASE_URL?.trim();
+if (!configuredDatabaseUrl) throw new Error("DATABASE_URL_REQUIRED");
+const databaseUrl: string = configuredDatabaseUrl;
 
 function runCommand(command: string, args: string[], env: NodeJS.ProcessEnv): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
@@ -184,9 +185,11 @@ async function scalar(sql: string): Promise<number> {
 async function main(): Promise<void> {
   await runPsql(databaseUrl, "DROP SCHEMA IF EXISTS ooh_data CASCADE;\n");
   const firstMigration = await migrateDatabase();
-  if (!firstMigration.applied.includes("001")) throw new Error("MIGRATION_001_NOT_APPLIED");
+  if (!firstMigration.applied.includes("001") || !firstMigration.applied.includes("002")) {
+    throw new Error("REQUIRED_MIGRATIONS_NOT_APPLIED");
+  }
   const secondMigration = await migrateDatabase();
-  if (!secondMigration.alreadyApplied.includes("001") || secondMigration.applied.length !== 0) {
+  if (!secondMigration.alreadyApplied.includes("001") || !secondMigration.alreadyApplied.includes("002") || secondMigration.applied.length !== 0) {
     throw new Error("MIGRATION_NOT_IDEMPOTENT");
   }
 
@@ -222,7 +225,7 @@ async function main(): Promise<void> {
   if (oohAfterFailure !== 1) throw new Error(`FAILED_RUN_ATOMICITY_FAILURE:${oohAfterFailure}`);
 
   const migrationRows = await scalar("SELECT count(*) FROM ooh_data.schema_migrations;\n");
-  if (migrationRows !== 1) throw new Error(`MIGRATION_HISTORY_FAILURE:${migrationRows}`);
+  if (migrationRows !== 2) throw new Error(`MIGRATION_HISTORY_FAILURE:${migrationRows}`);
 
   const report = JSON.parse(await readFile(join(valid, "seed-report.json"), "utf8")) as { catalogVersion: string };
   process.stdout.write(JSON.stringify({
