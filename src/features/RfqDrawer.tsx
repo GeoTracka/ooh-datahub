@@ -89,7 +89,7 @@ export function RfqDrawer({
     }
   }
   const output: RfqDraft | null = workflow.status === "Generated" ? workflow.output : null;
-  return <aside role="dialog" aria-modal="true" aria-label="Supplier verification RFQ">
+  return <div role="dialog" aria-modal="true" aria-label="Supplier verification RFQ">
     <button ref={closeRef} type="button" onClick={onClose}>Close</button>
     <strong>DEMO — DO NOT SEND</strong>
     <p>{workflow.status}</p>
@@ -126,5 +126,5 @@ export function RfqDrawer({
       buildInternalDownload(output),
     )}>Download consolidated internal request</button>}
     <p>Status: draft, unbooked, unsent</p>
-  </aside>;
+  </div>;
 }
