@@ -4,6 +4,7 @@ coverage/
 tsconfig.tsbuildinfo
 playwright-report/
 test-results/
+artifacts/ui-ux-review/
 .env*
 !.env.example
 .worktrees/
