@@ -37,6 +37,7 @@
     "test:data-vector-context": "tsx scripts/test-overture-vector-context-integration.ts",
     "test:data-accessibility": "tsx scripts/test-grid3-accessibility-integration.ts",
     "test:data-settlement": "tsx scripts/test-grid3-settlement-integration.ts",
+    "test:data-site-context": "tsx scripts/test-site-context-read-model-integration.ts",
     "bundle:build": "tsx scripts/build-demo-bundle.ts",
     "bundle:check": "tsx scripts/validate-frozen-bundle.ts",
     "bundle:verify": "pnpm bundle:build && git diff --exit-code -- src/demo/lagos-v1/bundle.json",
