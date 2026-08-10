@@ -8,12 +8,22 @@ export const MOVEMENT_CALIBRATION_PROTOCOL_VERSION = "movement-calibration-proto
 const DateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const DaypartSchema = z.enum(["AM", "Midday", "PM", "Evening"]);
 const StratumDimensionSchema = z.enum(["road_class", "daypart"]);
+const AllowedEvidenceProtocols = new Set(["https:", "file:", "s3:", "gs:", "az:"]);
+
+function governedUri(value: string): boolean {
+  try {
+    const uri = new URL(value);
+    return AllowedEvidenceProtocols.has(uri.protocol) && !uri.username && !uri.password;
+  } catch {
+    return false;
+  }
+}
 
 export const MovementCalibrationProtocolSchema = z.object({
   protocolVersion: z.literal(MOVEMENT_CALIBRATION_PROTOCOL_VERSION),
   protocolId: z.string().min(1),
   frozenAt: z.string().min(1),
-  retainedUri: z.string().min(1),
+  retainedUri: z.string().min(1).refine(governedUri, "retainedUri must be a governed evidence URI"),
   lowCountHandling: z.literal("none"),
   denominatorPolicy: z.literal("all_included_held_out_blocks"),
   stratumMinBlocks: z.literal(8),
@@ -79,9 +89,11 @@ export type MovementEvaluationFailure =
   | "INVALID_EVALUATION_FILE"
   | "PROTOCOL_MISMATCH"
   | "INVALID_PROTOCOL_FREEZE_TIME"
+  | "INVALID_OBSERVATION_DATE"
   | "PROTOCOL_NOT_PREREGISTERED"
   | "DUPLICATE_RECORD_ID"
   | "UNKNOWN_EXCLUDED_RECORD"
+  | "UNKNOWN_EXCLUDED_STRATUM"
   | "ARTIFACT_ROLE_MISMATCH"
   | "LOCATION_SPLIT_LEAKAGE"
   | "NO_INCLUDED_HELD_OUT_BLOCKS"
@@ -120,7 +132,14 @@ function median(values: readonly number[]): number {
 }
 
 function cellKey(record: MovementCalibrationRecord): string {
-  return [record.locationId, record.dayType, record.daypart, record.countDirection, record.split].join("\u001f");
+  return [
+    record.locationId,
+    record.faceId,
+    record.dayType,
+    record.daypart,
+    record.countDirection,
+    record.split,
+  ].join("\u001f");
 }
 
 function stratumKey(dimension: "road_class" | "daypart", value: string): string {
@@ -188,6 +207,7 @@ export function deriveMovementCalibrationReport(input: {
   const modelFrozenMs = Date.parse(input.modelFrozenAt);
   const records = parsedArtifacts.flatMap(({ usage, file }) => file.records.map((record) => ({ usage, record })));
   const recordDays = records.map(({ record }) => parseDay(record.observationDate));
+  if (recordDays.some((day) => !Number.isFinite(day))) failures.push("INVALID_OBSERVATION_DATE");
   if (Number.isFinite(protocolFrozenMs) && recordDays.some((day) => Number.isFinite(day) && protocolFrozenMs >= day)) {
     failures.push("PROTOCOL_NOT_PREREGISTERED");
   }
@@ -230,6 +250,17 @@ export function deriveMovementCalibrationReport(input: {
   const denominator = heldOut.reduce((sum, record) => sum + record.observed, 0);
   if (denominator <= 0) failures.push("ZERO_HELD_OUT_DENOMINATOR");
 
+  const availableStrata = new Set<string>();
+  for (const record of heldOut) {
+    availableStrata.add(stratumKey("road_class", record.roadClass));
+    availableStrata.add(stratumKey("daypart", record.daypart));
+  }
+  for (const excluded of protocol.excludedStrata) {
+    if (!availableStrata.has(stratumKey(excluded.dimension, excluded.value))) {
+      failures.push("UNKNOWN_EXCLUDED_STRATUM");
+    }
+  }
+
   const excludedStrata = new Set(protocol.excludedStrata.map((entry) => stratumKey(entry.dimension, entry.value)));
   const eligibleStratumBiases: number[] = [];
   let zeroTotalStratum = false;
@@ -255,11 +286,18 @@ export function deriveMovementCalibrationReport(input: {
   if (Number.isFinite(modelFrozenMs) && independent.some((record) => parseDay(record.observationDate) <= modelFrozenMs)) {
     failures.push("INDEPENDENT_DATE_PRE_FREEZE");
   }
-  const independentCells = new Set(independent
-    .filter((record) => parseDay(record.observationDate) > modelFrozenMs)
-    .map(cellKey));
+  const independentDatesByCell = new Map<string, Set<string>>();
+  for (const record of independent) {
+    if (!Number.isFinite(modelFrozenMs) || parseDay(record.observationDate) <= modelFrozenMs) continue;
+    const dates = independentDatesByCell.get(cellKey(record)) ?? new Set<string>();
+    dates.add(record.observationDate);
+    independentDatesByCell.set(cellKey(record), dates);
+  }
   const primary = included.map(({ record }) => record).filter((record) => record.phase === "primary");
-  const independentDateReplication = primary.length > 0 && primary.every((record) => independentCells.has(cellKey(record)));
+  const independentDateReplication = primary.length > 0 && primary.every((record) => {
+    const dates = independentDatesByCell.get(cellKey(record));
+    return Boolean(dates && [...dates].some((date) => date !== record.observationDate));
+  });
   if (!independentDateReplication) failures.push("INDEPENDENT_DATE_CELL_MISSING");
 
   const evaluationCanonical = canonicalJson({
