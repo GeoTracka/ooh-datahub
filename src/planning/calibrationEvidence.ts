@@ -73,8 +73,10 @@ export type CalibrationEvidencePackage = z.infer<typeof CalibrationEvidencePacka
 export type CalibrationPackageFailure =
   | "INVALID_PACKAGE_SCHEMA"
   | "ARTIFACT_PERIOD_INVALID"
+  | "UNREVIEWED_PROVENANCE_OR_RIGHTS"
   | "ARTIFACT_ROLE_COLLISION"
   | "DUPLICATE_ARTIFACT_ID"
+  | "MISSING_TRAINING_MOVEMENT_TRUTH"
   | "MISSING_HELD_OUT_MOVEMENT_TRUTH"
   | "MISSING_HELD_OUT_EXPOSURE_GEOMETRY_TRUTH"
   | "MISSING_HELD_OUT_TARGET_PANEL_TRUTH"
@@ -93,10 +95,35 @@ export type CalibrationPromotionDecision = {
   calibrationFailures: CalibrationFailure[];
 };
 
+const unreviewedMetadata = new Set(["unknown", "n/a", "na", "none", "tbd", "pending"]);
+const evidenceUriProtocols = new Set(["https:", "file:", "s3:", "gs:", "az:"]);
+
 function periodValid(start: string, end: string): boolean {
   const startMs = Date.parse(`${start}T00:00:00Z`);
   const endMs = Date.parse(`${end}T00:00:00Z`);
-  return Number.isFinite(startMs) && Number.isFinite(endMs) && startMs <= endMs;
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs > endMs) return false;
+  return new Date(startMs).toISOString().slice(0, 10) === start
+    && new Date(endMs).toISOString().slice(0, 10) === end;
+}
+
+function reviewedText(value: string): boolean {
+  return !unreviewedMetadata.has(value.trim().toLowerCase());
+}
+
+function reviewedUri(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return evidenceUriProtocols.has(url.protocol) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+function artifactGovernanceReviewed(artifact: CalibrationEvidenceArtifact): boolean {
+  return reviewedUri(artifact.provenanceUri)
+    && reviewedUri(artifact.retainedUri)
+    && reviewedText(artifact.licenseId)
+    && reviewedText(artifact.rightsReviewRef);
 }
 
 function hasArtifact(
@@ -121,6 +148,9 @@ export function validateCalibrationEvidencePackage(
   if (pkg.artifacts.some((artifact) => !periodValid(artifact.periodStart, artifact.periodEnd))) {
     failures.push("ARTIFACT_PERIOD_INVALID");
   }
+  if (pkg.artifacts.some((artifact) => !artifactGovernanceReviewed(artifact))) {
+    failures.push("UNREVIEWED_PROVENANCE_OR_RIGHTS");
+  }
 
   const artifactIds = new Set<string>();
   for (const artifact of pkg.artifacts) {
@@ -143,6 +173,9 @@ export function validateCalibrationEvidencePackage(
     failures.push("ARTIFACT_ROLE_COLLISION");
   }
 
+  if (!hasArtifact(pkg.artifacts, "movement_truth", "training")) {
+    failures.push("MISSING_TRAINING_MOVEMENT_TRUTH");
+  }
   if (!hasArtifact(pkg.artifacts, "movement_truth", "held_out_validation")) {
     failures.push("MISSING_HELD_OUT_MOVEMENT_TRUTH");
   }
