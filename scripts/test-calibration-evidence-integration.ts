@@ -83,6 +83,8 @@ INSERT INTO ooh_data.calibration_evidence_artifacts (
   provenance_uri, retained_uri, license_id, rights_review_ref,
   commercial_use_status, period_start, period_end
 ) VALUES
+  ('${digest}', 'movement-training', '${"6".repeat(64)}', 'movement_truth', 'training',
+   'https://evidence.example/movement-training', 'file:///retained/movement-training', 'fixture-license', 'fixture:rights:6', 'permitted', '2025-12-01', '2025-12-31'),
   ('${digest}', 'movement-holdout', '${"1".repeat(64)}', 'movement_truth', 'held_out_validation',
    'https://evidence.example/movement', 'file:///retained/movement', 'fixture-license', 'fixture:rights:1', 'permitted', '2026-01-01', '2026-01-31'),
   ('${digest}', 'geometry-holdout', '${"2".repeat(64)}', 'exposure_geometry_truth', 'held_out_validation',
@@ -124,10 +126,14 @@ ON CONFLICT (package_digest) DO NOTHING;
   if (await scalar(`SELECT count(*) FROM ooh_data.calibration_evidence_packages WHERE package_digest='${digest}';`) !== 1) {
     throw new Error("CALIBRATION_PACKAGE_REPLAY_NOT_IDEMPOTENT");
   }
-  if (await scalar(`SELECT count(*) FROM ooh_data.calibration_evidence_artifacts WHERE package_digest='${digest}';`) !== 5) {
+  if (await scalar(`SELECT count(*) FROM ooh_data.calibration_evidence_artifacts WHERE package_digest='${digest}';`) !== 6) {
     throw new Error("CALIBRATION_ARTIFACT_REGISTRATION_FAILURE");
   }
 
+  await expectSqlFailure(
+    `UPDATE ooh_data.context_feature_snapshots SET source_manifest='{"mutated":true}'::jsonb WHERE snapshot_id='${snapshotId}';`,
+    "CONTEXT_FEATURE_IMMUTABLE:context_feature_snapshots",
+  );
   await expectSqlFailure(
     `UPDATE ooh_data.calibration_evidence_packages SET model_version='mutated' WHERE package_digest='${digest}';`,
     "CALIBRATION_EVIDENCE_IMMUTABLE:calibration_evidence_packages",
@@ -181,7 +187,7 @@ INSERT INTO ooh_data.calibration_promotion_runs (
     ok: true,
     migrationCount: manifest.length,
     packageDigest: digest,
-    registeredArtifacts: 5,
+    registeredArtifacts: 6,
     rejectedRuns: 1,
   }, null, 2)}\n`);
 }
