@@ -46,8 +46,32 @@ export type ValidCoordinateAssertion = {
   enrichmentRevision: string;
 };
 
+function assertSourceRightsAlignment(
+  sourceKind: ValidCoordinateAssertion["sourceKind"],
+  spatialRights: ValidCoordinateAssertion["spatialRights"],
+  assertionStatus: ValidCoordinateAssertion["assertionStatus"],
+): void {
+  if (
+    spatialRights === "customer_captured"
+    && sourceKind !== "customer_capture"
+    && sourceKind !== "field_survey"
+  ) {
+    throw new Error("CUSTOMER_CAPTURED_RIGHTS_REQUIRE_CAPTURE_OR_FIELD_SURVEY");
+  }
+  if (spatialRights === "open_licensed" && sourceKind !== "open_dataset") {
+    throw new Error("OPEN_LICENSED_RIGHTS_REQUIRE_OPEN_DATASET");
+  }
+  if (spatialRights === "provider_derived" && sourceKind !== "licensed_provider") {
+    throw new Error("PROVIDER_DERIVED_RIGHTS_REQUIRE_LICENSED_PROVIDER");
+  }
+  if (spatialRights === "unknown" && assertionStatus === "approved") {
+    throw new Error("UNKNOWN_SPATIAL_RIGHTS_CANNOT_BE_APPROVED");
+  }
+}
+
 export function validateCoordinateAssertion(input: unknown): ValidCoordinateAssertion {
   const parsed = CoordinateAssertionInputSchema.parse(input);
+  assertSourceRightsAlignment(parsed.sourceKind, parsed.spatialRights, parsed.assertionStatus);
   const coordinateAccuracyM = parsed.coordinateAccuracyM ?? null;
   const sourceArtifactId = parsed.sourceArtifactId?.trim() || null;
   const spatialLicenseId = parsed.spatialLicenseId?.trim() || null;
@@ -55,7 +79,6 @@ export function validateCoordinateAssertion(input: unknown): ValidCoordinateAsse
 
   if (parsed.assertionStatus === "approved") {
     if (coordinateAccuracyM === null) throw new Error("APPROVED_COORDINATE_ACCURACY_REQUIRED");
-    if (parsed.spatialRights === "unknown") throw new Error("UNKNOWN_SPATIAL_RIGHTS_CANNOT_BE_APPROVED");
     if (!sourceArtifactId) throw new Error("APPROVED_COORDINATE_SOURCE_ARTIFACT_REQUIRED");
     if (parsed.spatialRights === "customer_captured" || parsed.spatialRights === "open_licensed") {
       if (!spatialLicenseId) throw new Error("APPROVED_MAPLIBRE_SPATIAL_LICENSE_REQUIRED");
@@ -124,7 +147,7 @@ export function validateMediaOwnerAssertion(input: unknown): ValidMediaOwnerAsse
   if (!normalizedKey) throw new Error("MEDIA_OWNER_NORMALIZED_KEY_REQUIRED");
   const canonicalName = parsed.ownerName.normalize("NFKC").trim().replace(/\s+/gu, " ");
   const sourceLiteral = (parsed.sourceLiteral ?? canonicalName).normalize("NFKC").trim().replace(/\s+/gu, " ");
-  const ownerId = mediaOwnerId(normalizedKey, parsed.registryNamespace, parsed.registryRevision);
+  const ownerId = mediaOwnerId(normalizedKey, parsed.registryNamespace);
   return {
     assertionId: stableResolutionId(
       "owner-assertion",
