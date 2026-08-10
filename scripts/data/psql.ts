@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import type { Writable } from "node:stream";
@@ -10,14 +9,7 @@ export type PsqlResult = {
 
 export type PsqlSession = {
   write: (chunk: string) => Promise<void>;
-  barrier: () => Promise<void>;
   finish: () => Promise<PsqlResult>;
-};
-
-type BarrierWaiter = {
-  marker: string;
-  resolve: () => void;
-  reject: (error: Error) => void;
 };
 
 function decode(value: string): string {
@@ -74,18 +66,10 @@ export function startPsql(
   });
   let stdout = "";
   let stderr = "";
-  const barrierWaiters: BarrierWaiter[] = [];
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
   child.stdout.on("data", (chunk: string) => {
     stdout += chunk;
-    for (let index = barrierWaiters.length - 1; index >= 0; index -= 1) {
-      const waiter = barrierWaiters[index];
-      if (stdout.includes(waiter.marker)) {
-        barrierWaiters.splice(index, 1);
-        waiter.resolve();
-      }
-    }
   });
   child.stderr.on("data", (chunk: string) => {
     stderr += chunk;
@@ -94,40 +78,24 @@ export function startPsql(
   let processError: Error | null = null;
   child.on("error", (error) => {
     processError = error;
-    for (const waiter of barrierWaiters.splice(0)) waiter.reject(error);
   });
 
   const completion = new Promise<PsqlResult>((resolve, reject) => {
     child.on("close", (code) => {
-      const error = processError
-        ?? (code === 0 ? null : new Error(`PSQL_FAILED:${code ?? "signal"}:${stderr.trim().slice(-4000)}`));
-      if (error) {
-        for (const waiter of barrierWaiters.splice(0)) waiter.reject(error);
-        reject(error);
+      if (processError) {
+        reject(new Error(`PSQL_PROCESS_ERROR:${processError.message}`));
         return;
       }
-      if (barrierWaiters.length > 0) {
-        const barrierError = new Error("PSQL_CLOSED_BEFORE_BARRIER");
-        for (const waiter of barrierWaiters.splice(0)) waiter.reject(barrierError);
-        reject(barrierError);
+      if (code !== 0) {
+        reject(new Error(`PSQL_FAILED:${code ?? "signal"}:${stderr.trim().slice(-4000)}`));
         return;
       }
       resolve({ stdout, stderr });
     });
   });
 
-  const write = (chunk: string) => writeWithBackpressure(child.stdin, chunk);
-
   return {
-    write,
-    barrier: async () => {
-      const marker = `__OOH_PSQL_BARRIER_${randomUUID().replaceAll("-", "_")}__`;
-      const reached = new Promise<void>((resolve, reject) => {
-        barrierWaiters.push({ marker, resolve, reject });
-      });
-      await write(`\\echo ${marker}\n`);
-      return reached;
-    },
+    write: (chunk) => writeWithBackpressure(child.stdin, chunk),
     finish: async () => {
       child.stdin.end();
       return completion;
