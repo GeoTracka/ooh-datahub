@@ -1,11 +1,12 @@
 # Governed Drive Data Seeding
 
-The repository has two deliberately separate data paths:
+The repository has three deliberately separate data layers:
 
-1. `src/demo/lagos-v1/bundle.json` is the deterministic synthetic Evidence-D demo bundle used by the planner.
-2. `pnpm seed:data` is the governed landing/normalization path for the real OOH industry and FAAN workbooks supplied in Drive.
+1. `src/demo/lagos-v1/bundle.json` — deterministic synthetic Evidence-D planner bundle.
+2. `pnpm seed:data` — governed landing/normalization path for the reviewed OOH and FAAN workbooks.
+3. `pnpm seed:persist` — durable PostgreSQL persistence for normalized seed staging.
 
-Real source rows are **not** promoted into the frozen planner bundle merely because they have been ingested. The Drive files do not contain the complete coordinate, supplier, exposure-geometry, movement, target-universe, panel or calibration inputs required by the current planner contract.
+Real source rows are **not** promoted into the frozen planner bundle merely because they have been ingested or persisted. The Drive files do not contain the complete coordinate, supplier, exposure-geometry, movement, target-universe, panel or calibration inputs required by the current planner contract.
 
 ## Source catalog
 
@@ -23,7 +24,7 @@ Real source rows are **not** promoted into the frozen planner bundle merely beca
 
 The full-year 2023 workbook contains duplicated/derived/working tabs. Only `DATA` is treated as the canonical placement table; `NB SOV` is ingested separately because its schema and meaning are different.
 
-## Running the seed
+## Running the deterministic seed
 
 Place the exact reviewed XLSX files in `data/raw/drive/` using the catalogued filenames, then run:
 
@@ -50,7 +51,7 @@ The generated directory is intentionally ignored by git and contains:
 - `quarantine.ndjson` — malformed rows that were not safe to normalize automatically; and
 - `seed-report.json` — deterministic source coverage, counts and quality flags.
 
-NDJSON is used for staging so large source families can be streamed into later warehouse/database loaders without turning the repository into a database implementation prematurely.
+NDJSON is the immutable/replayable normalization staging boundary. Durable relational persistence is documented in `docs/data-persistence.md`.
 
 ## Source fidelity rules
 
@@ -76,14 +77,41 @@ Some cargo/mail sheets do not contain a reported total column for every month; t
 
 The supplied 2025 FAAN workbook contains passenger sections but no aircraft, cargo or mail sections. `seed-report.json` records those metrics as absent. Absence is never converted to zero.
 
-## Persistence and planner boundary
+## Durable persistence
 
-This tranche stops at deterministic, replayable staging because the current application intentionally has no production database/warehouse contract. The next production steps are:
+T2 uses PostgreSQL as the normalized durable/query store while retaining the exact XLSX source artifacts outside the database in immutable storage.
 
-1. choose the durable persistence boundary and add idempotent source-revision upserts;
-2. normalize advertiser/brand/category/format/airport entities while retaining source literals;
-3. add rights-approved spatial enrichment and stable site/supplier identity;
-4. derive historical/context features with explicit source provenance; and
-5. promote data into planner measurement inputs only after the existing evidence/calibration requirements are met.
+Persistence is idempotent by source revision and source record:
 
-Do not make the synthetic demo bundle read these staging files directly. That would mix source observations with calibrated planner inputs and would overstate what the Drive data can support.
+```text
+source_id + source_artifact_sha256 + source_record_id
+```
+
+A rerun of the same reviewed source revision cannot duplicate the fact. A changed workbook revision can coexist with the prior version without destructive rewrites.
+
+Run:
+
+```bash
+DATABASE_URL='postgresql://...' \
+OOH_RAW_SOURCE_URI='s3://company-ooh-raw/reviewed/' \
+OOH_SEED_STAGING_URI='s3://company-ooh-staging/drive-r1/' \
+pnpm seed:persist
+```
+
+The persistence loader records source revisions, raw/staging locations, ingestion-run status, seed-report/staging hashes, processed counts and failures. It streams PostgreSQL `COPY` data through temporary staging tables and commits the observation load atomically.
+
+See `docs/data-persistence.md` for migration, replay, retention and operational details.
+
+## Planner boundary and next work
+
+Persisting the source data does **not** make it calibrated reach or delivery evidence.
+
+The next production tranche is entity/spatial resolution:
+
+1. normalize advertiser/brand/category/format/state/city and airport vocabularies while preserving source literals;
+2. establish stable non-destructive site/entity identities;
+3. map authoritative supplier/media-owner identities;
+4. add rights-approved coordinates with source/license/accuracy; and
+5. only then derive governed context features and later promote measurement inputs through the existing calibration requirements.
+
+Do not make the synthetic demo bundle read these staging or PostgreSQL tables directly. That would mix historical/context observations with calibrated planner inputs and overstate what the Drive data can support.
