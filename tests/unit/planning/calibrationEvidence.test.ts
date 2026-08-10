@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MOVEMENT_CALIBRATION_GATE_VERSION } from "@/planning/calibrationGate";
 import {
   CALIBRATION_EVIDENCE_PACKAGE_VERSION,
   evaluateCalibrationPromotion,
@@ -34,9 +35,11 @@ function packageFixture(
 ): CalibrationEvidencePackage {
   return {
     packageVersion: CALIBRATION_EVIDENCE_PACKAGE_VERSION,
+    movementCalibrationGateVersion: MOVEMENT_CALIBRATION_GATE_VERSION,
     evidenceEnvironment: "production_reviewed",
     modelVersion: "movement-model-v2",
     replayVersion: "movement-replay-v2",
+    modelFrozenAt: "2026-01-31T23:59:59Z",
     geographyId: "nga-lagos",
     applicabilityScope: "reviewed Lagos OOH faces inside the declared movement-model envelope",
     contextBinding: {
@@ -47,12 +50,12 @@ function packageFixture(
       resolutionFingerprint: "2".repeat(32),
     },
     artifacts: [
-      artifact("movement-training", "f", "movement_truth", "training"),
+      { ...artifact("movement-training", "f", "movement_truth", "training"), periodStart: "2025-12-01", periodEnd: "2025-12-31" },
       artifact("movement-holdout", "a", "movement_truth", "held_out_validation"),
       artifact("geometry-holdout", "b", "exposure_geometry_truth", "held_out_validation"),
       artifact("target-holdout", "c", "target_panel_truth", "held_out_validation"),
       artifact("downstream-holdout", "d", "downstream_validation_result", "held_out_validation"),
-      artifact("movement-replication", "e", "movement_truth", "independent_date_replication"),
+      { ...artifact("movement-replication", "e", "movement_truth", "independent_date_replication"), periodStart: "2026-02-01", periodEnd: "2026-02-28" },
     ],
     movementCalibrationReport: {
       heldOutLocations: 3,
@@ -75,6 +78,7 @@ describe("calibration evidence package", () => {
   it("requires a provenance-complete package and the existing movement gate to pass", () => {
     const result = evaluateCalibrationPromotion(packageFixture());
     expect(result).toMatchObject({
+      movementCalibrationGateVersion: MOVEMENT_CALIBRATION_GATE_VERSION,
       packageValid: true,
       calibrationPassed: true,
       eligibleForEvidenceC: true,
@@ -98,12 +102,22 @@ describe("calibration evidence package", () => {
     expect(result.failures).toContain("MISSING_TRAINING_MOVEMENT_TRUTH");
   });
 
-  it("rejects one artifact revision masquerading as both training and holdout", () => {
+  it("rejects one artifact revision masquerading across evidence roles", () => {
     const pkg = packageFixture();
     const duplicatedSha = pkg.artifacts.find((item) => item.usage === "held_out_validation")!.sha256;
     const result = validateCalibrationEvidencePackage(packageFixture({
       artifacts: pkg.artifacts.map((item) =>
         item.artifactId === "movement-training" ? { ...item, sha256: duplicatedSha } : item),
+    }));
+    expect(result.failures).toContain("ARTIFACT_ROLE_COLLISION");
+  });
+
+  it("rejects a held-out revision reused as independent-date replication", () => {
+    const pkg = packageFixture();
+    const heldOutSha = pkg.artifacts.find((item) => item.artifactId === "movement-holdout")!.sha256;
+    const result = validateCalibrationEvidencePackage(packageFixture({
+      artifacts: pkg.artifacts.map((item) =>
+        item.artifactId === "movement-replication" ? { ...item, sha256: heldOutSha } : item),
     }));
     expect(result.failures).toContain("ARTIFACT_ROLE_COLLISION");
   });
@@ -138,6 +152,16 @@ describe("calibration evidence package", () => {
       artifacts: pkg.artifacts.filter((item) => item.usage !== "independent_date_replication"),
     }));
     expect(result.failures).toContain("MISSING_INDEPENDENT_DATE_REPLICATION_EVIDENCE");
+  });
+
+  it("requires independent-date evidence to post-date the declared model freeze", () => {
+    const pkg = packageFixture();
+    const artifacts = pkg.artifacts.map((item) =>
+      item.artifactId === "movement-replication"
+        ? { ...item, periodStart: "2026-01-15", periodEnd: "2026-01-20" }
+        : item);
+    const result = validateCalibrationEvidencePackage(packageFixture({ artifacts }));
+    expect(result.failures).toContain("INDEPENDENT_DATE_NOT_POST_FREEZE");
   });
 
   it("uses the existing movement calibration gate rather than duplicating thresholds", () => {
