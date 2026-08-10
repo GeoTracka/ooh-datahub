@@ -333,7 +333,7 @@ export function UploadDialog({
   );
 
   return (
-    <aside role="dialog" aria-modal="true" aria-label="Upload inventory">
+    <div role="dialog" aria-modal="true" aria-label="Upload inventory">
       <button ref={closeRef} type="button" onClick={onClose}>Close</button>
       <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {
         const file = event.target.files?.[0];
@@ -493,6 +493,6 @@ export function UploadDialog({
           Use reviewed facts as context
         </button>
       </section>}
-    </aside>
+    </div>
   );
 }
