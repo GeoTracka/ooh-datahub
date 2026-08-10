@@ -20,7 +20,12 @@ CREATE TABLE IF NOT EXISTS ooh_data.site_vector_context_coverage (
   )
 );
 
-CREATE OR REPLACE VIEW ooh_data.site_vector_context_latest AS
+-- Migration 014 created this view before source-reduction coverage existed.
+-- The coverage columns intentionally change the public view shape, so recreate
+-- it explicitly instead of relying on CREATE OR REPLACE's positional-column
+-- compatibility rules.
+DROP VIEW IF EXISTS ooh_data.site_vector_context_latest;
+CREATE VIEW ooh_data.site_vector_context_latest AS
 WITH latest AS (
   SELECT DISTINCT ON (c.site_id, c.coordinate_assertion_id, c.radius_m)
     c.snapshot_id,
