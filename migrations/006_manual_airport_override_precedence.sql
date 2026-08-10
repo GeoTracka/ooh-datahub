@@ -3,26 +3,26 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $function$
 DECLARE
-  source_literal text;
+  record_source_literal text;
   manual_airport_id text;
 BEGIN
   IF NEW.record_scope = 'monthly' THEN
     SELECT trim(COALESCE(m.airport_name, m.airport_label, ''))
-    INTO source_literal
+    INTO record_source_literal
     FROM ooh_data.faan_monthly_observations m
     WHERE m.source_id = NEW.source_id
       AND m.source_sha256 = NEW.source_sha256
       AND m.source_record_id = NEW.source_record_id;
   ELSE
     SELECT trim(COALESCE(m.airport_name, m.airport_label, ''))
-    INTO source_literal
+    INTO record_source_literal
     FROM ooh_data.faan_annual_observations m
     WHERE m.source_id = NEW.source_id
       AND m.source_sha256 = NEW.source_sha256
       AND m.source_record_id = NEW.source_record_id;
   END IF;
 
-  IF source_literal IS NULL OR source_literal = '' THEN
+  IF record_source_literal IS NULL OR record_source_literal = '' THEN
     RETURN NEW;
   END IF;
 
@@ -31,7 +31,7 @@ BEGIN
   FROM ooh_data.airport_aliases a
   WHERE a.resolver_version = NEW.resolver_version
     AND a.mapping_method = 'manual_review'
-    AND a.source_literal = source_literal
+    AND a.source_literal = record_source_literal
   ORDER BY a.alias_id
   LIMIT 1;
 
