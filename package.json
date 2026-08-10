@@ -24,7 +24,7 @@
     "enrichment:register:grid3-raster": "tsx scripts/register-grid3-raster.ts",
     "enrichment:link": "tsx scripts/link-enrichment-artifact-derivation.ts",
     "enrichment:import": "tsx scripts/import-open-enrichment.ts",
-    "enrichment:import:grid3-settlement": "tsx scripts/import-grid3-settlement-context.ts",
+    "enrichment:import:grid3-settlement": "tsx scripts/import-grid3-settlement.ts",
     "enrichment:reduce:osm": "bash scripts/enrichment/reduce-osm-advertising.sh",
     "enrichment:reduce:overture": "bash scripts/enrichment/reduce-overture-vector.sh",
     "enrichment:import:overture": "tsx scripts/import-overture-vector.ts",
