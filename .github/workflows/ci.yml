@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgis/postgis:16-3.5-alpine
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: ooh_test
@@ -55,6 +55,7 @@ jobs:
       - run: pnpm test:data-resolution
       - run: pnpm test:data-context
       - run: pnpm test:data-enrichment
+      - run: pnpm test:data-vector-context
 
   e2e-core:
     needs: verify
