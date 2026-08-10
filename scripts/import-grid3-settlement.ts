@@ -41,44 +41,31 @@ function booleanArg(name: string): boolean {
   throw new Error(`GRID3_SETTLEMENT_BOOLEAN_ARGUMENT_INVALID:${name}`);
 }
 
-function parseBbox(raw: string): [number, number, number, number] {
-  const parts = raw.split(",").map((value) => Number(value.trim()));
-  if (
-    parts.length !== 4
-    || parts.some((value) => !Number.isFinite(value))
-    || parts[0] < -180 || parts[2] > 180
-    || parts[1] < -90 || parts[3] > 90
-    || parts[0] >= parts[2] || parts[1] >= parts[3]
-  ) {
-    throw new Error("GRID3_SETTLEMENT_COVERAGE_BBOX_INVALID");
-  }
-  return parts as [number, number, number, number];
-}
+type CoverageGeometry = {
+  type: "Polygon" | "MultiPolygon";
+  coordinates: unknown;
+};
 
-function inspectedBounds(value: unknown): [number, number, number, number] {
-  if (!Array.isArray(value) || value.length !== 4) {
-    throw new Error("GRID3_SETTLEMENT_INSPECTED_BOUNDS_INVALID");
+function normalizeCoverageGeometry(document: unknown): CoverageGeometry {
+  if (!document || typeof document !== "object" || Array.isArray(document)) {
+    throw new Error("GRID3_SETTLEMENT_COVERAGE_GEOJSON_OBJECT_REQUIRED");
   }
-  const values = value.map(Number);
-  if (values.some((item) => !Number.isFinite(item))) {
-    throw new Error("GRID3_SETTLEMENT_INSPECTED_BOUNDS_INVALID");
+  const object = document as Record<string, unknown>;
+  const geometry = object.type === "Feature" ? object.geometry : object;
+  if (!geometry || typeof geometry !== "object" || Array.isArray(geometry)) {
+    throw new Error("GRID3_SETTLEMENT_COVERAGE_GEOMETRY_REQUIRED");
   }
-  return values as [number, number, number, number];
-}
-
-function assertCoverageContainsFeatures(
-  coverage: readonly number[],
-  features: readonly number[],
-): void {
-  const tolerance = 1e-9;
-  if (
-    coverage[0] > features[0] + tolerance
-    || coverage[1] > features[1] + tolerance
-    || coverage[2] < features[2] - tolerance
-    || coverage[3] < features[3] - tolerance
-  ) {
-    throw new Error("GRID3_SETTLEMENT_COVERAGE_BBOX_EXCLUDES_FEATURES");
+  const candidate = geometry as Record<string, unknown>;
+  if (candidate.type !== "Polygon" && candidate.type !== "MultiPolygon") {
+    throw new Error("GRID3_SETTLEMENT_COVERAGE_POLYGON_REQUIRED");
   }
+  if (!Array.isArray(candidate.coordinates) || candidate.coordinates.length === 0) {
+    throw new Error("GRID3_SETTLEMENT_COVERAGE_COORDINATES_REQUIRED");
+  }
+  return {
+    type: candidate.type,
+    coordinates: candidate.coordinates,
+  };
 }
 
 async function sha256File(path: string): Promise<string> {
@@ -114,7 +101,10 @@ function runWorkerJson(args: string[]): Promise<Record<string, unknown>> {
     child.stderr.on("data", (chunk: string) => { stderr += chunk; });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code !== 0) return reject(new Error(stderr.trim() || `GRID3_SETTLEMENT_WORKER_FAILED:${code}`));
+      if (code !== 0) {
+        reject(new Error(stderr.trim() || `GRID3_SETTLEMENT_WORKER_FAILED:${code}`));
+        return;
+      }
       try {
         resolvePromise(JSON.parse(stdout) as Record<string, unknown>);
       } catch {
@@ -234,8 +224,19 @@ export async function importGrid3Settlement(): Promise<Record<string, unknown>> 
   const retrievedDate = new Date(retrievedAt);
   if (!Number.isFinite(retrievedDate.getTime())) throw new Error("GRID3_SETTLEMENT_RETRIEVED_AT_INVALID");
 
-  const coverageBoundsWgs84 = parseBbox(requiredArg("coverage-bbox"));
+  const coveragePath = resolve(requiredArg("coverage-geojson"));
+  const coverageStorageUri = validateRetentionUri(
+    requiredArg("coverage-storage-uri"),
+    "grid3_settlement_coverage_storage",
+  );
   const coverageReference = requiredArg("coverage-reference");
+  const coverageDocument = JSON.parse(await readFile(coveragePath, "utf8")) as unknown;
+  const coverageGeometry = normalizeCoverageGeometry(coverageDocument);
+  const coverageGeometryFingerprint = createHash("sha256")
+    .update(canonicalJson(coverageGeometry), "utf8")
+    .digest("hex");
+  const coverageEvidenceSha256 = await sha256File(coveragePath);
+
   const licenseId = requiredArg("license-id");
   const attributionText = requiredArg("attribution");
   const shareAlike = booleanArg("share-alike");
@@ -256,8 +257,6 @@ export async function importGrid3Settlement(): Promise<Record<string, unknown>> 
     const inspection = await runWorkerJson(workerArgs("inspect", inputPath, layer));
     validateGrid3SettlementInspection(inspection);
     assertGrid3SettlementFieldMapAgainstInspection(fieldMap, inspection.fields as readonly unknown[]);
-    const featureBoundsWgs84 = inspectedBounds(inspection.boundsWgs84);
-    assertCoverageContainsFeatures(coverageBoundsWgs84, featureBoundsWgs84);
 
     const fieldMapFingerprint = grid3SettlementFieldMapFingerprint(fieldMap);
     const fileStat = await stat(inputPath);
@@ -270,11 +269,10 @@ export async function importGrid3Settlement(): Promise<Record<string, unknown>> 
       fieldMap,
       fieldMapFingerprint,
       inspection,
-      featureBoundsWgs84,
-      coverageBoundsWgs84,
-      coverageBasis: "declared_coverage_bbox",
-      coverageReference,
+      featureBoundsWgs84: inspection.boundsWgs84,
       geometryRepairPolicy: "ogr_make_valid_then_polygonal_only_v1",
+      geometryDimensionPolicy: "force_2d_horizontal_morphology_v1",
+      coveragePolicy: "exact_reviewed_polygon_or_multipolygon_v1",
       rawArtifactRetained: true,
       limitations,
       licenseReview: {
@@ -316,8 +314,6 @@ BEGIN
       OR a.commercial_use_status IS DISTINCT FROM 'permitted'
       OR a.metadata->>'fieldMapFingerprint' IS DISTINCT FROM ${sqlLiteral(fieldMapFingerprint)}
       OR a.metadata->>'productVersion' IS DISTINCT FROM 'v4.1'
-      OR a.metadata->'coverageBoundsWgs84' IS DISTINCT FROM ${sqlLiteral(JSON.stringify(coverageBoundsWgs84))}::jsonb
-      OR a.metadata->>'coverageReference' IS DISTINCT FROM ${sqlLiteral(coverageReference)}
       OR a.metadata->'licenseReview' IS DISTINCT FROM ${sqlLiteral(JSON.stringify(metadata.licenseReview))}::jsonb
     );
   IF mismatch_count > 0 THEN RAISE EXCEPTION 'GRID3_SETTLEMENT_ARTIFACT_METADATA_DRIFT'; END IF;
@@ -335,7 +331,6 @@ COMMIT;
 
     try {
       const session = startPsql(databaseUrl);
-      let counts: { features: number; repaired: number };
       try {
         await session.write("\\set ON_ERROR_STOP on\nBEGIN;\n");
         await session.write(`
@@ -348,7 +343,7 @@ CREATE TEMP TABLE incoming_grid3_settlements (
   first_enrichment_run_id uuid, decision_use text
 ) ON COMMIT DROP;
 `);
-        counts = await writeSettlementRows(
+        const counts = await writeSettlementRows(
           session,
           inputPath,
           layer,
@@ -356,7 +351,55 @@ CREATE TEMP TABLE incoming_grid3_settlements (
           artifactSha256,
           runId,
         );
+        const expectedFeatureCount = Number(inspection.featureCount);
+        if (counts.features !== expectedFeatureCount) {
+          throw new Error(`GRID3_SETTLEMENT_FEATURE_COUNT_MISMATCH:${counts.features}:${expectedFeatureCount}`);
+        }
+
+        const resultCounts = {
+          features: counts.features,
+          repairedGeometries: counts.repaired,
+          productVersion: GRID3_SETTLEMENT_PRODUCT_VERSION,
+          fieldMapFingerprint,
+          coverageGeometryFingerprint,
+          mappedOptionalSemantics: Object.keys(fieldMap).filter((key) => key !== "featureId"),
+        };
+
         await session.write(`
+CREATE TEMP TABLE incoming_grid3_settlement_coverage ON COMMIT DROP AS
+SELECT
+  ST_Multi(
+    ST_CollectionExtract(
+      ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(${sqlLiteral(JSON.stringify(coverageGeometry))}), 4326)),
+      3
+    )
+  )::geometry(MultiPolygon,4326) AS geom;
+
+DO $coverage_guard$
+DECLARE coverage_geom geometry(MultiPolygon,4326);
+BEGIN
+  SELECT geom INTO coverage_geom FROM incoming_grid3_settlement_coverage;
+  IF coverage_geom IS NULL OR ST_IsEmpty(coverage_geom) OR NOT ST_IsValid(coverage_geom) THEN
+    RAISE EXCEPTION 'GRID3_SETTLEMENT_COVERAGE_GEOMETRY_INVALID';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM incoming_grid3_settlements s
+    WHERE NOT ST_CoveredBy(
+      ST_Multi(
+        ST_CollectionExtract(
+          ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(s.geometry_json), 4326)),
+          3
+        )
+      ),
+      coverage_geom
+    )
+  ) THEN
+    RAISE EXCEPTION 'GRID3_SETTLEMENT_COVERAGE_EXCLUDES_SOURCE_FEATURE';
+  END IF;
+END;
+$coverage_guard$;
+
 DO $duplicate_guard$
 BEGIN
   IF EXISTS (
@@ -366,6 +409,18 @@ BEGIN
   END IF;
 END;
 $duplicate_guard$;
+
+INSERT INTO ooh_data.grid3_settlement_coverage (
+  source_id, artifact_sha256, coverage_geometry_fingerprint,
+  coverage_evidence_sha256, coverage_reference, coverage_storage_uri,
+  geom, first_enrichment_run_id, decision_use
+)
+SELECT
+  ${sqlLiteral(GRID3_SETTLEMENT_SOURCE_ID)}, ${sqlLiteral(artifactSha256)},
+  ${sqlLiteral(coverageGeometryFingerprint)}, ${sqlLiteral(coverageEvidenceSha256)},
+  ${sqlLiteral(coverageReference)}, ${sqlLiteral(coverageStorageUri)},
+  geom, ${sqlLiteral(runId)}::uuid, 'context_only'
+FROM incoming_grid3_settlement_coverage;
 
 INSERT INTO ooh_data.grid3_settlement_features (
   source_id, artifact_sha256, feature_id, source_feature_id,
@@ -378,42 +433,38 @@ SELECT
   original_geometry_valid, geometry_repaired, building_count, building_density,
   degree_urbanisation, population_estimate, false_positive_probability, place_code,
   raw_properties,
-  ST_Multi(ST_CollectionExtract(ST_SetSRID(ST_GeomFromGeoJSON(geometry_json), 4326), 3)),
+  ST_Multi(
+    ST_CollectionExtract(
+      ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(geometry_json), 4326)),
+      3
+    )
+  ),
   record_fingerprint, first_enrichment_run_id, decision_use
 FROM incoming_grid3_settlements;
+
+UPDATE ooh_data.enrichment_runs
+SET
+  status='succeeded',
+  completed_at=now(),
+  counts=${sqlLiteral(JSON.stringify(resultCounts))}::jsonb
+WHERE run_id=${sqlLiteral(runId)}::uuid AND status='running';
 COMMIT;
 `);
         await session.finish();
+        return {
+          runId,
+          artifactSha256,
+          fieldMapFingerprint,
+          coverageGeometryFingerprint,
+          coverageEvidenceSha256,
+          inspection,
+          counts: resultCounts,
+        };
       } catch (error) {
         try { await session.write("ROLLBACK;\n"); } catch { /* session may be closed */ }
         try { await session.finish(); } catch { /* preserve original error */ }
         throw error;
       }
-
-      const expectedFeatureCount = Number(inspection.featureCount);
-      if (counts.features !== expectedFeatureCount) {
-        throw new Error(`GRID3_SETTLEMENT_FEATURE_COUNT_MISMATCH:${counts.features}:${expectedFeatureCount}`);
-      }
-      const resultCounts = {
-        features: counts.features,
-        repairedGeometries: counts.repaired,
-        productVersion: GRID3_SETTLEMENT_PRODUCT_VERSION,
-        fieldMapFingerprint,
-        mappedOptionalSemantics: Object.keys(fieldMap).filter((key) => key !== "featureId"),
-      };
-      await runPsql(databaseUrl, `
-UPDATE ooh_data.enrichment_runs
-SET status='succeeded', completed_at=now(), counts=${sqlLiteral(JSON.stringify(resultCounts))}::jsonb
-WHERE run_id=${sqlLiteral(runId)}::uuid AND status='running';
-`);
-      return {
-        runId,
-        artifactSha256,
-        fieldMapFingerprint,
-        inspection,
-        coverageBoundsWgs84,
-        counts: resultCounts,
-      };
     } catch (error) {
       try { await markFailed(databaseUrl, runId, error); } catch { /* preserve import failure */ }
       throw error;
