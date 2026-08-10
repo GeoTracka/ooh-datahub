@@ -65,14 +65,15 @@ INSERT INTO ooh_data.context_feature_snapshots (
 );
 
 INSERT INTO ooh_data.calibration_evidence_packages (
-  package_digest, package_version, evidence_environment, model_version, replay_version,
+  package_digest, package_version, movement_calibration_gate_version,
+  evidence_environment, model_version, replay_version, model_frozen_at,
   geography_id, applicability_scope, context_feature_snapshot_id, context_feature_version,
   resolver_version, source_fingerprint, resolution_fingerprint,
   movement_calibration_report, canonical_manifest
 ) VALUES (
-  '${digest}', 'calibration-evidence-package-v1', 'test_fixture',
-  'movement-model-v2', 'movement-replay-v2', 'nga-lagos', 'fixture-only',
-  '${snapshotId}', 'planner-context-v1', 'entity-resolver-v1',
+  '${digest}', 'calibration-evidence-package-v1', 'movement-calibration-gate-v1', 'test_fixture',
+  'movement-model-v2', 'movement-replay-v2', '2026-01-31T23:59:59Z'::timestamptz,
+  'nga-lagos', 'fixture-only', '${snapshotId}', 'planner-context-v1', 'entity-resolver-v1',
   '${sourceFingerprint}', '${resolutionFingerprint}',
   '{"heldOutLocations":3,"directionalBlocks":192}'::jsonb,
   '{"fixture":true}'::jsonb
@@ -97,24 +98,27 @@ INSERT INTO ooh_data.calibration_evidence_artifacts (
    'https://evidence.example/replication', 'file:///retained/replication', 'fixture-license', 'fixture:rights:5', 'permitted', '2026-02-01', '2026-02-28');
 
 INSERT INTO ooh_data.calibration_promotion_runs (
-  run_id, submitted_digest, package_digest, policy_version, evidence_environment,
-  validation_status, eligible_for_evidence_c, submitted_manifest,
+  run_id, submitted_digest, package_digest, policy_version, movement_calibration_gate_version,
+  evidence_environment, validation_status, eligible_for_evidence_c, submitted_manifest,
   promotion_failure_codes
 ) VALUES (
   '33333333-3333-4333-8333-333333333333'::uuid, '${digest}', '${digest}',
-  'calibration-promotion-policy-v1', 'test_fixture', 'accepted', false,
+  'calibration-promotion-policy-v1', 'movement-calibration-gate-v1',
+  'test_fixture', 'accepted', false,
   '{"fixture":true}'::jsonb, ARRAY['TEST_FIXTURE_NOT_PROMOTABLE']::text[]
 );
 `);
 
   await runPsql(databaseUrl, `
 INSERT INTO ooh_data.calibration_evidence_packages (
-  package_digest, package_version, evidence_environment, model_version, replay_version,
+  package_digest, package_version, movement_calibration_gate_version,
+  evidence_environment, model_version, replay_version, model_frozen_at,
   geography_id, applicability_scope, context_feature_snapshot_id, context_feature_version,
   resolver_version, source_fingerprint, resolution_fingerprint,
   movement_calibration_report, canonical_manifest
 )
-SELECT package_digest, package_version, evidence_environment, model_version, replay_version,
+SELECT package_digest, package_version, movement_calibration_gate_version,
+       evidence_environment, model_version, replay_version, model_frozen_at,
        geography_id, applicability_scope, context_feature_snapshot_id, context_feature_version,
        resolver_version, source_fingerprint, resolution_fingerprint,
        movement_calibration_report, canonical_manifest
@@ -149,24 +153,27 @@ ON CONFLICT (package_digest) DO NOTHING;
 
   await expectSqlFailure(`
 INSERT INTO ooh_data.calibration_evidence_packages (
-  package_digest, package_version, evidence_environment, model_version, replay_version,
+  package_digest, package_version, movement_calibration_gate_version,
+  evidence_environment, model_version, replay_version, model_frozen_at,
   geography_id, applicability_scope, context_feature_snapshot_id, context_feature_version,
   resolver_version, source_fingerprint, resolution_fingerprint,
   movement_calibration_report, canonical_manifest
 ) VALUES (
-  '${"b".repeat(64)}', 'calibration-evidence-package-v1', 'test_fixture',
-  'movement-model-v2', 'movement-replay-v2', 'nga-lagos', 'fixture-only',
-  '${snapshotId}', 'planner-context-v1', 'entity-resolver-v1',
+  '${"b".repeat(64)}', 'calibration-evidence-package-v1', 'movement-calibration-gate-v1', 'test_fixture',
+  'movement-model-v2', 'movement-replay-v2', '2026-01-31T23:59:59Z'::timestamptz,
+  'nga-lagos', 'fixture-only', '${snapshotId}', 'planner-context-v1', 'entity-resolver-v1',
   '${"3".repeat(32)}', '${resolutionFingerprint}', '{}'::jsonb, '{}'::jsonb
 );`, "CALIBRATION_CONTEXT_BINDING_MISMATCH");
 
   await runPsql(databaseUrl, `
 INSERT INTO ooh_data.calibration_promotion_runs (
-  run_id, submitted_digest, policy_version, evidence_environment, validation_status,
+  run_id, submitted_digest, policy_version, movement_calibration_gate_version,
+  evidence_environment, validation_status,
   package_failure_codes, eligible_for_evidence_c, submitted_manifest
 ) VALUES (
   '44444444-4444-4444-8444-444444444444'::uuid, '${"b".repeat(64)}',
-  'calibration-promotion-policy-v1', 'test_fixture', 'rejected',
+  'calibration-promotion-policy-v1', 'movement-calibration-gate-v1',
+  'test_fixture', 'rejected',
   ARRAY['CALIBRATION_CONTEXT_BINDING_MISMATCH']::text[], false, '{"fixture":true}'::jsonb
 );
 `);
@@ -176,11 +183,12 @@ INSERT INTO ooh_data.calibration_promotion_runs (
 
   await expectSqlFailure(`
 INSERT INTO ooh_data.calibration_promotion_runs (
-  run_id, submitted_digest, package_digest, policy_version, evidence_environment,
-  validation_status, eligible_for_evidence_c, submitted_manifest
+  run_id, submitted_digest, package_digest, policy_version, movement_calibration_gate_version,
+  evidence_environment, validation_status, eligible_for_evidence_c, submitted_manifest
 ) VALUES (
   '55555555-5555-4555-8555-555555555555'::uuid, '${digest}', '${digest}',
-  'calibration-promotion-policy-v1', 'test_fixture', 'accepted', true, '{"fixture":true}'::jsonb
+  'calibration-promotion-policy-v1', 'movement-calibration-gate-v1',
+  'test_fixture', 'accepted', true, '{"fixture":true}'::jsonb
 );`, "calibration_promotion_runs_check");
 
   process.stdout.write(`${JSON.stringify({
