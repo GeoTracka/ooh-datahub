@@ -55,9 +55,9 @@ describe("OSM advertising adapter", () => {
       osmId: "2",
       advertisingType: "screen",
       representativeMethod: "vertex_mean",
-      latitude: 6.55,
-      longitude: 3.35,
     });
+    expect(rows[0].latitude).toBeCloseTo(6.55, 12);
+    expect(rows[0].longitude).toBeCloseTo(3.35, 12);
   });
 
   it("computes proximity in metres without turning proximity into identity", () => {
