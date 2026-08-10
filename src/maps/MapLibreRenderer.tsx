@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import MapView, { Marker, type MapRef } from "@vis.gl/react-maplibre";
 import type { MapLibreScene } from "@/contracts/renderer";
 import { mapLibreStyle } from "@/maps/mapLibreStyle";
@@ -47,7 +47,7 @@ export function MapLibreRenderer({
   const targetLatitude = selected?.coordinate[1] ?? overview.latitude;
   const targetZoom = selected ? 12.5 : overview.zoom;
 
-  useEffect(() => {
+  const focusCurrentTarget = useCallback(() => {
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     mapRef.current?.flyTo({
       center: [targetLongitude, targetLatitude],
@@ -56,6 +56,10 @@ export function MapLibreRenderer({
     });
   }, [targetLatitude, targetLongitude, targetZoom]);
 
+  useEffect(() => {
+    focusCurrentTarget();
+  }, [focusCurrentTarget]);
+
   return (
     <div data-testid="maplibre-renderer" className="map-surface">
       <MapView
@@ -63,6 +67,7 @@ export function MapLibreRenderer({
         initialViewState={overview}
         mapStyle={mapLibreStyle}
         reuseMaps={false}
+        onLoad={focusCurrentTarget}
       >
         {scene.features.map((feature) => (
           <Marker
