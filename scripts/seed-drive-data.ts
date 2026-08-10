@@ -85,9 +85,21 @@ async function verifySources(sourceDir: string): Promise<VerifiedSource[]> {
   return verified;
 }
 
-async function readSheet(path: string, sheet: string): Promise<unknown[][]> {
-  const rows = await readXlsxFile(path, { sheet });
-  return rows as unknown[][];
+type WorkbookSheet = {
+  sheet: string;
+  data: unknown[][];
+};
+
+async function readWorkbook(path: string): Promise<Map<string, unknown[][]>> {
+  const readAllSheets = readXlsxFile as unknown as (input: string) => Promise<WorkbookSheet[]>;
+  const sheets = await readAllSheets(path);
+  return new Map(sheets.map((sheet) => [sheet.sheet, sheet.data]));
+}
+
+function sheetRows(workbook: Map<string, unknown[][]>, sourceId: string, sheet: string): unknown[][] {
+  const rows = workbook.get(sheet);
+  if (!rows) throw new Error(`SOURCE_SHEET_MISSING:${sourceId}:${sheet}`);
+  return rows;
 }
 
 function bump(map: QualityCounts, key: string): void {
@@ -161,10 +173,11 @@ async function processOohSource(
   quality: QualityCounts,
 ): Promise<{ sourceId: string; sheets: { sheet: string; physicalRows: number; accepted: number; quarantined: number }[] }> {
   const path = join(sourceDir, source.fileName);
+  const workbook = await readWorkbook(path);
   const sheets: { sheet: string; physicalRows: number; accepted: number; quarantined: number }[] = [];
 
   for (const spec of source.placementSheets) {
-    const rows = await readSheet(path, spec.sheet);
+    const rows = sheetRows(workbook, source.id, spec.sheet);
     const physicalRows = nonEmptyRowCount(rows);
     if (physicalRows !== spec.expectedDataRows) {
       throw new Error(`SOURCE_ROW_COUNT_MISMATCH:${source.id}:${spec.sheet}:expected=${spec.expectedDataRows}:actual=${physicalRows}`);
@@ -190,7 +203,7 @@ async function processOohSource(
   }
 
   for (const spec of source.boardQualitySheets ?? []) {
-    const rows = await readSheet(path, spec.sheet);
+    const rows = sheetRows(workbook, source.id, spec.sheet);
     const physicalRows = nonEmptyRowCount(rows);
     if (physicalRows !== spec.expectedDataRows) {
       throw new Error(`SOURCE_ROW_COUNT_MISMATCH:${source.id}:${spec.sheet}:expected=${spec.expectedDataRows}:actual=${physicalRows}`);
@@ -241,16 +254,11 @@ async function processFaanSource(
   quality: QualityCounts,
 ): Promise<{ sourceId: string; sheets: { sheet: string; parsedSections: number }[] }> {
   const path = join(sourceDir, source.fileName);
-  const sheetNames = [...new Set([
-    ...source.flowSections.map((section) => section.sheet),
-    ...source.weightSections.map((section) => section.sheet),
-  ])];
-  const sheets = new Map<string, unknown[][]>();
-  for (const sheet of sheetNames) sheets.set(sheet, await readSheet(path, sheet));
+  const workbook = await readWorkbook(path);
   const sectionCounts = new Map<string, number>();
 
   for (const spec of source.flowSections) {
-    const parsed = parseFaanFlowSection(sheets.get(spec.sheet) ?? [], source.id, source.year, spec);
+    const parsed = parseFaanFlowSection(sheetRows(workbook, source.id, spec.sheet), source.id, source.year, spec);
     for (const record of parsed.monthly) {
       await writeLine(streams.monthly, record);
       counts.faanMonthlyAccepted += 1;
@@ -266,7 +274,7 @@ async function processFaanSource(
   }
 
   for (const spec of source.weightSections) {
-    const parsed = parseFaanWeightSection(sheets.get(spec.sheet) ?? [], source.id, source.year, spec);
+    const parsed = parseFaanWeightSection(sheetRows(workbook, source.id, spec.sheet), source.id, source.year, spec);
     for (const record of parsed.monthly) {
       await writeLine(streams.monthly, record);
       counts.faanMonthlyAccepted += 1;
@@ -379,6 +387,7 @@ async function main(): Promise<void> {
     throw error;
   }
 }
+
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   process.stderr.write(`seed:data failed: ${message}\n`);
