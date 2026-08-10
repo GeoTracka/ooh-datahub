@@ -12,3 +12,9 @@ docs/superpowers/plans/.calibrated-wizard-FAB90-patches.json.gz
 docs/superpowers/plans/.calibrated-wizard-FAB90.recovery.md
 docs/superpowers/plans/.space-test.tmp
 scripts/reconstruct-plan.mjs
+
+# Reviewed Drive source artifacts and generated seed staging stay outside git.
+data/raw/drive/
+data/seeded/drive/
+data/seeded/.drive-*/
+data/seeded/drive.previous-*/
