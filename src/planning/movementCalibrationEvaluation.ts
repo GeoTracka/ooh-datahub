@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { MovementCalibrationReport } from "@/planning/calibrationGate";
 import { canonicalJson } from "@/shared/canonicalJson";
@@ -101,7 +100,7 @@ export type MovementEvaluationArtifactInput = {
 
 export type DerivedMovementCalibration = {
   evaluationVersion: typeof MOVEMENT_CALIBRATION_EVALUATION_VERSION;
-  evaluationDigest: string;
+  evaluationCanonical: string | null;
   report: MovementCalibrationReport | null;
   failures: MovementEvaluationFailure[];
 };
@@ -172,7 +171,7 @@ export function deriveMovementCalibrationReport(input: {
   if (parsedArtifacts.length !== input.artifacts.length || parsedArtifacts.length === 0) {
     return {
       evaluationVersion: MOVEMENT_CALIBRATION_EVALUATION_VERSION,
-      evaluationDigest: createHash("sha256").update(canonicalJson(input.artifacts)).digest("hex"),
+      evaluationCanonical: null,
       report: null,
       failures: [...new Set(failures)],
     };
@@ -263,19 +262,19 @@ export function deriveMovementCalibrationReport(input: {
   const independentDateReplication = primary.length > 0 && primary.every((record) => independentCells.has(cellKey(record)));
   if (!independentDateReplication) failures.push("INDEPENDENT_DATE_CELL_MISSING");
 
-  const evaluationDigest = createHash("sha256").update(canonicalJson({
+  const evaluationCanonical = canonicalJson({
     evaluationVersion: MOVEMENT_CALIBRATION_EVALUATION_VERSION,
     protocol,
     records: records
       .map(({ usage, record }) => ({ usage, record }))
       .sort((a, b) => a.record.recordId.localeCompare(b.record.recordId)),
-  })).digest("hex");
+  });
 
   const fatalFailures = failures.filter((failure) => failure !== "INDEPENDENT_DATE_CELL_MISSING");
   if (fatalFailures.length > 0 || heldOut.length === 0 || positiveHeldOut.length === 0 || denominator <= 0 || eligibleStratumBiases.length === 0) {
     return {
       evaluationVersion: MOVEMENT_CALIBRATION_EVALUATION_VERSION,
-      evaluationDigest,
+      evaluationCanonical,
       report: null,
       failures: [...new Set(failures)],
     };
@@ -301,7 +300,7 @@ export function deriveMovementCalibrationReport(input: {
 
   return {
     evaluationVersion: MOVEMENT_CALIBRATION_EVALUATION_VERSION,
-    evaluationDigest,
+    evaluationCanonical,
     report,
     failures: [...new Set(failures)],
   };
