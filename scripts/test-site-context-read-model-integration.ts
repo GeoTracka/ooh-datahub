@@ -208,6 +208,23 @@ WHERE coordinate_assertion_id='coordinate:e3:b';
   }
 
   await expectSqlFailure(
+    `UPDATE ooh_data.site_vector_context_snapshots SET radii_m=ARRAY[250,500] WHERE snapshot_id='${snapshotTwo}';`,
+    "VECTOR_CONTEXT_IMMUTABLE:site_vector_context_snapshots",
+  );
+  await expectSqlFailure(
+    `UPDATE ooh_data.site_vector_context_coverage SET places_covered=false WHERE snapshot_id='${snapshotTwo}';`,
+    "VECTOR_CONTEXT_IMMUTABLE:site_vector_context_coverage",
+  );
+  await expectSqlFailure(
+    `UPDATE ooh_data.site_destination_context SET place_count=1000 WHERE snapshot_id='${snapshotTwo}';`,
+    "VECTOR_CONTEXT_IMMUTABLE:site_destination_context",
+  );
+  await expectSqlFailure(
+    `DELETE FROM ooh_data.site_network_context WHERE snapshot_id='${snapshotTwo}';`,
+    "VECTOR_CONTEXT_IMMUTABLE:site_network_context",
+  );
+
+  await expectSqlFailure(
     "UPDATE ooh_data.site_coordinate_assertions SET latitude=6.6 WHERE assertion_id='coordinate:e3:a';",
     "COORDINATE_ASSERTION_EVIDENCE_IMMUTABLE:coordinate:e3:a",
   );
