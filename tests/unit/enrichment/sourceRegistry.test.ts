@@ -20,6 +20,15 @@ describe("open enrichment source registry", () => {
       .toThrow("ENRICHMENT_SOURCE_NOT_PRODUCTION_ENABLED");
   });
 
+  it("fails closed for generic settlement ingestion until the exact release is reviewed", () => {
+    const settlement = enrichmentSource("grid3-nigeria-settlements");
+    expect(settlement.licenseId).toBe("PRODUCT-SPECIFIC-REVIEW-REQUIRED");
+    expect(settlement.commercialUseStatus).toBe("unknown");
+    expect(settlement.productionEnabled).toBe(false);
+    expect(() => productionEnrichmentSource("grid3-nigeria-settlements"))
+      .toThrow("ENRICHMENT_SOURCE_NOT_PRODUCTION_ENABLED");
+  });
+
   it("requires explicit product license review where the source family is mixed", () => {
     const common = {
       sourceId: "worldpop-nigeria-age-sex",
