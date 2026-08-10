@@ -85,6 +85,7 @@ jobs:
           tests/e2e/seeded-fmcg.spec.ts
           tests/e2e/sector-presets.spec.ts
           tests/e2e/network-disabled.spec.ts
+          tests/e2e/upload-enrichment.spec.ts
 
   e2e-visual:
     name: UI / UX review
