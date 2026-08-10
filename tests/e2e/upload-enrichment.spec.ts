@@ -1,7 +1,7 @@
 import path from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-async function reachActionStep(page: Parameters<typeof test>[0] extends never ? never : import("@playwright/test").Page) {
+async function reachActionStep(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
