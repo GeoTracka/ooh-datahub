@@ -17,11 +17,13 @@ E2A consumes two retained reductions from the **same explicit Overture release a
 
 A derivation fails closed when the two artifacts do not share a release and bbox.
 
-The reducer never resolves a floating `latest` release. Example:
+The reducer never resolves a floating `latest` release. Check Overture's official release calendar before landing new data and pass a release that is actually published. At the time this document was updated, the official calendar still listed `2026-06-17.0` as the current published release; later scheduled releases must not be assumed available merely from their calendar date.
+
+Example:
 
 ```bash
 pnpm enrichment:reduce:overture -- \
-  2026-07-22.0 \
+  2026-06-17.0 \
   3.20,6.35,3.75,6.75 \
   /secure/overture/places.geojson \
   /secure/overture/roads.geojson
@@ -57,10 +59,10 @@ The reduced file itself is the OOH Datahub replay boundary. Its exact SHA-256, r
 DATABASE_URL='postgresql://...' pnpm enrichment:import:overture -- \
   --kind=places \
   --input=/secure/overture/places.geojson \
-  --release=2026-07-22.0 \
+  --release=2026-06-17.0 \
   --bbox=3.20,6.35,3.75,6.75 \
-  --access-uri='s3://overturemaps-us-west-2/release/2026-07-22.0/theme=places/type=place/' \
-  --storage-uri='s3://company-open-data/overture/2026-07-22.0/lagos/places.geojson'
+  --access-uri='s3://overturemaps-us-west-2/release/2026-06-17.0/theme=places/type=place/' \
+  --storage-uri='s3://company-open-data/overture/2026-06-17.0/lagos/places.geojson'
 ```
 
 and equivalently for `--kind=roads`.
