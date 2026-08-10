@@ -16,6 +16,7 @@
     "data:resolve": "tsx scripts/rebuild-entity-resolution.ts",
     "data:assert": "tsx scripts/import-resolution-assertions.ts",
     "data:derive": "tsx scripts/derive-context-features.ts",
+    "enrichment:land": "tsx scripts/land-open-source.ts",
     "enrichment:register": "tsx scripts/register-open-artifact.ts",
     "enrichment:link": "tsx scripts/link-enrichment-artifact-derivation.ts",
     "enrichment:import": "tsx scripts/import-open-enrichment.ts",
