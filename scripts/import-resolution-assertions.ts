@@ -95,6 +95,17 @@ async function readAssertions(path: string): Promise<AssertionImport> {
   return result;
 }
 
+function firstOwnerEntities(rows: readonly ValidMediaOwnerAssertion[]): ValidMediaOwnerAssertion[] {
+  const seen = new Set<string>();
+  const entities: ValidMediaOwnerAssertion[] = [];
+  for (const row of rows) {
+    if (seen.has(row.ownerId)) continue;
+    seen.add(row.ownerId);
+    entities.push(row);
+  }
+  return entities;
+}
+
 async function writeRows(
   session: PsqlSession,
   table: string,
@@ -130,6 +141,7 @@ async function importAssertions(): Promise<{
 }> {
   const databaseUrl = requiredDatabaseUrl();
   const assertions = await readAssertions(inputPath());
+  const ownerEntities = firstOwnerEntities(assertions.mediaOwners);
   await migrateDatabase();
   const runId = randomUUID();
   const counts = {
@@ -194,7 +206,7 @@ VALUES (
       session,
       "assertion_owners",
       ["owner_id", "canonical_name", "normalized_key", "registry_namespace", "registry_revision"],
-      assertions.mediaOwners.map((row) => [
+      ownerEntities.map((row) => [
         row.ownerId,
         row.canonicalName,
         row.normalizedKey,
@@ -295,10 +307,8 @@ ON CONFLICT (assertion_id) DO NOTHING;
 INSERT INTO ooh_data.media_owner_entities (
   owner_id, canonical_name, normalized_key, registry_namespace, registry_revision
 )
-SELECT DISTINCT ON (owner_id)
-  owner_id, canonical_name, normalized_key, registry_namespace, registry_revision
+SELECT owner_id, canonical_name, normalized_key, registry_namespace, registry_revision
 FROM assertion_owners
-ORDER BY owner_id, canonical_name
 ON CONFLICT (owner_id) DO NOTHING;
 
 INSERT INTO ooh_data.media_owner_aliases (
