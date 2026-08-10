@@ -87,6 +87,7 @@ jobs:
           tests/e2e/network-disabled.spec.ts
 
   e2e-visual:
+    name: UI / UX review
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -99,12 +100,36 @@ jobs:
       - run: corepack prepare pnpm@10.32.1 --activate
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm exec playwright test tests/e2e/visual-accessibility.spec.ts
-      - name: Upload visual failure artifacts
+      - name: Run visual regression and UX review suite
+        run: pnpm test:ui-review
+      - name: Summarize UI / UX review evidence
+        if: always()
+        shell: bash
+        run: |
+          echo "## UI / UX review evidence" >> "$GITHUB_STEP_SUMMARY"
+          if [ -d artifacts/ui-ux-review ]; then
+            screenshots=$(find artifacts/ui-ux-review -type f -name '*.png' | wc -l | tr -d ' ')
+            diagnostics=$(find artifacts/ui-ux-review -type f -name '*.json' | wc -l | tr -d ' ')
+            echo "- Captured **${screenshots} screenshots** and **${diagnostics} diagnostic files**." >> "$GITHUB_STEP_SUMMARY"
+            echo "- Download the \`ui-ux-review-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}\` artifact to review hierarchy, density, responsive states and interaction polish." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- No review pack was produced; inspect the UI / UX review job failure." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload UI / UX review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-ux-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/ui-ux-review/
+          if-no-files-found: warn
+          retention-days: 21
+      - name: Upload visual failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: visual-failure-${{ github.run_id }}-${{ github.run_attempt }}
-          path: test-results/
-          if-no-files-found: error
+          name: ui-ux-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            playwright-report/ui-ux/
+          if-no-files-found: warn
           retention-days: 7
