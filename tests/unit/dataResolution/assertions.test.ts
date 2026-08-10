@@ -69,8 +69,8 @@ describe("resolution assertions", () => {
       latitude: 6.6,
       longitude: 3.35,
       coordinateAccuracyM: 10,
-      sourceKind: "field_survey",
-      coordinateSourceId: "survey",
+      sourceKind: "open_dataset",
+      coordinateSourceId: "open-dataset",
       spatialRights: "open_licensed",
       spatialLicenseId: "ODbL",
       assertionStatus: "approved",
@@ -78,7 +78,30 @@ describe("resolution assertions", () => {
     })).toThrow("APPROVED_COORDINATE_SOURCE_ARTIFACT_REQUIRED");
   });
 
-  it("makes owner, airport and site decisions evidence-versioned", () => {
+  it("rejects source-kind / rights mismatches before persistence", () => {
+    expect(() => validateCoordinateAssertion({
+      siteId: "site:fixture",
+      latitude: 6.6,
+      longitude: 3.35,
+      sourceKind: "licensed_provider",
+      coordinateSourceId: "provider",
+      spatialRights: "open_licensed",
+      assertionStatus: "pending",
+      enrichmentRevision: "r1",
+    })).toThrow("OPEN_LICENSED_RIGHTS_REQUIRE_OPEN_DATASET");
+    expect(() => validateCoordinateAssertion({
+      siteId: "site:fixture",
+      latitude: 6.6,
+      longitude: 3.35,
+      sourceKind: "open_dataset",
+      coordinateSourceId: "dataset",
+      spatialRights: "provider_derived",
+      assertionStatus: "pending",
+      enrichmentRevision: "r1",
+    })).toThrow("PROVIDER_DERIVED_RIGHTS_REQUIRE_LICENSED_PROVIDER");
+  });
+
+  it("makes owner identity stable across registry revisions while evidence remains versioned", () => {
     const owner = validateMediaOwnerAssertion({
       siteId: "site:fixture",
       ownerName: "Example Media Ltd.",
@@ -89,8 +112,20 @@ describe("resolution assertions", () => {
       mappingMethod: "authoritative_registry",
       assertionStatus: "approved",
     });
+    const laterRevision = validateMediaOwnerAssertion({
+      siteId: "site:fixture-2",
+      ownerName: "Example Media Ltd",
+      registryNamespace: "ooh-registry",
+      registryRevision: "2026-09-01",
+      evidenceSourceId: "registry-row:99",
+      evidenceRevision: "rev-4",
+      mappingMethod: "authoritative_registry",
+      assertionStatus: "approved",
+    });
     expect(owner.normalizedKey).toBe("example media ltd");
     expect(owner.ownerId).toMatch(/^owner:/);
+    expect(laterRevision.ownerId).toBe(owner.ownerId);
+    expect(laterRevision.aliasId).not.toBe(owner.aliasId);
 
     const airport = validateAirportOverride({
       sourceLiteral: "Nnamdi Azikwe International Airport",
