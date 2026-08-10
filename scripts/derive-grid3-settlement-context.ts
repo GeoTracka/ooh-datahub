@@ -201,7 +201,8 @@ fingerprinted AS (
           'primaryContainmentPolicy', 'smallest_containing_extent_area_then_feature_id',
           'coreDepthPolicy', 'geodesic_distance_to_primary_extent_boundary',
           'settledAreaPolicy', 'union_of_polygonal_intersections_to_avoid_overlap_double_count',
-          'patchDensityPolicy', 'positive_area_intersecting_extent_count_per_buffer_sqkm',
+          'fragmentationPolicy', 'connected_components_of_unioned_polygonal_intersections',
+          'sourceExtentCountPolicy', 'positive_area_source_extent_intersections_only',
           'coveragePolicy', 'full_radius_buffer_inside_exact_reviewed_coverage_geometry'
         ),
         'sourceManifest', source_manifest
@@ -350,7 +351,7 @@ WITH intersections AS (
    AND f.artifact_sha256=${sqlLiteral(settlementSha)}
    AND ST_Intersects(f.geom, sr.buffer_geom)
 ),
-per_buffer AS (
+unioned AS (
   SELECT
     site_id,
     coordinate_assertion_id,
@@ -359,35 +360,44 @@ per_buffer AS (
     source_covered,
     count(feature_id) FILTER (
       WHERE intersection_geom IS NOT NULL AND NOT ST_IsEmpty(intersection_geom)
-    )::integer AS intersecting_settlement_count,
-    COALESCE(
-      ST_Area(
-        ST_UnaryUnion(
-          ST_Collect(intersection_geom) FILTER (
-            WHERE intersection_geom IS NOT NULL AND NOT ST_IsEmpty(intersection_geom)
-          )
-        )::geography
+    )::integer AS intersecting_source_extent_count,
+    ST_CollectionExtract(
+      ST_UnaryUnion(
+        ST_Collect(intersection_geom) FILTER (
+          WHERE intersection_geom IS NOT NULL AND NOT ST_IsEmpty(intersection_geom)
+        )
       ),
-      0::double precision
-    ) AS settled_area_m2,
-    COALESCE(
-      max(ST_Area(intersection_geom::geography)) FILTER (
-        WHERE intersection_geom IS NOT NULL AND NOT ST_IsEmpty(intersection_geom)
-      ),
-      0::double precision
-    ) AS largest_intersection_area_m2
+      3
+    ) AS union_geom
   FROM intersections
   GROUP BY site_id, coordinate_assertion_id, radius_m, buffer_area_m2, source_covered
+),
+metrics AS (
+  SELECT
+    u.site_id,
+    u.coordinate_assertion_id,
+    u.radius_m,
+    u.buffer_area_m2,
+    u.source_covered,
+    u.intersecting_source_extent_count,
+    COALESCE(ST_Area(u.union_geom::geography), 0::double precision) AS settled_area_m2,
+    COALESCE(ST_NumGeometries(u.union_geom), 0)::integer AS settled_component_count,
+    COALESCE(component.largest_component_area_m2, 0::double precision) AS largest_component_area_m2
+  FROM unioned u
+  LEFT JOIN LATERAL (
+    SELECT max(ST_Area(dumped.geom::geography)) AS largest_component_area_m2
+    FROM ST_Dump(u.union_geom) AS dumped
+  ) component ON true
 )
 SELECT
   *,
   LEAST(1::double precision, settled_area_m2 / buffer_area_m2) AS settled_area_share,
-  intersecting_settlement_count / (buffer_area_m2 / 1000000.0) AS patch_density_per_sqkm,
+  settled_component_count / (buffer_area_m2 / 1000000.0) AS component_density_per_sqkm,
   CASE WHEN settled_area_m2 > 0
-    THEN LEAST(1::double precision, largest_intersection_area_m2 / settled_area_m2)
+    THEN LEAST(1::double precision, largest_component_area_m2 / settled_area_m2)
     ELSE NULL
-  END AS largest_settlement_share
-FROM per_buffer;
+  END AS largest_component_share
+FROM metrics;
 
 INSERT INTO ooh_data.site_settlement_context (
   snapshot_id, site_id, coordinate_assertion_id, radius_m,
@@ -396,8 +406,9 @@ INSERT INTO ooh_data.site_settlement_context (
   primary_settlement_area_m2, primary_settlement_perimeter_m, primary_settlement_compactness,
   primary_building_count, primary_building_density, primary_degree_urbanisation,
   primary_population_estimate, primary_false_positive_probability, primary_place_code,
-  buffer_area_m2, settled_area_m2, settled_area_share, intersecting_settlement_count,
-  patch_density_per_sqkm, largest_intersection_area_m2, largest_settlement_share,
+  buffer_area_m2, settled_area_m2, settled_area_share,
+  intersecting_source_extent_count, settled_component_count, component_density_per_sqkm,
+  largest_component_area_m2, largest_component_share,
   semantic_label, decision_use
 )
 SELECT
@@ -424,10 +435,11 @@ SELECT
   r.buffer_area_m2,
   r.settled_area_m2,
   r.settled_area_share,
-  r.intersecting_settlement_count,
-  r.patch_density_per_sqkm,
-  r.largest_intersection_area_m2,
-  r.largest_settlement_share,
+  r.intersecting_source_extent_count,
+  r.settled_component_count,
+  r.component_density_per_sqkm,
+  r.largest_component_area_m2,
+  r.largest_component_share,
   'settlement_morphology_context_not_land_use_or_audience',
   'context_only'
 FROM settlement_radius_agg r
