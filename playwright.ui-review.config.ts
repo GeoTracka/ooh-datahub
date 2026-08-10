@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -17,8 +17,6 @@ export default defineConfig({
   },
   use: {
     baseURL: "http://localhost:3000",
-    viewport: { width: 1440, height: 1000 },
-    deviceScaleFactor: 1,
     locale: "en-US",
     timezoneId: "UTC",
     colorScheme: "light",
@@ -32,5 +30,8 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: true,
   },
-  projects: [{ name: "chromium" }],
+  projects: [{
+    name: "chromium",
+    use: devices["Desktop Chrome"],
+  }],
 });
