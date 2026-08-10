@@ -456,7 +456,13 @@ WHERE r.run_id=${sqlLiteral(runId)}::uuid;
 COMMIT;
 `);
 
-    const rows = await queryJsonRows<{
+    let result: {
+      snapshotId: string;
+      inputFingerprint: string;
+      counts: Record<string, unknown>;
+    } | null = null;
+    let resultCount = 0;
+    for await (const row of queryJsonRows<{
       snapshotId: string;
       inputFingerprint: string;
       counts: Record<string, unknown>;
@@ -468,9 +474,13 @@ SELECT jsonb_build_object(
 )
 FROM ooh_data.site_settlement_context_runs
 WHERE run_id=${sqlLiteral(runId)}::uuid AND status='succeeded';
-`);
-    if (rows.length !== 1) throw new Error("GRID3_SETTLEMENT_CONTEXT_RUN_RESULT_MISSING");
-    return { runId, ...rows[0] };
+`)) {
+      result = row;
+      resultCount += 1;
+      if (resultCount > 1) throw new Error("GRID3_SETTLEMENT_CONTEXT_RUN_RESULT_NOT_UNIQUE");
+    }
+    if (!result) throw new Error("GRID3_SETTLEMENT_CONTEXT_RUN_RESULT_MISSING");
+    return { runId, ...result };
   } catch (error) {
     try { await markFailed(databaseUrl, runId, error); } catch { /* preserve derivation failure */ }
     throw error;
