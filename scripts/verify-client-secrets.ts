@@ -5,6 +5,8 @@ const forbidden = [
   /GOOGLE_GEOCODING_API_KEY/i,
   /X-Goog-Api-Key/i,
   /AIza[0-9A-Za-z_-]{20,}/,
+  /DATABASE_URL/i,
+  /PGPASSWORD/i,
 ];
 
 async function filesUnder(directory: string): Promise<string[]> {
