@@ -3,6 +3,7 @@ import { MOVEMENT_CALIBRATION_GATE_VERSION } from "@/planning/calibrationGate";
 import {
   CALIBRATION_EVIDENCE_PACKAGE_VERSION,
   evaluateCalibrationPromotion,
+  evaluateVerifiedCalibrationPromotion,
   validateCalibrationEvidencePackage,
   type CalibrationEvidenceArtifact,
   type CalibrationEvidencePackage,
@@ -75,16 +76,33 @@ function packageFixture(
 }
 
 describe("calibration evidence package", () => {
-  it("requires a provenance-complete package and the existing movement gate to pass", () => {
+  it("never promotes a production package from its declared summary alone", () => {
     const result = evaluateCalibrationPromotion(packageFixture());
     expect(result).toMatchObject({
       movementCalibrationGateVersion: MOVEMENT_CALIBRATION_GATE_VERSION,
       packageValid: true,
+      movementEvaluationVerified: false,
+      calibrationPassed: true,
+      eligibleForEvidenceC: false,
+      packageFailures: [],
+      promotionFailures: ["MOVEMENT_EVALUATION_NOT_VERIFIED"],
+      calibrationFailures: [],
+    });
+  });
+
+  it("promotes only after a separately derived report has been semantically verified", () => {
+    const pkg = packageFixture();
+    const result = evaluateVerifiedCalibrationPromotion({
+      packageInput: pkg,
+      derivedReport: pkg.movementCalibrationReport,
+      evaluationFailures: [],
+    });
+    expect(result).toMatchObject({
+      movementEvaluationVerified: true,
       calibrationPassed: true,
       eligibleForEvidenceC: true,
-      packageFailures: [],
       promotionFailures: [],
-      calibrationFailures: [],
+      evaluationFailures: [],
     });
   });
 
@@ -164,12 +182,16 @@ describe("calibration evidence package", () => {
     expect(result.failures).toContain("INDEPENDENT_DATE_NOT_POST_FREEZE");
   });
 
-  it("uses the existing movement calibration gate rather than duplicating thresholds", () => {
+  it("still uses the existing movement calibration gate as the only threshold authority", () => {
     const pkg = packageFixture();
-    const result = evaluateCalibrationPromotion(packageFixture({
-      movementCalibrationReport: { ...pkg.movementCalibrationReport, directionalBlocks: 191 },
-    }));
+    const failingReport = { ...pkg.movementCalibrationReport, directionalBlocks: 191 };
+    const result = evaluateVerifiedCalibrationPromotion({
+      packageInput: packageFixture({ movementCalibrationReport: failingReport }),
+      derivedReport: failingReport,
+      evaluationFailures: [],
+    });
     expect(result.packageValid).toBe(true);
+    expect(result.movementEvaluationVerified).toBe(true);
     expect(result.calibrationPassed).toBe(false);
     expect(result.calibrationFailures).toContain("DIRECTIONAL_BLOCKS");
     expect(result.eligibleForEvidenceC).toBe(false);
