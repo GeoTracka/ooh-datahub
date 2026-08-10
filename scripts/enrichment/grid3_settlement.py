@@ -206,6 +206,9 @@ def polygonal_geometry(geometry: ogr.Geometry) -> tuple[ogr.Geometry, bool, bool
     else:
         fail("GRID3_SETTLEMENT_POLYGON_GEOMETRY_REQUIRED")
 
+    # E2B2 models horizontal settlement morphology only. Source Z/M dimensions are
+    # intentionally discarded rather than widening the durable geometry contract.
+    working.FlattenTo2D()
     if not working.IsValid():
         fail("GRID3_SETTLEMENT_GEOMETRY_REPAIR_FAILED")
     return working, original_valid, repaired
@@ -242,6 +245,7 @@ def export_records(path: str, requested_layer: str | None, field_map_path: str) 
         polygon, original_valid, repaired = polygonal_geometry(geometry)
         if polygon.Transform(tx) != 0:
             fail("GRID3_SETTLEMENT_GEOMETRY_TRANSFORM_FAILED", feature_id)
+        polygon.FlattenTo2D()
         if polygon.IsEmpty() or not polygon.IsValid():
             fail("GRID3_SETTLEMENT_TRANSFORMED_GEOMETRY_INVALID", feature_id)
 
