@@ -127,6 +127,33 @@ describe("versioned enrichment snapshots", () => {
     expect(draft.selectedRows[0].coordinate?.value).toEqual([3.3717, 6.5158]);
   });
 
+  it("hashes explicit undefined optional fields like omitted fields", () => {
+    const omitted: EnrichmentRow = {
+      rowId: "UP-OPTIONAL",
+      address: "Yaba Lagos",
+      spatialRights: "unknown",
+    };
+    const explicitUndefined: EnrichmentRow = {
+      rowId: "UP-OPTIONAL",
+      address: "Yaba Lagos",
+      spatialRights: "unknown",
+      latitude: undefined,
+      longitude: undefined,
+      coordinateAccuracyM: undefined,
+      spatialLicenseId: undefined,
+      sourceArtifactId: undefined,
+      assetId: undefined,
+      supplier: undefined,
+      format: undefined,
+      rateNgn: undefined,
+      orientation: undefined,
+    };
+    const omittedSnapshot = createLocalEnrichmentSnapshot([omitted], nowIso);
+    const explicitSnapshot = createLocalEnrichmentSnapshot([explicitUndefined], nowIso);
+    expect(explicitSnapshot.id).toBe(omittedSnapshot.id);
+    expect(explicitSnapshot.dataRevision).toBe(omittedSnapshot.dataRevision);
+  });
+
   it("creates a usable local snapshot before any provider response", () => {
     const localRow = {
       ...row,
