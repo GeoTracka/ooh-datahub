@@ -138,7 +138,6 @@ export function coordinateAssertionId(input: {
 export function mediaOwnerId(
   normalizedKey: string,
   registryNamespace: string,
-  registryRevision: string,
 ): string {
-  return stableResolutionId("owner", registryNamespace, registryRevision, normalizedKey);
+  return stableResolutionId("owner", registryNamespace, normalizedKey);
 }
