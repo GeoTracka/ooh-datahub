@@ -1,7 +1,7 @@
 import { sourceDisplayLiteral } from "../dataResolution/normalize";
 
 export const OVERTURE_VECTOR_ADAPTER_VERSION = "overture-vector-context-v1";
-export const OVERTURE_VECTOR_CONTEXT_VERSION = "overture-site-vector-context-v1";
+export const OVERTURE_VECTOR_CONTEXT_VERSION = "overture-site-vector-context-v2";
 
 export type OvertureSourceItem = {
   property?: string | null;
