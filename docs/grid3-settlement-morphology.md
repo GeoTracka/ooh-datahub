@@ -12,21 +12,29 @@ Do not assume that an attribute name from an older GRID3 settlement release has 
 
 The repository does not hard-code a v4.1 license from another GRID3 product or older release. Production registration requires the exact release-specific license ID, attribution, share-alike status, review date/reference and commercial-use approval to be supplied from reviewed source evidence.
 
-## Why feature bounds are not coverage
+The generic source-registry entry is intentionally not production enabled. The dedicated v4.1 importer is the only supported production path because it requires exact release-specific licensing and coverage evidence.
 
-The outer extent of settlement polygons only says where settlement features exist. It does **not** prove that an empty area outside those features was absent from the source survey/product.
+## Exact source coverage is separate evidence
 
-Therefore registration requires a separate declared coverage envelope:
+Settlement feature bounds are **not** product coverage. The outermost polygon only says where settlement features exist; it cannot prove that an empty location was actually evaluated by the source product.
 
-- `--coverage-bbox=minLon,minLat,maxLon,maxLat`
+A latitude/longitude bounding box is also insufficient for a national product because it can include territory outside the actual product geography. E2B2 therefore requires a retained WGS84 Polygon or MultiPolygon coverage mask:
+
+- `--coverage-geojson=/retained/evidence/nga-settlement-coverage.geojson`
+- `--coverage-storage-uri=<immutable retained URI for those exact bytes>`
 - `--coverage-reference=<reviewed source/reduction evidence>`
 
-The importer verifies that the declared envelope contains the inspected feature bounds and stores both separately:
+The coverage record stores:
 
-- `featureBoundsWgs84` — diagnostic bounds of source features;
-- `coverageBoundsWgs84` — reviewed retained-source coverage used for complete/partial context semantics.
+- exact canonical geometry fingerprint;
+- SHA-256 of the retained coverage-evidence file;
+- evidence reference;
+- retained storage URI;
+- valid immutable `MultiPolygon,4326` geometry.
 
-A site-radius row is `complete` only when its full radius buffer is inside the declared coverage bbox. Otherwise it is `partial_source_coverage`; an empty intersection is never silently interpreted as a rural/unsettled zero outside known coverage.
+Import fails atomically if any normalized settlement feature lies outside the declared coverage geometry. Failed coverage validation leaves no normalized settlement feature or coverage rows behind; only the landed artifact/run audit may remain.
+
+A site-radius row is `complete` only when its **entire geodesic radius buffer** is covered by the exact retained coverage geometry. Otherwise it is `partial_source_coverage`. An empty settlement intersection can therefore mean zero only inside reviewed source coverage; missing coverage never becomes rural/suburban evidence.
 
 ## Explicit source-field map
 
@@ -58,7 +66,22 @@ Accepted source geometry is polygonal. Invalid geometry may be repaired only by 
 
 `ogr_make_valid_then_polygonal_only_v1`
 
-The importer records whether the original geometry was valid and whether repair occurred. Non-polygonal results or failed repairs are rejected. Raw source properties and immutable artifact bytes remain the audit boundary.
+The importer records whether the original geometry was valid and whether repair occurred. Non-polygonal results or failed repairs are rejected. Settlement morphology is explicitly 2D horizontal context; source Z/M dimensions are discarded before durable storage rather than silently widening the geometry contract.
+
+Raw source properties and immutable source bytes remain auditable.
+
+## Atomic source import
+
+The raw artifact registration is separate from normalization. Once a normalization run starts, these operations commit together:
+
+1. exact coverage geometry validation;
+2. source-feature count and duplicate-ID validation;
+3. proof that every normalized feature lies within coverage;
+4. coverage-row insertion/replay check;
+5. normalized source-feature insertion/replay check;
+6. successful enrichment-run status + counts.
+
+Any failure rolls back coverage and normalized features, then records the enrichment run as failed. This prevents durable normalized facts from pointing to an import that never became successful.
 
 ## Derived morphology
 
@@ -95,7 +118,7 @@ The hard semantic label is:
 
 ## Registration
 
-Example using a reviewed retained vector artifact:
+Example using a reviewed retained vector artifact and exact retained coverage evidence:
 
 ```bash
 DATABASE_URL=postgresql://... pnpm enrichment:import:grid3-settlement -- \
@@ -104,7 +127,8 @@ DATABASE_URL=postgresql://... pnpm enrichment:import:grid3-settlement -- \
   --release=2026-08-v4.1 \
   --access-uri=<source-or-retention-uri> \
   --storage-uri=<immutable-retained-uri> \
-  --coverage-bbox=<minLon,minLat,maxLon,maxLat> \
+  --coverage-geojson=/data/grid3/nga-settlement-v4.1-coverage.geojson \
+  --coverage-storage-uri=<immutable-coverage-retained-uri> \
   --coverage-reference=<reviewed-coverage-evidence> \
   --license-id=<exact-v4.1-license> \
   --attribution=<exact-v4.1-attribution> \
@@ -115,9 +139,9 @@ DATABASE_URL=postgresql://... pnpm enrichment:import:grid3-settlement -- \
   --field-map=/data/grid3/v4.1-field-map.json
 ```
 
-Registration streams SHA-256 over the actual source bytes, inspects the actual vector layer, validates the field map and imports source polygons through PostgreSQL COPY.
+Registration streams SHA-256 over the actual source bytes and the retained coverage-evidence bytes, inspects the actual vector layer, validates the explicit field map, and imports source polygons through PostgreSQL COPY.
 
-Identical artifact replay is allowed only when normalized source rows are identical. Same artifact/feature identity with changed output fails as replay drift.
+Identical artifact/coverage/source-feature replay is allowed only when the normalized evidence is identical. Same governed identity with changed output fails as replay drift.
 
 ## Derivation
 
@@ -130,7 +154,7 @@ DATABASE_URL=postgresql://... pnpm data:derive:settlement -- \
 The snapshot fingerprint binds:
 
 - exact settlement artifact SHA/release/license/metadata;
-- declared source coverage and evidence reference;
+- exact coverage-geometry fingerprint + evidence SHA/reference/retained URI;
 - field map and fingerprint;
 - all eligible coordinate assertions and their evidence metadata;
 - radii;
@@ -146,6 +170,15 @@ The integration fixture intentionally gives two sites the same E2B1 500 m reside
 - one site inside a small patch surrounded by multiple fragmented patches.
 
 E2B2 passes only if the morphology layer distinguishes them using interpretable outputs such as core depth, settled-area share and patch count. This prevents morphology from becoming a redundant proxy for population/accessibility.
+
+The fixture also first attempts an import with an undersized coverage polygon and requires:
+
+- import failure;
+- a failed run audit;
+- zero normalized settlement rows;
+- zero coverage rows.
+
+It then imports the valid exact coverage evidence and proves replay idempotency.
 
 ## Production-calibration boundary
 
