@@ -106,11 +106,12 @@ CREATE TABLE IF NOT EXISTS ooh_data.site_settlement_context (
   buffer_area_m2 double precision NOT NULL CHECK (buffer_area_m2 > 0),
   settled_area_m2 double precision NOT NULL CHECK (settled_area_m2 >= 0),
   settled_area_share double precision NOT NULL CHECK (settled_area_share >= 0 AND settled_area_share <= 1.000000001),
-  intersecting_settlement_count integer NOT NULL CHECK (intersecting_settlement_count >= 0),
-  patch_density_per_sqkm double precision NOT NULL CHECK (patch_density_per_sqkm >= 0),
-  largest_intersection_area_m2 double precision NOT NULL CHECK (largest_intersection_area_m2 >= 0),
-  largest_settlement_share double precision CHECK (
-    largest_settlement_share IS NULL OR (largest_settlement_share >= 0 AND largest_settlement_share <= 1.000000001)
+  intersecting_source_extent_count integer NOT NULL CHECK (intersecting_source_extent_count >= 0),
+  settled_component_count integer NOT NULL CHECK (settled_component_count >= 0),
+  component_density_per_sqkm double precision NOT NULL CHECK (component_density_per_sqkm >= 0),
+  largest_component_area_m2 double precision NOT NULL CHECK (largest_component_area_m2 >= 0),
+  largest_component_share double precision CHECK (
+    largest_component_share IS NULL OR (largest_component_share >= 0 AND largest_component_share <= 1.000000001)
   ),
   semantic_label text NOT NULL DEFAULT 'settlement_morphology_context_not_land_use_or_audience'
     CHECK (semantic_label = 'settlement_morphology_context_not_land_use_or_audience'),
@@ -120,8 +121,10 @@ CREATE TABLE IF NOT EXISTS ooh_data.site_settlement_context (
   CHECK (inside_settlement = (containing_settlement_count > 0)),
   CHECK ((inside_settlement AND core_depth_m IS NOT NULL AND primary_settlement_feature_id IS NOT NULL)
     OR (NOT inside_settlement AND core_depth_m IS NULL)),
-  CHECK ((settled_area_m2 = 0 AND largest_settlement_share IS NULL)
-    OR (settled_area_m2 > 0 AND largest_settlement_share IS NOT NULL))
+  CHECK (
+    (settled_area_m2 = 0 AND settled_component_count = 0 AND largest_component_area_m2 = 0 AND largest_component_share IS NULL)
+    OR (settled_area_m2 > 0 AND settled_component_count > 0 AND largest_component_area_m2 > 0 AND largest_component_share IS NOT NULL)
+  )
 );
 
 CREATE OR REPLACE FUNCTION ooh_data.validate_grid3_settlement_snapshot_source()
