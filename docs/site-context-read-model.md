@@ -37,7 +37,7 @@ This preserves evidence history without allowing revoked coordinates to continue
 
 ## Comparison semantics
 
-`src/enrichment/siteContext.ts` is the narrow typed application/planner contract. `compareSiteContext()` emits only factual contrasts from mutually source-covered facts. It is versioned separately from the SQL read model.
+`src/enrichment/siteContext.ts` is the narrow typed application/planner contract. It retains coordinate evidence plus exact family snapshot/input/artifact provenance instead of leaking source-specific raw rows into application code. `compareSiteContext()` emits only factual contrasts from mutually source-covered facts and is versioned separately from the SQL read model.
 
 The comparison layer deliberately has **no winner, score, rank bonus or recommendation field**. It can say that one site has higher resident-population context while another has more destination presence, for example, without resolving that disagreement into a universal score.
 
@@ -56,7 +56,7 @@ WHERE site_id = ANY($1::text[])
 ORDER BY site_id, coordinate_assertion_id;
 ```
 
-Do not query each context family per site. Supporting site/coordinate indexes were added specifically so the unified path can avoid an N+1 access pattern.
+Do not query each context family per site. E3 intentionally adds **no speculative indexes or materialization**: existing primary/FK indexes remain the baseline, and production query plans/cardinality should justify any later read-optimization index.
 
 ## Evidence boundary
 
