@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgis/postgis:16-3.5-alpine
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: ooh_test
@@ -55,6 +55,7 @@ jobs:
       - run: pnpm test:data-resolution
       - run: pnpm test:data-context
       - run: pnpm test:data-enrichment
+      - run: pnpm test:data-vector-context
 
   e2e-core:
     needs: verify
@@ -89,3 +90,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec playwright test tests/e2e/visual-accessibility.spec.ts
+      - name: Upload visual failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/
+          if-no-files-found: error
+          retention-days: 7
