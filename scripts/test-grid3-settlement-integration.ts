@@ -118,6 +118,7 @@ async function makeFixtures(directory: string): Promise<{
   await writeFile(generator, `
 from osgeo import gdal, ogr, osr
 import numpy as np
+import os
 import sys
 
 pop_path, walk_path, mixed_path, gpkg_path = sys.argv[1:5]
@@ -145,8 +146,8 @@ mixed = np.full((240, 320), 0.010, dtype=np.float32)
 write_tif(walk_path, walk, (origin_x, pixel, 0.0, origin_y, 0.0, -pixel), utm, -9999.0)
 write_tif(mixed_path, mixed, (origin_x, pixel, 0.0, origin_y, 0.0, -pixel), utm, -9999.0)
 
-if ogr.GetDriverByName('GPKG').DeleteDataSource(gpkg_path) == 0:
-    pass
+if os.path.exists(gpkg_path):
+    ogr.GetDriverByName('GPKG').DeleteDataSource(gpkg_path)
 ds = ogr.GetDriverByName('GPKG').CreateDataSource(gpkg_path)
 layer = ds.CreateLayer('settlements', srs=wgs, geom_type=ogr.wkbPolygon)
 for name, kind in [('sid', ogr.OFTString), ('bldg_count', ogr.OFTInteger), ('bldg_dens', ogr.OFTReal), ('degurba', ogr.OFTString), ('pop_est', ogr.OFTReal), ('fp_prob', ogr.OFTReal), ('place_code', ogr.OFTString)]:
@@ -175,7 +176,7 @@ for idx, (sid, x, y) in enumerate(patches):
     d = 0.00075 if idx == 0 else 0.00055
     add_feature(sid, [(x-d,y-d),(x+d,y-d),(x+d,y+d),(x-d,y+d),(x-d,y-d)], 20 + idx, 95.0 + idx, 'peri_urban', 120.0 + idx, 0.04, 'FRAG')
 
-# Far tiny valid/invalid features widen retained feature bounds without affecting 1 km site buffers.
+# Far features exercise source-feature bounds independently of the declared coverage envelope.
 add_feature('corner-sw', [(7.985,6.985),(7.9854,6.985),(7.9854,6.9854),(7.985,6.9854),(7.985,6.985)], 2, 10.0, 'rural', 8.0, 0.10, 'EDGE')
 add_feature('corner-ne', [(8.035,7.015),(8.0354,7.015),(8.0354,7.0154),(8.035,7.0154),(8.035,7.015)], 2, 10.0, 'rural', 8.0, 0.10, 'EDGE')
 # Self-intersecting bow-tie validates deterministic MakeValid handling.
@@ -240,6 +241,8 @@ FROM ooh_data.site_accessible_population_context WHERE access_mode='walking' AND
     "--access-uri=file:///fixture/settlements.gpkg",
     "--storage-uri=file:///retained/settlements.gpkg",
     "--retrieved-at=2026-08-10T16:40:00Z",
+    "--coverage-bbox=7.98,6.98,8.04,7.02",
+    "--coverage-reference=fixture:declared-retained-source-coverage",
     "--license-id=CC-BY-4.0",
     "--attribution=GRID3 synthetic settlement fixture",
     "--share-alike=false",
@@ -248,7 +251,10 @@ FROM ooh_data.site_accessible_population_context WHERE access_mode='walking' AND
     "--limitations=synthetic fixture; operational morphology only",
     `--field-map=${fixture.fieldMap}`,
   ];
-  const importedOne = JSON.parse((await runCommand(node, importArgs)).stdout) as { artifactSha256: string; counts: { repairedGeometries: number } };
+  const importedOne = JSON.parse((await runCommand(node, importArgs)).stdout) as {
+    artifactSha256: string;
+    counts: { repairedGeometries: number };
+  };
   await runCommand(node, importArgs);
   if (importedOne.counts.repairedGeometries < 1) throw new Error("GRID3_SETTLEMENT_REPAIR_PATH_NOT_EXERCISED");
   if (await scalar("SELECT count(*) FROM ooh_data.enrichment_artifacts WHERE source_id='grid3-nigeria-settlements';") !== 1) {
