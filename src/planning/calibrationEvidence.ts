@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { canonicalJson } from "@/shared/canonicalJson";
 import {
+  MOVEMENT_CALIBRATION_GATE_VERSION,
   evaluateMovementCalibration,
   type CalibrationFailure,
   type MovementCalibrationReport,
@@ -56,9 +57,11 @@ export const MovementCalibrationReportSchema = z.object({
 
 export const CalibrationEvidencePackageSchema = z.object({
   packageVersion: z.literal(CALIBRATION_EVIDENCE_PACKAGE_VERSION),
+  movementCalibrationGateVersion: z.literal(MOVEMENT_CALIBRATION_GATE_VERSION),
   evidenceEnvironment: z.enum(["production_reviewed", "test_fixture"]),
   modelVersion: z.string().min(1),
   replayVersion: z.string().min(1),
+  modelFrozenAt: z.string().min(1),
   geographyId: z.string().min(1),
   applicabilityScope: z.string().min(1),
   contextBinding: CalibrationContextBindingSchema,
@@ -72,6 +75,7 @@ export type CalibrationEvidencePackage = z.infer<typeof CalibrationEvidencePacka
 
 export type CalibrationPackageFailure =
   | "INVALID_PACKAGE_SCHEMA"
+  | "INVALID_MODEL_FREEZE_TIME"
   | "ARTIFACT_PERIOD_INVALID"
   | "UNREVIEWED_PROVENANCE_OR_RIGHTS"
   | "ARTIFACT_ROLE_COLLISION"
@@ -81,12 +85,14 @@ export type CalibrationPackageFailure =
   | "MISSING_HELD_OUT_EXPOSURE_GEOMETRY_TRUTH"
   | "MISSING_HELD_OUT_TARGET_PANEL_TRUTH"
   | "MISSING_DOWNSTREAM_VALIDATION_RESULT"
-  | "MISSING_INDEPENDENT_DATE_REPLICATION_EVIDENCE";
+  | "MISSING_INDEPENDENT_DATE_REPLICATION_EVIDENCE"
+  | "INDEPENDENT_DATE_NOT_POST_FREEZE";
 
 export type CalibrationPromotionFailure = "TEST_FIXTURE_NOT_PROMOTABLE";
 
 export type CalibrationPromotionDecision = {
   policyVersion: typeof CALIBRATION_PROMOTION_POLICY_VERSION;
+  movementCalibrationGateVersion: typeof MOVEMENT_CALIBRATION_GATE_VERSION;
   packageValid: boolean;
   calibrationPassed: boolean;
   eligibleForEvidenceC: boolean;
@@ -144,7 +150,9 @@ export function validateCalibrationEvidencePackage(
 
   const pkg = parsed.data;
   const failures: CalibrationPackageFailure[] = [];
+  const modelFrozenMs = Date.parse(pkg.modelFrozenAt);
 
+  if (!Number.isFinite(modelFrozenMs)) failures.push("INVALID_MODEL_FREEZE_TIME");
   if (pkg.artifacts.some((artifact) => !periodValid(artifact.periodStart, artifact.periodEnd))) {
     failures.push("ARTIFACT_PERIOD_INVALID");
   }
@@ -167,9 +175,7 @@ export function validateCalibrationEvidencePackage(
     usages.add(artifact.usage);
     usagesBySha.set(artifact.sha256, usages);
   }
-  if ([...usagesBySha.values()].some((usages) =>
-    usages.has("training") &&
-    (usages.has("held_out_validation") || usages.has("independent_date_replication")))) {
+  if ([...usagesBySha.values()].some((usages) => usages.size > 1)) {
     failures.push("ARTIFACT_ROLE_COLLISION");
   }
 
@@ -188,9 +194,15 @@ export function validateCalibrationEvidencePackage(
   if (!hasArtifact(pkg.artifacts, "downstream_validation_result", "held_out_validation")) {
     failures.push("MISSING_DOWNSTREAM_VALIDATION_RESULT");
   }
-  if (pkg.movementCalibrationReport.independentDateReplication &&
-      !hasArtifact(pkg.artifacts, "movement_truth", "independent_date_replication")) {
+
+  const replicationArtifacts = pkg.artifacts.filter((artifact) =>
+    artifact.kind === "movement_truth" && artifact.usage === "independent_date_replication");
+  if (pkg.movementCalibrationReport.independentDateReplication && replicationArtifacts.length === 0) {
     failures.push("MISSING_INDEPENDENT_DATE_REPLICATION_EVIDENCE");
+  }
+  if (Number.isFinite(modelFrozenMs) && replicationArtifacts.some((artifact) =>
+    Date.parse(`${artifact.periodStart}T00:00:00Z`) <= modelFrozenMs)) {
+    failures.push("INDEPENDENT_DATE_NOT_POST_FREEZE");
   }
 
   return { package: pkg, failures: [...new Set(failures)] };
@@ -212,6 +224,7 @@ export function evaluateCalibrationPromotion(input: unknown): CalibrationPromoti
   if (!validation.package) {
     return {
       policyVersion: CALIBRATION_PROMOTION_POLICY_VERSION,
+      movementCalibrationGateVersion: MOVEMENT_CALIBRATION_GATE_VERSION,
       packageValid: false,
       calibrationPassed: false,
       eligibleForEvidenceC: false,
@@ -230,6 +243,7 @@ export function evaluateCalibrationPromotion(input: unknown): CalibrationPromoti
 
   return {
     policyVersion: CALIBRATION_PROMOTION_POLICY_VERSION,
+    movementCalibrationGateVersion: MOVEMENT_CALIBRATION_GATE_VERSION,
     packageValid: validation.failures.length === 0,
     calibrationPassed: calibration.passed,
     eligibleForEvidenceC:
