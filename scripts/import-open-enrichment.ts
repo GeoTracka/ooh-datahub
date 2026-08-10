@@ -339,7 +339,7 @@ FROM incoming_osm_ads
 ON CONFLICT (source_id, artifact_sha256, osm_type, osm_id) DO NOTHING;
 
 WITH approved_site_coordinates AS (
-  SELECT DISTINCT ON (c.site_id)
+  SELECT
     c.site_id,
     c.assertion_id,
     c.latitude,
@@ -348,7 +348,6 @@ WITH approved_site_coordinates AS (
   JOIN ooh_data.site_entities s ON s.site_id=c.site_id AND s.identity_status='confirmed'
   WHERE c.assertion_status='approved'
     AND c.renderer_eligibility='maplibre'
-  ORDER BY c.site_id, c.created_at DESC, c.assertion_id
 ),
 proximity AS (
   SELECT
