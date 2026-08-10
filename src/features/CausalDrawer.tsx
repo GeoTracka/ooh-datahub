@@ -79,7 +79,7 @@ export function CausalDrawer({
   if (target.kind === "pillar" && target.id !== "D") {
     const description = pillarDescriptions[target.id];
     return (
-      <aside role="dialog" aria-modal="true" aria-label="How delivery was estimated">
+      <div role="dialog" aria-modal="true" aria-label="How delivery was estimated">
         <button ref={closeRef} type="button" onClick={onClose}>Close</button>
         <nav aria-label="Explanation breadcrumb">
           {ancestors.map((ancestor, index) => (
@@ -105,14 +105,14 @@ export function CausalDrawer({
           The UI therefore does not present Location → Unique as an explanation for this score.
         </p>
         <p>{scopeNote}</p>
-      </aside>
+      </div>
     );
   }
 
   const stage = measurement.stages.find((item) => item.id === activeStage);
   if (!stage) return null;
   return (
-    <aside role="dialog" aria-modal="true" aria-label="How delivery was estimated">
+    <div role="dialog" aria-modal="true" aria-label="How delivery was estimated">
       <button ref={closeRef} type="button" onClick={onClose}>Close</button>
       <nav aria-label="Explanation breadcrumb">
         {ancestors.map((ancestor, index) => (
@@ -198,6 +198,6 @@ export function CausalDrawer({
           ))}
         </section>}
       </section>
-    </aside>
+    </div>
   );
 }
