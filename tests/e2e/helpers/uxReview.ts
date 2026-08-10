@@ -189,9 +189,7 @@ export async function assertCriticalControlInViewport(locator: Locator, label: s
   const box = await locator.boundingBox();
   expect(box, `${label}: critical control should have a bounding box`).not.toBeNull();
   if (!box) return;
-  const viewport = locator.page().viewportSize();
-  expect(viewport, `${label}: viewport should be available`).not.toBeNull();
-  if (!viewport) return;
+  const viewport = await locator.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
 
   expect(box.x, `${label}: control begins left of viewport`).toBeGreaterThanOrEqual(-1);
   expect(box.y, `${label}: control begins above viewport`).toBeGreaterThanOrEqual(-1);
