@@ -344,8 +344,8 @@ FROM ooh_data.site_accessible_population_context WHERE access_mode='walking' AND
   const morphology = await text(`
 SELECT string_agg(
   site_id || ':' || round(core_depth_m::numeric,1)::text || ':' ||
-  round(settled_area_share::numeric,3)::text || ':' || intersecting_settlement_count::text || ':' ||
-  coalesce(primary_degree_urbanisation,'-'),
+  round(settled_area_share::numeric,3)::text || ':' || intersecting_source_extent_count::text || ':' ||
+  settled_component_count::text || ':' || coalesce(primary_degree_urbanisation,'-'),
   ',' ORDER BY site_id
 )
 FROM ooh_data.site_settlement_context WHERE radius_m=500;
@@ -354,9 +354,9 @@ FROM ooh_data.site_settlement_context WHERE radius_m=500;
   const fragmentedDepth = await scalar("SELECT core_depth_m FROM ooh_data.site_settlement_context WHERE site_id='site:morph-fragmented' AND radius_m=500;");
   const coreShare = await scalar("SELECT settled_area_share FROM ooh_data.site_settlement_context WHERE site_id='site:morph-core' AND radius_m=500;");
   const fragmentedShare = await scalar("SELECT settled_area_share FROM ooh_data.site_settlement_context WHERE site_id='site:morph-fragmented' AND radius_m=500;");
-  const corePatches = await scalar("SELECT intersecting_settlement_count FROM ooh_data.site_settlement_context WHERE site_id='site:morph-core' AND radius_m=500;");
-  const fragmentedPatches = await scalar("SELECT intersecting_settlement_count FROM ooh_data.site_settlement_context WHERE site_id='site:morph-fragmented' AND radius_m=500;");
-  if (!(coreDepth > fragmentedDepth && coreShare > fragmentedShare && fragmentedPatches > corePatches)) {
+  const coreComponents = await scalar("SELECT settled_component_count FROM ooh_data.site_settlement_context WHERE site_id='site:morph-core' AND radius_m=500;");
+  const fragmentedComponents = await scalar("SELECT settled_component_count FROM ooh_data.site_settlement_context WHERE site_id='site:morph-fragmented' AND radius_m=500;");
+  if (!(coreDepth > fragmentedDepth && coreShare > fragmentedShare && fragmentedComponents > coreComponents)) {
     throw new Error(`GRID3_SETTLEMENT_INCREMENTAL_VALUE_FAILURE:${morphology}`);
   }
   if (await scalar("SELECT count(*) FROM ooh_data.site_settlement_context WHERE decision_use <> 'context_only';") !== 0) {

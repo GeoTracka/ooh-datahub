@@ -105,10 +105,10 @@ Overlapping containing extents are never resolved by choosing the most attractiv
 - buffer area;
 - unioned settlement area inside the radius;
 - settled-area share;
-- positive-area intersecting settlement count;
-- patch density per km²;
-- largest settlement-intersection area;
-- largest-patch share of settled area.
+- positive-area intersecting **source extent** count (provenance/overlap diagnostic);
+- connected settlement-component count after union;
+- connected-component density per km²;
+- largest connected-component area/share.
 
 Polygon intersections are unioned before area calculation so overlapping source extents cannot double-count settled area. Boundary-only line/point touches do not count as settled patches.
 
@@ -169,7 +169,7 @@ The integration fixture intentionally gives two sites the same E2B1 500 m reside
 - one site deep inside one large dense extent;
 - one site inside a small patch surrounded by multiple fragmented patches.
 
-E2B2 passes only if the morphology layer distinguishes them using interpretable outputs such as core depth, settled-area share and patch count. This prevents morphology from becoming a redundant proxy for population/accessibility.
+E2B2 passes only if the morphology layer distinguishes them using interpretable outputs such as core depth, settled-area share and connected-component count. This prevents morphology from becoming a redundant proxy for population/accessibility.
 
 The fixture also first attempts an import with an undersized coverage polygon and requires:
 
