@@ -67,15 +67,25 @@ DO $preflight$
 DECLARE
   role_value text;
   version_value text;
-  bounds_value jsonb;
+  coverage_bounds jsonb;
+  coverage_basis text;
+  coverage_reference text;
   field_map_fp text;
   commercial_status text;
   license_value text;
 BEGIN
   SELECT
-    a.metadata->>'grid3ProductRole', a.metadata->>'productVersion', a.metadata->'boundsWgs84',
-    a.metadata->>'fieldMapFingerprint', a.commercial_use_status, a.license_id
-  INTO role_value, version_value, bounds_value, field_map_fp, commercial_status, license_value
+    a.metadata->>'grid3ProductRole',
+    a.metadata->>'productVersion',
+    a.metadata->'coverageBoundsWgs84',
+    a.metadata->>'coverageBasis',
+    a.metadata->>'coverageReference',
+    a.metadata->>'fieldMapFingerprint',
+    a.commercial_use_status,
+    a.license_id
+  INTO
+    role_value, version_value, coverage_bounds, coverage_basis, coverage_reference,
+    field_map_fp, commercial_status, license_value
   FROM ooh_data.enrichment_artifacts a
   WHERE a.source_id=${sqlLiteral(GRID3_SETTLEMENT_SOURCE_ID)}
     AND a.artifact_sha256=${sqlLiteral(settlementSha)};
@@ -83,8 +93,10 @@ BEGIN
   IF role_value IS DISTINCT FROM 'settlement_extents' OR version_value IS DISTINCT FROM 'v4.1' THEN
     RAISE EXCEPTION 'GRID3_SETTLEMENT_ARTIFACT_NOT_READY';
   END IF;
-  IF jsonb_typeof(bounds_value) <> 'array' OR jsonb_array_length(bounds_value) <> 4 THEN
-    RAISE EXCEPTION 'GRID3_SETTLEMENT_BOUNDS_REQUIRED';
+  IF jsonb_typeof(coverage_bounds) <> 'array' OR jsonb_array_length(coverage_bounds) <> 4
+     OR coverage_basis IS DISTINCT FROM 'declared_coverage_bbox'
+     OR coverage_reference IS NULL OR coverage_reference = '' THEN
+    RAISE EXCEPTION 'GRID3_SETTLEMENT_DECLARED_COVERAGE_REQUIRED';
   END IF;
   IF field_map_fp IS NULL OR field_map_fp !~ '^[0-9a-f]{64}$' THEN
     RAISE EXCEPTION 'GRID3_SETTLEMENT_FIELD_MAP_FINGERPRINT_REQUIRED';
@@ -184,9 +196,9 @@ fingerprinted AS (
           'radiiM', to_jsonb(${radiiSql}),
           'primaryContainmentPolicy', 'smallest_containing_extent_area_then_feature_id',
           'coreDepthPolicy', 'geodesic_distance_to_primary_extent_boundary',
-          'settledAreaPolicy', 'union_of_polygon_intersections_to_avoid_overlap_double_count',
-          'patchDensityPolicy', 'intersecting_extent_count_per_buffer_sqkm',
-          'coveragePolicy', 'full_radius_buffer_inside_retained_source_bounds'
+          'settledAreaPolicy', 'union_of_polygonal_intersections_to_avoid_overlap_double_count',
+          'patchDensityPolicy', 'positive_area_intersecting_extent_count_per_buffer_sqkm',
+          'coveragePolicy', 'full_radius_buffer_inside_declared_coverage_bbox'
         ),
         'sourceManifest', source_manifest
       )::text,
@@ -301,10 +313,10 @@ LEFT JOIN nearest n USING (site_id, coordinate_assertion_id);
 CREATE TEMP TABLE settlement_site_radii ON COMMIT DROP AS
 WITH source_bounds AS (
   SELECT ST_MakeEnvelope(
-    (a.metadata->'boundsWgs84'->>0)::double precision,
-    (a.metadata->'boundsWgs84'->>1)::double precision,
-    (a.metadata->'boundsWgs84'->>2)::double precision,
-    (a.metadata->'boundsWgs84'->>3)::double precision,
+    (a.metadata->'coverageBoundsWgs84'->>0)::double precision,
+    (a.metadata->'coverageBoundsWgs84'->>1)::double precision,
+    (a.metadata->'coverageBoundsWgs84'->>2)::double precision,
+    (a.metadata->'coverageBoundsWgs84'->>3)::double precision,
     4326
   ) AS bounds_geom
   FROM ooh_data.enrichment_artifacts a
@@ -331,7 +343,9 @@ WITH intersections AS (
     sr.buffer_area_m2,
     sr.source_covered,
     f.feature_id,
-    ST_Intersection(f.geom, sr.buffer_geom) AS intersection_geom
+    CASE WHEN f.feature_id IS NULL THEN NULL
+      ELSE ST_CollectionExtract(ST_Intersection(f.geom, sr.buffer_geom), 3)
+    END AS intersection_geom
   FROM settlement_site_radii sr
   LEFT JOIN ooh_data.grid3_settlement_features f
     ON f.source_id=${sqlLiteral(GRID3_SETTLEMENT_SOURCE_ID)}
@@ -345,12 +359,25 @@ per_buffer AS (
     radius_m,
     buffer_area_m2,
     source_covered,
-    count(feature_id)::integer AS intersecting_settlement_count,
+    count(feature_id) FILTER (
+      WHERE intersection_geom IS NOT NULL AND NOT ST_IsEmpty(intersection_geom)
+    )::integer AS intersecting_settlement_count,
     COALESCE(
-      ST_Area(ST_UnaryUnion(ST_Collect(intersection_geom))::geography),
+      ST_Area(
+        ST_UnaryUnion(
+          ST_Collect(intersection_geom) FILTER (
+            WHERE intersection_geom IS NOT NULL AND NOT ST_IsEmpty(intersection_geom)
+          )
+        )::geography
+      ),
       0::double precision
     ) AS settled_area_m2,
-    COALESCE(max(ST_Area(intersection_geom::geography)), 0::double precision) AS largest_intersection_area_m2
+    COALESCE(
+      max(ST_Area(intersection_geom::geography)) FILTER (
+        WHERE intersection_geom IS NOT NULL AND NOT ST_IsEmpty(intersection_geom)
+      ),
+      0::double precision
+    ) AS largest_intersection_area_m2
   FROM intersections
   GROUP BY site_id, coordinate_assertion_id, radius_m, buffer_area_m2, source_covered
 )
