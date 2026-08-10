@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import MapView, { Marker, type MapRef } from "@vis.gl/react-maplibre";
 import type { MapLibreScene } from "@/contracts/renderer";
 import { mapLibreStyle } from "@/maps/mapLibreStyle";
@@ -42,26 +42,38 @@ export function MapLibreRenderer({
   onFeatureSelect?(featureId: string): void;
 }) {
   const mapRef = useRef<MapRef | null>(null);
+  const [appliedTargetId, setAppliedTargetId] = useState<string | null>(null);
   const selected = scene.features.find((feature) => feature.id === selectedFeatureId);
   const targetLongitude = selected?.coordinate[0] ?? overview.longitude;
   const targetLatitude = selected?.coordinate[1] ?? overview.latitude;
   const targetZoom = selected ? 12.5 : overview.zoom;
+  const targetId = selected?.id ?? "overview";
+  const cameraFocusState = appliedTargetId === targetId
+    ? (targetId === "overview" ? "overview" : "selected")
+    : "pending";
 
   const focusCurrentTarget = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    mapRef.current?.flyTo({
+    map.flyTo({
       center: [targetLongitude, targetLatitude],
       zoom: targetZoom,
       duration: reducedMotion ? 0 : 400,
     });
-  }, [targetLatitude, targetLongitude, targetZoom]);
+    setAppliedTargetId(targetId);
+  }, [targetId, targetLatitude, targetLongitude, targetZoom]);
 
   useEffect(() => {
     focusCurrentTarget();
   }, [focusCurrentTarget]);
 
   return (
-    <div data-testid="maplibre-renderer" className="map-surface">
+    <div
+      data-testid="maplibre-renderer"
+      data-camera-focus-state={cameraFocusState}
+      className="map-surface"
+    >
       <MapView
         ref={mapRef}
         initialViewState={overview}
