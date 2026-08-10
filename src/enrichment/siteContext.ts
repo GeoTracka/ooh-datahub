@@ -6,6 +6,30 @@ export type ContextCoverage = "complete" | "partial_source_coverage";
 export type VectorCoverage = "full" | "places_only" | "roads_only" | "uncovered";
 export type ContextMissingReason = "coordinate_not_currently_eligible" | "not_derived" | null;
 
+export type SourceArtifactIdentity = {
+  sourceId: string;
+  artifactSha256: string;
+};
+
+export type ContextProvenance = {
+  snapshotId: string;
+  algorithmVersion: string;
+  inputFingerprint: string;
+  sourceArtifacts: SourceArtifactIdentity[];
+};
+
+export type CoordinateEvidence = {
+  latitude: number;
+  longitude: number;
+  accuracyM: number | null;
+  sourceKind: string;
+  coordinateSourceId: string;
+  sourceArtifactId: string | null;
+  spatialRights: string;
+  spatialLicenseId: string | null;
+  enrichmentRevision: string;
+};
+
 export type VectorContextRadius = {
   radiusM: number;
   placesCovered: boolean;
@@ -44,6 +68,10 @@ export type SiteContextReadModel = {
   siteId: string;
   coordinateAssertionId: string;
   coordinateCurrentlyEligible: boolean;
+  coordinateEvidence: CoordinateEvidence;
+  vectorProvenance: ContextProvenance | null;
+  rasterProvenance: ContextProvenance | null;
+  settlementProvenance: ContextProvenance | null;
   vectorMissingReason: ContextMissingReason;
   rasterMissingReason: ContextMissingReason;
   settlementMissingReason: ContextMissingReason;
