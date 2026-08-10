@@ -42,6 +42,7 @@ export function MapLibreRenderer({
   onFeatureSelect?(featureId: string): void;
 }) {
   const mapRef = useRef<MapRef | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const [appliedTargetId, setAppliedTargetId] = useState<string | null>(null);
   const selected = scene.features.find((feature) => feature.id === selectedFeatureId);
   const targetLongitude = selected?.coordinate[0] ?? overview.longitude;
@@ -51,6 +52,12 @@ export function MapLibreRenderer({
   const cameraFocusState = appliedTargetId === targetId
     ? (targetId === "overview" ? "overview" : "selected")
     : "pending";
+
+  const assignMapRef = useCallback((map: MapRef | null) => {
+    mapRef.current = map;
+    setMapReady(Boolean(map));
+    if (!map) setAppliedTargetId(null);
+  }, []);
 
   const focusCurrentTarget = useCallback(() => {
     const map = mapRef.current;
@@ -65,8 +72,9 @@ export function MapLibreRenderer({
   }, [targetId, targetLatitude, targetLongitude, targetZoom]);
 
   useEffect(() => {
+    if (!mapReady) return;
     focusCurrentTarget();
-  }, [focusCurrentTarget]);
+  }, [focusCurrentTarget, mapReady]);
 
   return (
     <div
@@ -75,7 +83,7 @@ export function MapLibreRenderer({
       className="map-surface"
     >
       <MapView
-        ref={mapRef}
+        ref={assignMapRef}
         initialViewState={overview}
         mapStyle={mapLibreStyle}
         reuseMaps={false}
