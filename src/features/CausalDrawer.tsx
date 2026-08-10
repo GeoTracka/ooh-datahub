@@ -18,6 +18,15 @@ const pillarDescriptions = {
   E: "Relative economics",
 } as const;
 
+const focusableSelector = [
+  "button:not([disabled])",
+  "a[href]",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
 export function CausalDrawer({
   measurement,
   target,
@@ -57,6 +66,7 @@ export function CausalDrawer({
   onBack(): void;
   onClose(): void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
@@ -67,7 +77,27 @@ export function CausalDrawer({
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCloseRef.current();
+      if (event.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])]
+        .filter((element) => !element.hidden && element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) {
+        event.preventDefault();
+        closeRef.current?.focus();
+        return;
+      }
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
@@ -79,7 +109,7 @@ export function CausalDrawer({
   if (target.kind === "pillar" && target.id !== "D") {
     const description = pillarDescriptions[target.id];
     return (
-      <aside role="dialog" aria-modal="true" aria-label="How delivery was estimated">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="How delivery was estimated">
         <button ref={closeRef} type="button" onClick={onClose}>Close</button>
         <nav aria-label="Explanation breadcrumb">
           {ancestors.map((ancestor, index) => (
@@ -105,14 +135,14 @@ export function CausalDrawer({
           The UI therefore does not present Location → Unique as an explanation for this score.
         </p>
         <p>{scopeNote}</p>
-      </aside>
+      </div>
     );
   }
 
   const stage = measurement.stages.find((item) => item.id === activeStage);
   if (!stage) return null;
   return (
-    <aside role="dialog" aria-modal="true" aria-label="How delivery was estimated">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="How delivery was estimated">
       <button ref={closeRef} type="button" onClick={onClose}>Close</button>
       <nav aria-label="Explanation breadcrumb">
         {ancestors.map((ancestor, index) => (
@@ -198,6 +228,6 @@ export function CausalDrawer({
           ))}
         </section>}
       </section>
-    </aside>
+    </div>
   );
 }

@@ -10,6 +10,15 @@ import {
 } from "@/contracts/rfq";
 import { buildInternalDownload, generateRfq } from "@/planning/rfq";
 
+const focusableSelector = [
+  "button:not([disabled])",
+  "a[href]",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
 export function downloadText(fileName: string, value: string): void {
   const url = URL.createObjectURL(new Blob([value], { type: "text/plain;charset=utf-8" }));
   const anchor = document.createElement("a");
@@ -42,6 +51,7 @@ export function RfqDrawer({
   const [datesConfirmed, setDatesConfirmed] = useState(false);
   const [supplierNotes, setSupplierNotes] = useState<Record<string, string>>({});
   const [workflow, setWorkflow] = useState<RfqWorkflowState>({ status: "Review required" });
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
@@ -52,7 +62,27 @@ export function RfqDrawer({
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCloseRef.current();
+      if (event.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])]
+        .filter((element) => !element.hidden && element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) {
+        event.preventDefault();
+        closeRef.current?.focus();
+        return;
+      }
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
@@ -89,7 +119,7 @@ export function RfqDrawer({
     }
   }
   const output: RfqDraft | null = workflow.status === "Generated" ? workflow.output : null;
-  return <aside role="dialog" aria-modal="true" aria-label="Supplier verification RFQ">
+  return <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Supplier verification RFQ">
     <button ref={closeRef} type="button" onClick={onClose}>Close</button>
     <strong>DEMO — DO NOT SEND</strong>
     <p>{workflow.status}</p>
@@ -126,5 +156,5 @@ export function RfqDrawer({
       buildInternalDownload(output),
     )}>Download consolidated internal request</button>}
     <p>Status: draft, unbooked, unsent</p>
-  </aside>;
+  </div>;
 }

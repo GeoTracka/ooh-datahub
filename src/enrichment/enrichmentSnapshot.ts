@@ -10,9 +10,25 @@ import { canProjectField } from "@/enrichment/policyRules";
 import { resolveClaimLadder } from "@/planning/claimLadder";
 import { canonicalJson } from "@/shared/canonicalJson";
 
+function normalizeOptionalJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((child) =>
+      child === undefined ? null : normalizeOptionalJson(child),
+    );
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, child]) => child !== undefined)
+        .map(([key, child]) => [key, normalizeOptionalJson(child)]),
+    );
+  }
+  return value;
+}
+
 function stableId(value: unknown): string {
   let hash = 0x811c9dc5;
-  for (const character of canonicalJson(value)) {
+  for (const character of canonicalJson(normalizeOptionalJson(value))) {
     hash ^= character.charCodeAt(0);
     hash = Math.imul(hash, 0x01000193);
   }

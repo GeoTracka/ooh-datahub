@@ -33,6 +33,15 @@ import {
 
 type HeaderMapping = ReturnType<typeof mapHeaders>[number];
 
+const focusableSelector = [
+  "button:not([disabled])",
+  "a[href]",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
 const mappingOptions: CanonicalHeader[] = [
   "assetId",
   "address",
@@ -105,6 +114,7 @@ export function UploadDialog({
   onClose(): void;
   onDraft(draft: UploadPlanningDraft, snapshot: EnrichmentSnapshot): void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
@@ -131,7 +141,27 @@ export function UploadDialog({
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCloseRef.current();
+      if (event.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])]
+        .filter((element) => !element.hidden && element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) {
+        event.preventDefault();
+        closeRef.current?.focus();
+        return;
+      }
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
@@ -333,7 +363,7 @@ export function UploadDialog({
   );
 
   return (
-    <aside role="dialog" aria-modal="true" aria-label="Upload inventory">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Upload inventory">
       <button ref={closeRef} type="button" onClick={onClose}>Close</button>
       <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {
         const file = event.target.files?.[0];
@@ -493,6 +523,6 @@ export function UploadDialog({
           Use reviewed facts as context
         </button>
       </section>}
-    </aside>
+    </div>
   );
 }
