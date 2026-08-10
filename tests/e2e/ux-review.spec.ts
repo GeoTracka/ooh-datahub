@@ -137,10 +137,14 @@ test.describe("desktop workflow review", () => {
     await captureUxReview(page, testInfo, "desktop-12-upload-preview", { fullPage: false });
 
     await page.getByRole("button", { name: "Use uploaded facts as context" }).click();
-    await expect(page.getByText(/Context shortlist/)).toBeVisible();
-    await expect(page.getByText(/Evidence unavailable · context only/)).toBeVisible();
-    await assertNoHorizontalOverflow(page, "uploaded context shortlist");
-    await captureUxReview(page, testInfo, "desktop-13-context-shortlist");
+    await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+    const uploadStatus = page.getByRole("complementary", { name: "Uploaded planning status" });
+    await expect(uploadStatus).toContainText("Customer inventory · context only");
+    await expect(uploadStatus).toContainText("1 reviewed rows");
+    await expect(uploadStatus).toContainText("CALIBRATION_BUNDLE_MISMATCH");
+    await expect(uploadStatus).toContainText("Unapplied context change");
+    await assertNoHorizontalOverflow(page, "uploaded context status");
+    await captureUxReview(page, testInfo, "desktop-13-uploaded-context-status");
   });
 });
 
