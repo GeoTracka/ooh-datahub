@@ -101,7 +101,8 @@ describe("site context comparison", () => {
 
     expect(result.complete).toBe(true);
     expect(result.contrasts.find((item) => item.metric === "destination_presence")?.direction).toBe("left_higher");
-    expect(result.contrasts.find((item) => item.metric === "major_road_proximity")?.direction).toBe("left_higher");
+    expect(result.contrasts.find((item) => item.metric === "nearest_major_road_distance_m")?.direction).toBe("left_lower");
+    expect(result.contrasts.find((item) => item.metric === "nearest_major_road_distance_m")?.text).toContain("Left site is closer");
     expect(result.contrasts.find((item) => item.metric === "resident_population")?.direction).toBe("similar");
     expect(result.contrasts.find((item) => item.metric === "settled_area_share")?.direction).toBe("similar");
   });
@@ -210,7 +211,7 @@ describe("site context comparison", () => {
     expect(result.leftCoordinateAssertionId).toBe("coordinate:shared:a");
     expect(result.rightCoordinateAssertionId).toBe("coordinate:shared:b");
     expect(result.contrasts.find((item) => item.metric === "destination_presence")?.direction).toBe("left_higher");
-    expect(result.contrasts.find((item) => item.metric === "major_road_proximity")?.direction).toBe("left_higher");
+    expect(result.contrasts.find((item) => item.metric === "nearest_major_road_distance_m")?.direction).toBe("left_lower");
   });
 
   it("preserves coordinate identity and stops interpretation for revoked evidence", () => {
