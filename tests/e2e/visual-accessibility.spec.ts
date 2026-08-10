@@ -54,6 +54,8 @@ test("keeps the explorer legible at 390 CSS pixels", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5:/ })).toBeVisible();
+  await expect(page.getByTestId("maplibre-renderer"))
+    .toHaveAttribute("data-camera-focus-state", "selected");
   await expect(page).toHaveScreenshot("explorer-mobile-390.png", {
     animations: "disabled",
     fullPage: true,
