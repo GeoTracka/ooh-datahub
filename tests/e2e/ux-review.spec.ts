@@ -34,6 +34,12 @@ async function reachRecommendedPackage(page: Page): Promise<void> {
   await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
 }
 
+async function reachActionStep(page: Page): Promise<void> {
+  await reachRecommendedPackage(page);
+  await page.getByRole("button", { name: "This package works" }).click();
+  await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
 });
@@ -105,7 +111,9 @@ test.describe("desktop workflow review", () => {
     await page.keyboard.press("Tab");
     await captureUxReview(page, testInfo, "desktop-10-keyboard-focus", { fullPage: false });
 
+    await reachActionStep(page);
     const uploadTrigger = page.getByRole("button", { name: "Upload spreadsheet" });
+    await expect(uploadTrigger).toBeVisible();
     await uploadTrigger.click();
     const upload = page.getByRole("dialog", { name: "Upload inventory" });
     await expect(upload).toBeVisible();
