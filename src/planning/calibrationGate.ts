@@ -1,3 +1,5 @@
+export const MOVEMENT_CALIBRATION_GATE_VERSION = "movement-calibration-gate-v1" as const;
+
 export type MovementCalibrationReport = {
   heldOutLocations: number;
   directionalBlocks: number;
