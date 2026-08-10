@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { MOVEMENT_CALIBRATION_GATE_VERSION } from "@/planning/calibrationGate";
 import { CALIBRATION_EVIDENCE_PACKAGE_VERSION } from "@/planning/calibrationEvidence";
 import { verifyCalibrationManifest } from "../../../scripts/calibration/manifest";
 
@@ -38,6 +39,11 @@ async function writeManifest(): Promise<{ manifestPath: string; artifactPath: st
     await writeFile(path, content, "utf8");
     if (!firstArtifactPath) firstArtifactPath = path;
     artifactFiles[artifactId] = `./${fileName}`;
+    const period = usage === "training"
+      ? { periodStart: "2025-12-01", periodEnd: "2025-12-31" }
+      : usage === "independent_date_replication"
+        ? { periodStart: "2026-02-01", periodEnd: "2026-02-28" }
+        : { periodStart: "2026-01-01", periodEnd: "2026-01-31" };
     artifacts.push({
       artifactId,
       sha256: sha256(content),
@@ -48,8 +54,7 @@ async function writeManifest(): Promise<{ manifestPath: string; artifactPath: st
       licenseId: "fixture-reviewed-license",
       rightsReviewRef: `fixture:rights:${artifactId}`,
       commercialUseStatus: "permitted",
-      periodStart: "2026-01-01",
-      periodEnd: "2026-01-31",
+      ...period,
     });
   }
 
@@ -57,9 +62,11 @@ async function writeManifest(): Promise<{ manifestPath: string; artifactPath: st
   await writeFile(manifestPath, JSON.stringify({
     package: {
       packageVersion: CALIBRATION_EVIDENCE_PACKAGE_VERSION,
+      movementCalibrationGateVersion: MOVEMENT_CALIBRATION_GATE_VERSION,
       evidenceEnvironment: "test_fixture",
       modelVersion: "fixture-model-v1",
       replayVersion: "fixture-replay-v1",
+      modelFrozenAt: "2026-01-31T23:59:59Z",
       geographyId: "fixture",
       applicabilityScope: "fixture only",
       contextBinding: {
