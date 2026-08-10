@@ -1,7 +1,8 @@
 import { runPsql } from "./data/psql";
 
-const databaseUrl = process.env.DATABASE_URL?.trim();
-if (!databaseUrl) throw new Error("DATABASE_URL_REQUIRED");
+const configuredDatabaseUrl = process.env.DATABASE_URL?.trim();
+if (!configuredDatabaseUrl) throw new Error("DATABASE_URL_REQUIRED");
+const databaseUrl = configuredDatabaseUrl;
 
 async function expectSqlFailure(sql: string, pattern: string): Promise<void> {
   try {
