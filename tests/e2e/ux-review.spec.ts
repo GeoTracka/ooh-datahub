@@ -1,6 +1,6 @@
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   assertCriticalControlInViewport,
   assertFocusInside,
@@ -11,6 +11,17 @@ import {
 async function assertAccessible(page: Page): Promise<void> {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
+}
+
+async function assertFocusCycle(page: Page, dialog: Locator, label: string): Promise<void> {
+  for (let index = 0; index < 24; index += 1) {
+    await page.keyboard.press("Tab");
+    await assertFocusInside(dialog, `${label} forward tab ${index + 1}`);
+  }
+  for (let index = 0; index < 24; index += 1) {
+    await page.keyboard.press("Shift+Tab");
+    await assertFocusInside(dialog, `${label} reverse tab ${index + 1}`);
+  }
 }
 
 async function makeExplicitSwap(page: Page): Promise<void> {
@@ -77,8 +88,7 @@ test.describe("desktop workflow review", () => {
     await deliveryStoryTrigger.click();
     const causalDialog = page.getByRole("dialog", { name: "How delivery was estimated" });
     await expect(causalDialog).toBeVisible();
-    await page.keyboard.press("Tab");
-    await assertFocusInside(causalDialog, "delivery story");
+    await assertFocusCycle(page, causalDialog, "delivery story");
     await captureUxReview(page, testInfo, "desktop-05-delivery-story", { fullPage: false });
     await assertAccessible(page);
     await causalDialog.getByRole("button", { name: "Close" }).click();
@@ -100,8 +110,7 @@ test.describe("desktop workflow review", () => {
     await page.getByRole("button", { name: "Apply & review RFQ" }).click();
     const rfq = page.getByRole("dialog", { name: "Supplier verification RFQ" });
     await expect(rfq).toBeVisible();
-    await page.keyboard.press("Tab");
-    await assertFocusInside(rfq, "supplier verification RFQ");
+    await assertFocusCycle(page, rfq, "supplier verification RFQ");
     await captureUxReview(page, testInfo, "desktop-09-rfq-review", { fullPage: false });
     await assertAccessible(page);
   });
@@ -112,13 +121,12 @@ test.describe("desktop workflow review", () => {
     await captureUxReview(page, testInfo, "desktop-10-keyboard-focus", { fullPage: false });
 
     await reachActionStep(page);
-    const uploadTrigger = page.getByRole("button", { name: "Upload spreadsheet" });
+    const uploadTrigger = page.getByRole("button", { name: /Upload customer inventory/ });
     await expect(uploadTrigger).toBeVisible();
     await uploadTrigger.click();
     const upload = page.getByRole("dialog", { name: "Upload inventory" });
     await expect(upload).toBeVisible();
-    await page.keyboard.press("Tab");
-    await assertFocusInside(upload, "upload inventory");
+    await assertFocusCycle(page, upload, "upload inventory");
     await captureUxReview(page, testInfo, "desktop-11-upload-dialog", { fullPage: false });
     await assertAccessible(page);
 
@@ -156,6 +164,7 @@ test.describe("responsive review", () => {
     await page.getByRole("button", { name: "View delivery story" }).click();
     const causalDialog = page.getByRole("dialog", { name: "How delivery was estimated" });
     await expect(causalDialog).toBeVisible();
+    await assertFocusCycle(page, causalDialog, "tablet delivery story");
     await captureUxReview(page, testInfo, "responsive-834-delivery-story", { fullPage: false });
     await assertAccessible(page);
   });
