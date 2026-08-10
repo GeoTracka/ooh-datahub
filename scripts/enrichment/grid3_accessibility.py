@@ -412,6 +412,8 @@ def accessibility_population_context(
         nodata_population = ~pop_valid
         estimate = float(np.sum(population[reachable], dtype=np.float64)) if np.any(reachable) else 0.0
         complete = pop_window.fully_covered and not traversal.source_boundary_reached and not traversal.search_truncated
+        threshold_costs = traversal.costs[np.isfinite(traversal.costs) & (traversal.costs <= float(threshold))]
+        max_reached_for_threshold = float(np.max(threshold_costs)) if threshold_costs.size else 0.0
         results.append({
             "mode": mode,
             "thresholdMinutes": int(threshold),
@@ -421,8 +423,8 @@ def accessibility_population_context(
             "validPopulationCellCount": int(np.count_nonzero(pop_valid)),
             "noDataPopulationCellCount": int(np.count_nonzero(nodata_population)),
             "frictionUnavailablePopulationCellCount": int(np.count_nonzero(friction_unavailable)),
-            "reachedFrictionCellCount": int(np.count_nonzero(np.isfinite(traversal.costs) & (traversal.costs <= float(threshold)))),
-            "maxReachedMinutes": float(traversal.max_reached_minutes),
+            "reachedFrictionCellCount": int(threshold_costs.size),
+            "maxReachedMinutes": max_reached_for_threshold,
             "populationExtentFullyCovered": bool(pop_window.fully_covered),
             "frictionExtentFullyCovered": bool(traversal.window.fully_covered),
             "searchTruncated": bool(traversal.search_truncated),
