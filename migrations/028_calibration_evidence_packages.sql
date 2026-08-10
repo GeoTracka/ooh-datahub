@@ -5,9 +5,11 @@
 CREATE TABLE IF NOT EXISTS ooh_data.calibration_evidence_packages (
   package_digest text PRIMARY KEY CHECK (package_digest ~ '^[0-9a-f]{64}$'),
   package_version text NOT NULL CHECK (package_version = 'calibration-evidence-package-v1'),
+  movement_calibration_gate_version text NOT NULL CHECK (movement_calibration_gate_version = 'movement-calibration-gate-v1'),
   evidence_environment text NOT NULL CHECK (evidence_environment IN ('production_reviewed', 'test_fixture')),
   model_version text NOT NULL CHECK (length(model_version) > 0),
   replay_version text NOT NULL CHECK (length(replay_version) > 0),
+  model_frozen_at timestamptz NOT NULL,
   geography_id text NOT NULL CHECK (length(geography_id) > 0),
   applicability_scope text NOT NULL CHECK (length(applicability_scope) > 0),
   context_feature_snapshot_id text NOT NULL
@@ -54,6 +56,7 @@ CREATE TABLE IF NOT EXISTS ooh_data.calibration_promotion_runs (
   submitted_digest text CHECK (submitted_digest IS NULL OR submitted_digest ~ '^[0-9a-f]{64}$'),
   package_digest text REFERENCES ooh_data.calibration_evidence_packages (package_digest) ON DELETE RESTRICT,
   policy_version text NOT NULL CHECK (policy_version = 'calibration-promotion-policy-v1'),
+  movement_calibration_gate_version text NOT NULL CHECK (movement_calibration_gate_version = 'movement-calibration-gate-v1'),
   evidence_environment text CHECK (evidence_environment IS NULL OR evidence_environment IN ('production_reviewed', 'test_fixture')),
   validation_status text NOT NULL CHECK (validation_status IN ('accepted', 'rejected')),
   package_failure_codes text[] NOT NULL DEFAULT ARRAY[]::text[],
