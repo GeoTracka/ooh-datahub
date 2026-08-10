@@ -106,13 +106,10 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "## UI / UX review evidence" >> "$GITHUB_STEP_SUMMARY"
           if [ -d artifacts/ui-ux-review ]; then
-            screenshots=$(find artifacts/ui-ux-review -type f -name '*.png' | wc -l | tr -d ' ')
-            diagnostics=$(find artifacts/ui-ux-review -type f -name '*.json' | wc -l | tr -d ' ')
-            echo "- Captured **${screenshots} screenshots** and **${diagnostics} diagnostic files**." >> "$GITHUB_STEP_SUMMARY"
-            echo "- Download the \`ui-ux-review-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}\` artifact to review hierarchy, density, responsive states and interaction polish." >> "$GITHUB_STEP_SUMMARY"
+            node scripts/summarize-ui-ux-review.mjs artifacts/ui-ux-review >> "$GITHUB_STEP_SUMMARY"
           else
+            echo "## UI / UX review evidence" >> "$GITHUB_STEP_SUMMARY"
             echo "- No review pack was produced; inspect the UI / UX review job failure." >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload UI / UX review screenshots
