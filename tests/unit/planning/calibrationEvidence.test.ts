@@ -47,6 +47,7 @@ function packageFixture(
       resolutionFingerprint: "2".repeat(32),
     },
     artifacts: [
+      artifact("movement-training", "f", "movement_truth", "training"),
       artifact("movement-holdout", "a", "movement_truth", "held_out_validation"),
       artifact("geometry-holdout", "b", "exposure_geometry_truth", "held_out_validation"),
       artifact("target-holdout", "c", "target_panel_truth", "held_out_validation"),
@@ -89,14 +90,20 @@ describe("calibration evidence package", () => {
     expect(calibrationEvidencePackageDigest(reversed)).toBe(calibrationEvidencePackageDigest(pkg));
   });
 
+  it("requires explicit fitting evidence", () => {
+    const pkg = packageFixture();
+    const result = validateCalibrationEvidencePackage(packageFixture({
+      artifacts: pkg.artifacts.filter((item) => item.usage !== "training"),
+    }));
+    expect(result.failures).toContain("MISSING_TRAINING_MOVEMENT_TRUTH");
+  });
+
   it("rejects one artifact revision masquerading as both training and holdout", () => {
     const pkg = packageFixture();
-    const duplicatedSha = pkg.artifacts[0]!.sha256;
+    const duplicatedSha = pkg.artifacts.find((item) => item.usage === "held_out_validation")!.sha256;
     const result = validateCalibrationEvidencePackage(packageFixture({
-      artifacts: [
-        ...pkg.artifacts,
-        { ...artifact("movement-training", "f", "movement_truth", "training"), sha256: duplicatedSha },
-      ],
+      artifacts: pkg.artifacts.map((item) =>
+        item.artifactId === "movement-training" ? { ...item, sha256: duplicatedSha } : item),
     }));
     expect(result.failures).toContain("ARTIFACT_ROLE_COLLISION");
   });
@@ -107,6 +114,22 @@ describe("calibration evidence package", () => {
     artifacts[0] = { ...artifacts[0]!, rightsReviewRef: "" };
     pkg.artifacts = artifacts;
     expect(validateCalibrationEvidencePackage(pkg).failures).toEqual(["INVALID_PACKAGE_SCHEMA"]);
+  });
+
+  it("rejects placeholder provenance instead of treating 'unknown' as reviewed metadata", () => {
+    const pkg = packageFixture();
+    const artifacts = [...pkg.artifacts];
+    artifacts[0] = { ...artifacts[0]!, licenseId: "unknown" };
+    const result = validateCalibrationEvidencePackage(packageFixture({ artifacts }));
+    expect(result.failures).toContain("UNREVIEWED_PROVENANCE_OR_RIGHTS");
+  });
+
+  it("rejects impossible calendar periods", () => {
+    const pkg = packageFixture();
+    const artifacts = [...pkg.artifacts];
+    artifacts[0] = { ...artifacts[0]!, periodEnd: "2026-02-31" };
+    const result = validateCalibrationEvidencePackage(packageFixture({ artifacts }));
+    expect(result.failures).toContain("ARTIFACT_PERIOD_INVALID");
   });
 
   it("requires an independent-date movement artifact when the existing report claims replication", () => {
