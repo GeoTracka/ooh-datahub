@@ -18,6 +18,21 @@ async function expectComfortableTarget(
   expect(box!.height, `${label} target height`).toBeGreaterThanOrEqual(minimumHeight);
 }
 
+async function expectFullyInViewport(
+  page: Page,
+  locator: Locator,
+  label: string,
+): Promise<void> {
+  const box = await locator.boundingBox();
+  expect(box, `${label} should have measurable geometry`).not.toBeNull();
+  const viewport = page.viewportSize();
+  expect(viewport, `${label} should have a viewport`).not.toBeNull();
+  expect(box!.x, `${label} left edge`).toBeGreaterThanOrEqual(0);
+  expect(box!.y, `${label} top edge`).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width, `${label} right edge`).toBeLessThanOrEqual(viewport!.width + 1);
+  expect(box!.y + box!.height, `${label} bottom edge`).toBeLessThanOrEqual(viewport!.height + 1);
+}
+
 async function expectComparisonFitsWithoutHorizontalScroll(page: Page): Promise<void> {
   const geometry = await page.locator(".recommendation-carousel").evaluate((element) => ({
     clientWidth: element.clientWidth,
@@ -102,8 +117,11 @@ test.describe("desktop recommendation hierarchy", () => {
   });
 });
 
-test("keeps all three ranks comparable at 1024px", async ({ page }) => {
+test("keeps all three ranks and the decision CTA visible at 1024px", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await reachRecommendedPackage(page);
   await expectComparisonFitsWithoutHorizontalScroll(page);
+  const primaryAction = page.getByRole("button", { name: "This package works" });
+  await expect(primaryAction).toBeVisible();
+  await expectFullyInViewport(page, primaryAction, "This package works");
 });
