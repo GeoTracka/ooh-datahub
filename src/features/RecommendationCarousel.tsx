@@ -53,7 +53,10 @@ export function RecommendationCarousel({
     previousSelectedZoneId.current = selectedZoneId;
     if (!selectedZoneId || !selectedCardRef.current) return;
     const frame = requestAnimationFrame(() => {
-      selectedCardRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+      const selectedCard = selectedCardRef.current;
+      if (typeof selectedCard?.scrollIntoView === "function") {
+        selectedCard.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
     });
     return () => cancelAnimationFrame(frame);
   }, [selectedZoneId]);

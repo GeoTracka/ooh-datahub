@@ -102,4 +102,16 @@ describe("PlannerPage explorer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("region", { name: /Step 3 of 5:/ })).toBeInTheDocument();
   }, 30000);
+
+  it("clears a clean package preview when the applied recommendation is reselected", async () => {
+    render(<PlannerPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
+    await screen.findByRole("region", { name: /Step 3 of 5:/ });
+    await userEvent.click(screen.getByRole("radio", { name: /Maximum delivery/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Best overall/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Fine-tune selected package" }));
+
+    expect(screen.queryByText("Unapplied changes")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
+  }, 30000);
 });
