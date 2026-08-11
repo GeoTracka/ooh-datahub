@@ -49,6 +49,8 @@ The review suite intentionally samples the user journey rather than duplicating 
 12. uploaded inventory preview; and
 13. uploaded planning-context status.
 
+For the desktop fine-tune workflow, 1440 × 1000 is the no-internal-scroll quality target: clean and dirty Step 5 must expose all four adjustment modes and the RFQ decision action in the first viewport while retaining meaningful map context. Shorter desktop heights such as the 1280 × 720 locked visual baseline may still scroll vertically; that is preferable to shrinking typography, hiding decision evidence, or overlaying actions.
+
 ### Responsive
 
 - compact laptop: 1024 × 768 recommended package;
