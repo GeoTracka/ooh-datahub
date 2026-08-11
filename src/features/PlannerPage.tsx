@@ -286,15 +286,6 @@ export function PlannerPage() {
     if (!visible) return;
     if (candidate.id === visible.recommended.id) return;
     setSelectedZoneId(candidate.zoneIds[0] ?? null);
-    const applied = state.appliedPlan;
-    if (
-      applied &&
-      briefsMatch(applied.brief, visible.brief) &&
-      candidate.id === applied.recommended.id
-    ) {
-      dispatch({ type: "package-previewed", plan: null });
-      return;
-    }
     dispatch({
       type: "package-previewed",
       plan: recalculateSelectedSites(bundle, visible, candidate.siteIds),

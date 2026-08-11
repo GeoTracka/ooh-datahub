@@ -5,6 +5,7 @@ export type PlannerState = {
   appliedPlan: PlanningResult | null;
   draftPlan: PlanningResult | null;
   packagePreviewBasePlan: PlanningResult | null;
+  packagePreviewActive: boolean;
   draftHistory: PlanningResult[];
   lastAction: string | null;
   status: "brief" | "loaded" | "dirty" | "rfq";
@@ -15,6 +16,7 @@ export const initialPlannerState: PlannerState = {
   appliedPlan: null,
   draftPlan: null,
   packagePreviewBasePlan: null,
+  packagePreviewActive: false,
   draftHistory: [],
   lastAction: null,
   status: "brief",
@@ -43,6 +45,7 @@ export function plannerReducer(
         appliedPlan: action.plan,
         draftPlan: null,
         packagePreviewBasePlan: null,
+        packagePreviewActive: false,
         draftHistory: [],
         lastAction: null,
         status: "loaded",
@@ -54,6 +57,7 @@ export function plannerReducer(
           ...state,
           draftPlan: restored,
           packagePreviewBasePlan: null,
+          packagePreviewActive: false,
           lastAction: restored ? "Plan adjustment" : null,
           status: restored ? "dirty" : "loaded",
         };
@@ -61,7 +65,10 @@ export function plannerReducer(
       return {
         ...state,
         draftPlan: action.plan,
-        packagePreviewBasePlan: state.packagePreviewBasePlan ?? state.draftPlan,
+        packagePreviewBasePlan: state.packagePreviewActive
+          ? state.packagePreviewBasePlan
+          : state.draftPlan,
+        packagePreviewActive: true,
         draftHistory: state.draftHistory,
         lastAction: "Package option selected",
         status: "dirty",
@@ -74,6 +81,7 @@ export function plannerReducer(
           : state.draftHistory,
         draftPlan: action.plan,
         packagePreviewBasePlan: null,
+        packagePreviewActive: false,
         lastAction: action.reason ?? "Plan adjustment",
         status: "dirty",
       };
@@ -83,6 +91,7 @@ export function plannerReducer(
         ...state,
         draftPlan: previous,
         packagePreviewBasePlan: null,
+        packagePreviewActive: false,
         draftHistory: previous ? state.draftHistory.slice(0, -1) : [],
         lastAction: previous ? "Undo adjustment" : null,
         status: previous ? "dirty" : "loaded",
@@ -95,6 +104,7 @@ export function plannerReducer(
         ...state,
         draftPlan: appliedIsOriginal ? null : state.originalPlan,
         packagePreviewBasePlan: null,
+        packagePreviewActive: false,
         draftHistory: [],
         lastAction: appliedIsOriginal ? null : "Reset to original recommendation",
         status: appliedIsOriginal ? "loaded" : "dirty",
@@ -108,6 +118,7 @@ export function plannerReducer(
         appliedPlan: state.draftPlan,
         draftPlan: null,
         packagePreviewBasePlan: null,
+        packagePreviewActive: false,
         draftHistory: [],
         lastAction: null,
         status: "loaded",
@@ -125,6 +136,7 @@ export function plannerReducer(
         appliedPlan: state.draftPlan,
         draftPlan: null,
         packagePreviewBasePlan: null,
+        packagePreviewActive: false,
         draftHistory: [],
         lastAction: null,
         status: "rfq",
@@ -136,6 +148,7 @@ export function plannerReducer(
         ...state,
         draftPlan: action.plan,
         packagePreviewBasePlan: null,
+        packagePreviewActive: false,
         draftHistory: [],
         lastAction: "RFQ schedule changed",
         status: "dirty",

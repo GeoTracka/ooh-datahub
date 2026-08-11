@@ -60,6 +60,7 @@ describe("plannerReducer", () => {
 
     expect(previewed.draftHistory).toEqual(drafted.draftHistory);
     expect(previewed.packagePreviewBasePlan).toBe(secondDraft);
+    expect(previewed.packagePreviewActive).toBe(true);
   });
 
   it("restores the underlying adjustment when a package preview is cleared", () => {
@@ -74,7 +75,50 @@ describe("plannerReducer", () => {
 
     expect(restored.draftPlan).toBe(underlyingDraft);
     expect(restored.packagePreviewBasePlan).toBeNull();
+    expect(restored.packagePreviewActive).toBe(false);
     expect(restored.status).toBe("dirty");
+  });
+
+  it("previews the applied package without losing an underlying adjustment", () => {
+    const applied = buildPlan(frozenLagosBundle, brief);
+    const underlyingDraft = { ...applied };
+    const appliedPreview = { ...applied };
+    const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });
+    const drafted = plannerReducer(loaded, { type: "drafted", plan: underlyingDraft });
+
+    const previewed = plannerReducer(drafted, {
+      type: "package-previewed",
+      plan: appliedPreview,
+    });
+
+    expect(previewed.draftPlan).toBe(appliedPreview);
+    expect(previewed.packagePreviewBasePlan).toBe(underlyingDraft);
+    expect(previewed.packagePreviewActive).toBe(true);
+  });
+
+  it("keeps the original preview base while switching back to the applied package", () => {
+    const applied = buildPlan(frozenLagosBundle, brief);
+    const underlyingDraft = { ...applied };
+    const alternativePreview = {
+      ...applied,
+      recommended: applied.packageOptions[1].candidate,
+    };
+    const appliedPreview = { ...applied };
+    const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });
+    const drafted = plannerReducer(loaded, { type: "drafted", plan: underlyingDraft });
+    const alternative = plannerReducer(drafted, {
+      type: "package-previewed",
+      plan: alternativePreview,
+    });
+
+    const switched = plannerReducer(alternative, {
+      type: "package-previewed",
+      plan: appliedPreview,
+    });
+
+    expect(switched.draftPlan).toBe(appliedPreview);
+    expect(switched.packagePreviewBasePlan).toBe(underlyingDraft);
+    expect(switched.packagePreviewActive).toBe(true);
   });
 
   it("clears an alternative preview when the applied package is selected", () => {
