@@ -81,6 +81,14 @@
   line-height: 1.5;
 }
 
+.recommendation-selected-detail p strong {
+  color: #343a46;
+}
+
+.recommendation-selected-detail-desktop {
+  display: none;
+}
+
 .recommendation-focus-actions {
   display: flex;
   flex-wrap: wrap;
@@ -192,7 +200,28 @@
 
   .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-slide {
     min-width: 0;
+    align-self: start;
     scroll-snap-align: none;
+  }
+
+  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-selected-detail-mobile {
+    display: none;
+  }
+
+  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-selected-detail-desktop {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 12px;
+    border: 1px solid #e4e5e8;
+    border-radius: 11px;
+    background: #fbfbfa;
+  }
+
+  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-selected-detail-desktop p {
+    max-width: 68%;
   }
 
   .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .package-strip {
