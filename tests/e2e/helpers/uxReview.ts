@@ -23,6 +23,7 @@ export type UxReviewDiagnostics = {
   undersizedInteractiveCandidates: ElementDiagnostic[];
   clippedTextCandidates: ElementDiagnostic[];
   nestedScrollableContainers: ElementDiagnostic[];
+  actionableNestedScrollCandidates: ElementDiagnostic[];
 };
 
 type ElementDiagnostic = {
@@ -98,13 +99,40 @@ async function collectDiagnostics(page: Page): Promise<UxReviewDiagnostics> {
       .slice(0, 40)
       .map(describe);
 
-    const nestedScrollableContainers = Array.from(document.querySelectorAll("body *"))
+    const scrollableElements = Array.from(document.querySelectorAll("body *"))
       .filter(visible)
       .filter((element) => {
         const html = element as HTMLElement;
         const style = window.getComputedStyle(html);
         return ["auto", "scroll"].includes(style.overflowY)
           && html.scrollHeight > html.clientHeight + 2;
+      });
+
+    const nestedScrollableContainers = scrollableElements
+      .slice(0, 40)
+      .map(describe);
+
+    const actionableNestedScrollCandidates = scrollableElements
+      .filter((element) => {
+        const html = element as HTMLElement;
+        const rect = html.getBoundingClientRect();
+
+        // The mobile explorer shell is the page's intentional primary scroll
+        // surface, not a nested competing container.
+        if (html.matches("main.explorer-shell")) return false;
+
+        // Tablet/mobile step cards operate as full-width bottom sheets. A
+        // near-full-width sheet is an intentional primary content surface;
+        // preserve it in the raw diagnostics but do not rank it as scroll debt.
+        if (
+          window.innerWidth < 1024
+          && html.classList.contains("explorer-step-card")
+          && rect.width >= window.innerWidth * 0.8
+        ) {
+          return false;
+        }
+
+        return true;
       })
       .slice(0, 40)
       .map(describe);
@@ -135,6 +163,7 @@ async function collectDiagnostics(page: Page): Promise<UxReviewDiagnostics> {
       undersizedInteractiveCandidates,
       clippedTextCandidates,
       nestedScrollableContainers,
+      actionableNestedScrollCandidates,
     };
   });
 }
