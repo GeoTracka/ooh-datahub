@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { EstimatePackageResult } from "@/contracts/metrics";
 import type { DrawerTarget } from "@/contracts/renderer";
+import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
 
 const labels = {
   location: "Location",
@@ -109,9 +110,15 @@ export function CausalDrawer({
   if (target.kind === "pillar" && target.id !== "D") {
     const description = pillarDescriptions[target.id];
     return (
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="How delivery was estimated">
-        <button ref={closeRef} type="button" onClick={onClose}>Close</button>
-        <nav aria-label="Explanation breadcrumb">
+      <PlannerDrawerFrame
+        ariaLabel="How delivery was estimated"
+        eyebrow="Delivery explanation"
+        className="causal-drawer"
+        dialogRef={dialogRef}
+        closeRef={closeRef}
+        onClose={onClose}
+      >
+        <nav className="planner-drawer-breadcrumb" aria-label="Explanation breadcrumb">
           {ancestors.map((ancestor, index) => (
             <button key={ancestor.kind + "/" + ("id" in ancestor ? ancestor.id : "package")} type="button" onClick={() => onAncestor(index)}>
               {ancestor.kind === "package"
@@ -135,16 +142,22 @@ export function CausalDrawer({
           The UI therefore does not present Location → Unique as an explanation for this score.
         </p>
         <p>{scopeNote}</p>
-      </div>
+      </PlannerDrawerFrame>
     );
   }
 
   const stage = measurement.stages.find((item) => item.id === activeStage);
   if (!stage) return null;
   return (
-    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="How delivery was estimated">
-      <button ref={closeRef} type="button" onClick={onClose}>Close</button>
-      <nav aria-label="Explanation breadcrumb">
+    <PlannerDrawerFrame
+      ariaLabel="How delivery was estimated"
+      eyebrow="Delivery explanation"
+      className="causal-drawer"
+      dialogRef={dialogRef}
+      closeRef={closeRef}
+      onClose={onClose}
+    >
+      <nav className="planner-drawer-breadcrumb" aria-label="Explanation breadcrumb">
         {ancestors.map((ancestor, index) => (
           <button key={ancestor.kind + "/" + ("id" in ancestor ? ancestor.id : "package")} type="button" onClick={() => onAncestor(index)}>
             {ancestor.kind === "package"
@@ -159,18 +172,18 @@ export function CausalDrawer({
       </nav>
       <h1>{target.metric === "influence" ? "Influence" : "Reach"} · {entityLabel}</h1>
       <p>{scopeNote}</p>
-      <nav aria-label="Causal stages">
-        {measurement.stages.map((stage) => (
+      <nav className="causal-stage-navigation" aria-label="Causal stages">
+        {measurement.stages.map((stageItem) => (
           <button
-            key={stage.id}
-            aria-current={activeStage === stage.id ? "step" : undefined}
-            onClick={() => onStage(stage.id as keyof typeof labels)}
+            key={stageItem.id}
+            aria-current={activeStage === stageItem.id ? "step" : undefined}
+            onClick={() => onStage(stageItem.id as keyof typeof labels)}
           >
-            {labels[stage.id as keyof typeof labels]}
+            {labels[stageItem.id as keyof typeof labels]}
           </button>
         ))}
       </nav>
-      <section>
+      <section className="causal-stage-detail">
         <h2>{labels[activeStage]}</h2>
         <strong>{stage.valueText}</strong>
         <dl>
@@ -228,6 +241,6 @@ export function CausalDrawer({
           ))}
         </section>}
       </section>
-    </div>
+    </PlannerDrawerFrame>
   );
 }
