@@ -42,7 +42,7 @@ describe("RfqDrawer", () => {
     expect(screen.getByText("Review required", { exact: true })).toBeInTheDocument();
   });
 
-  it("shows observable generation failure without clearing reviewed fields", async () => {
+  it("shows human recovery guidance without clearing reviewed fields", async () => {
     const failing: typeof generateRfq = () => {
       throw new Error("FIXTURE_GENERATION_FAILURE");
     };
@@ -56,7 +56,14 @@ describe("RfqDrawer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Generate RFQ" }));
     expect(await screen.findByText("Generation failed", { exact: true }))
       .toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("FIXTURE_GENERATION_FAILURE");
+    const alert = screen.getByRole("alert", { name: "RFQ generation failure" });
+    expect(alert).toHaveTextContent("We couldn't generate the supplier request");
+    expect(alert).toHaveTextContent("Your reviewed fields are still here");
+    expect(alert.querySelector(".recovery-notice-copy")).not.toHaveTextContent(
+      "FIXTURE_GENERATION_FAILURE",
+    );
+    expect(alert.querySelector("details")).toHaveTextContent("FIXTURE_GENERATION_FAILURE");
+    expect(screen.getByRole("button", { name: "Retry RFQ generation" })).toBeEnabled();
     expect(screen.getByLabelText("Buyer name")).toHaveValue("Demo Buyer");
     expect(screen.getByLabelText("Buyer email")).toHaveValue("buyer@example.test");
     expect(screen.getByLabelText("Response deadline")).toHaveValue("2026-08-20");
