@@ -113,7 +113,7 @@ export function PackageOptionComparison({
                               {compact(candidate.deliveryRaw)}
                             </span>
                             <small className="package-option-metric-unit">
-                              {delivery.suffix.trim()}
+                              {" "}{delivery.suffix.trim()}
                             </small>
                           </>
                         )}

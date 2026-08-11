@@ -37,6 +37,8 @@ describe("explorer components", () => {
     expect(screen.getByRole("radio", { name: /Best overall/ })).toBeChecked();
     expect(screen.getByText("Maximum delivery")).toBeInTheDocument();
     expect(screen.getByText("Budget smart")).toBeInTheDocument();
+    expect(screen.getByText("Best overall").closest("label"))
+      .toHaveTextContent(/\d+(?:\.\d+)?K people/);
 
     await userEvent.click(screen.getByRole("radio", { name: /Budget smart/ }));
     expect(onSelect).toHaveBeenCalledWith(plan.packageOptions[2].candidate);
