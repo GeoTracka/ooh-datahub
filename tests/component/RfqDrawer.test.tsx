@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { frozenLagosBundle } from "@/bundle/loadFrozenBundle";
 import { RfqDrawer } from "@/features/RfqDrawer";
 import { generateRfq } from "@/planning/rfq";
 import { seededFmcgPlan as plan } from "../fixtures/seededPlans";
