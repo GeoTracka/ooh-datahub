@@ -11,6 +11,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/unit/**/*.test.ts", "tests/component/**/*.test.tsx"],
+    // Planner fixtures are intentionally compute-heavy. Limiting parallelism
+    // prevents worker contention from turning their 5s guardrail into flakes.
+    maxWorkers: 4,
   },
   resolve: {
     alias: {
