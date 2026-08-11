@@ -25,6 +25,8 @@ import {
   type ValidatedInventoryRow,
 } from "@/import/validateRows";
 import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
+import { RecoveryNotice } from "@/features/RecoveryNotice";
+import { summarizeReasonCodes, uploadErrorCopy } from "@/features/recoveryCopy";
 import { UploadPreview } from "@/features/UploadPreview";
 import { MapCanvas } from "@/maps/MapCanvas";
 import {
@@ -123,8 +125,8 @@ export function UploadDialog({
   const [sheets, setSheets] = useState<LocalSheet[]>([]);
   const [sheetIndex, setSheetIndex] = useState(0);
   const [headerMappings, setHeaderMappings] = useState<HeaderMapping[]>([]);
-  const [quarantineCount, setQuarantineCount] = useState(0);
-  const [rejectedCount, setRejectedCount] = useState(0);
+  const [quarantined, setQuarantined] = useState<Array<{ reasonCodes: string[] }>>([]);
+  const [rejected, setRejected] = useState<Array<{ reasonCodes: string[] }>>([]);
   const [selected, setSelected] = useState(new Set<string>());
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -220,8 +222,8 @@ export function UploadDialog({
   function applyMappedSheet(sheet: LocalSheet, mappings: HeaderMapping[]) {
     const validated = validateMappedRows(mapSheet(sheet, mappings));
     setAccepted(validated.accepted);
-    setQuarantineCount(validated.quarantined.length);
-    setRejectedCount(validated.rejected.length);
+    setQuarantined(validated.quarantined.map(({ reasonCodes }) => ({ reasonCodes })));
+    setRejected(validated.rejected.map(({ reasonCodes }) => ({ reasonCodes })));
     setSelected(new Set(validated.accepted.slice(0, 50).map((row) => row.assetId)));
     setPreflight(null);
     setEnrichmentError(null);
@@ -239,8 +241,8 @@ export function UploadDialog({
     const ambiguous = mappings.some((mapping) => mapping.target && !mapping.confirmed);
     if (ambiguous) {
       setAccepted([]);
-      setQuarantineCount(0);
-      setRejectedCount(0);
+      setQuarantined([]);
+      setRejected([]);
       setSelected(new Set());
       setSnapshot(null);
       return;
@@ -261,6 +263,13 @@ export function UploadDialog({
   async function selectFile(file: File) {
     setParsing(true);
     setParseError(null);
+    setAccepted([]);
+    setSelected(new Set());
+    setQuarantined([]);
+    setRejected([]);
+    setSnapshot(null);
+    setPreflight(null);
+    setEnrichmentError(null);
     try {
       const workbook = await readLocalSpreadsheet(file);
       setSheets(workbook.sheets);
@@ -271,6 +280,10 @@ export function UploadDialog({
       setAccepted([]);
       setSelected(new Set());
       setHeaderMappings([]);
+      setQuarantined([]);
+      setRejected([]);
+      setSnapshot(null);
+      setPreflight(null);
     } finally {
       setParsing(false);
     }
@@ -362,6 +375,16 @@ export function UploadDialog({
   const pendingMappingReview = headerMappings.some(
     (mapping) => mapping.target && !mapping.confirmed,
   );
+  const parseRecovery = parseError ? uploadErrorCopy("parse", parseError) : null;
+  const enrichmentRecovery = enrichmentError
+    ? uploadErrorCopy("provider", enrichmentError)
+    : null;
+  const quarantineSummary = summarizeReasonCodes(quarantined);
+  const rejectionSummary = summarizeReasonCodes(rejected);
+  const validationCodes = [...new Set([
+    ...quarantineSummary.map((item) => item.code),
+    ...rejectionSummary.map((item) => item.code),
+  ])];
 
   return (
     <PlannerDrawerFrame
@@ -388,7 +411,8 @@ export function UploadDialog({
       </section>
       {pendingMappingReview && <section className="planner-drawer-notice" aria-label="Review column mappings">
         <h2>Confirm spreadsheet columns</h2>
-        <p>Some columns were recognized approximately. Confirm or correct them before the rows are used.</p>
+        <strong>Review required before rows can be used</strong>
+        <p>Some columns were recognized approximately. Confirm or correct them before the rows are used; approximate matches are never applied automatically.</p>
         {headerMappings.map((mapping, index) => mapping.target && !mapping.confirmed ? (
           <label key={mapping.source}>
             {mapping.source}
@@ -416,9 +440,45 @@ export function UploadDialog({
       </section>}
       <p className="upload-status-line">{parsing
         ? "Reading spreadsheet locally…"
-        : accepted.length + " accepted · " + quarantineCount + " quarantined · " + rejectedCount + " rejected"}</p>
-      {parseError && <p role="alert">{parseError}</p>}
-      {enrichmentError && <p role="alert">{enrichmentError}. Uploaded facts remain usable offline.</p>}
+        : accepted.length + " accepted · " + quarantined.length + " quarantined · " + rejected.length + " rejected"}</p>
+      {parseRecovery && (
+        <RecoveryNotice
+          ariaLabel="Spreadsheet read failure"
+          title={parseRecovery.title}
+          tone="error"
+          technicalCode={parseError}
+        >
+          <p>{parseRecovery.message}</p>
+        </RecoveryNotice>
+      )}
+      {enrichmentRecovery && (
+        <RecoveryNotice
+          ariaLabel="Enrichment failure"
+          title={enrichmentRecovery.title}
+          tone="warning"
+          technicalCode={enrichmentError}
+        >
+          <p>{enrichmentRecovery.message}</p>
+        </RecoveryNotice>
+      )}
+      {(quarantined.length > 0 || rejected.length > 0) && (
+        <section className="upload-validation-summary" aria-label="Upload validation summary">
+          <RecoveryNotice
+            title="Some rows were kept out of planning"
+            technicalCode={validationCodes.join(", ")}
+          >
+            <p>Only accepted rows can be selected for planning or enrichment. Quarantined and rejected rows remain excluded.</p>
+            <ul>
+              {quarantineSummary.map((item) => (
+                <li key={`q-${item.code}`}><strong>{item.count} quarantined</strong> · {item.label}</li>
+              ))}
+              {rejectionSummary.map((item) => (
+                <li key={`r-${item.code}`}><strong>{item.count} rejected</strong> · {item.label}</li>
+              ))}
+            </ul>
+          </RecoveryNotice>
+        </section>
+      )}
       {!pendingMappingReview && <UploadPreview
         rows={accepted}
         selected={selected}

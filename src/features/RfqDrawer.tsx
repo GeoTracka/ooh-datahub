@@ -9,6 +9,7 @@ import {
   type RfqWorkflowState,
 } from "@/contracts/rfq";
 import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
+import { RecoveryNotice } from "@/features/RecoveryNotice";
 import { buildInternalDownload, generateRfq } from "@/planning/rfq";
 
 const focusableSelector = [
@@ -133,7 +134,16 @@ export function RfqDrawer({
         <strong>DEMO — DO NOT SEND</strong>
         <span>{workflow.status}</span>
       </div>
-      {workflow.status === "Generation failed" && <p role="alert">{workflow.message}</p>}
+      {workflow.status === "Generation failed" && (
+        <RecoveryNotice
+          ariaLabel="RFQ generation failure"
+          title="We couldn't generate the supplier request"
+          tone="error"
+          technicalCode={workflow.message}
+        >
+          <p>Your reviewed fields are still here. Check them and retry; nothing was sent, booked, or reserved.</p>
+        </RecoveryNotice>
+      )}
       <div className="planner-drawer-form-grid">
         <label>Buyer name<input value={buyerName} onChange={(event) => change(() => setBuyerName(event.target.value))} /></label>
         <label>Buyer email<input type="email" value={buyerEmail} onChange={(event) => change(() => setBuyerEmail(event.target.value))} /></label>
@@ -160,7 +170,7 @@ export function RfqDrawer({
         <textarea value={supplierNotes[supplierId] ?? ""} onChange={(event) => change(() => setSupplierNotes((current) => ({ ...current, [supplierId]: event.target.value })))} />
       </label>)}
       <div className="planner-drawer-primary-row">
-        <button className="primary" type="button" disabled={!valid || workflow.status === "Generating"} onClick={() => void generate()}>Generate RFQ</button>
+        <button className="primary" type="button" disabled={!valid || workflow.status === "Generating"} onClick={() => void generate()}>{workflow.status === "Generation failed" ? "Retry RFQ generation" : "Generate RFQ"}</button>
       </div>
       {output?.supplierMessages.map((message) => <section className="planner-drawer-output" key={message.supplierId}>
         <h2>{message.supplierId}</h2>

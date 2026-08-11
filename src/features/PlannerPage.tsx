@@ -28,6 +28,7 @@ import { AdjustmentsPanel } from "@/features/AdjustmentsPanel";
 import { CausalDrawer } from "@/features/CausalDrawer";
 import { LensTabs } from "@/features/LensTabs";
 import { MapStage } from "@/features/MapStage";
+import { PackageConstraintNotice } from "@/features/PackageConstraintNotice";
 import { PackageStrip } from "@/features/PackageStrip";
 import { RecommendationCarousel } from "@/features/RecommendationCarousel";
 import { RfqDrawer } from "@/features/RfqDrawer";
@@ -481,10 +482,7 @@ export function PlannerPage() {
               onReviewRfq={reviewRfq}
             />
             {!visible.recommended.valid && (
-              <section role="alert" aria-label="Package constraints">
-                <strong>Package needs repair before acceptance</strong>
-                {visible.recommended.invalidReasonCodes.map((reason) => <p key={reason}>{reason}</p>)}
-              </section>
+              <PackageConstraintNotice reasonCodes={visible.recommended.invalidReasonCodes} />
             )}
             {visible.contextRevision && (
               <aside className="explorer-context-status" aria-label="Uploaded planning status">
