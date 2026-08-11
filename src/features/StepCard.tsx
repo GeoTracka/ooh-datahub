@@ -10,6 +10,7 @@ export function StepCard({
   children,
   onBack,
   primaryAction,
+  busy = false,
 }: {
   step: number;
   total: number;
@@ -22,10 +23,11 @@ export function StepCard({
     onClick(): void;
     disabled?: boolean;
   };
+  busy?: boolean;
 }) {
   useEffect(() => {
     const back = onBack;
-    if (!back) return;
+    if (!back || busy) return;
     function handleEscape(event: KeyboardEvent) {
       if (event.key !== "Escape" || event.defaultPrevented) return;
       // Dialogs own Escape while open; never close a modal and navigate the
@@ -35,7 +37,7 @@ export function StepCard({
     }
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [onBack]);
+  }, [busy, onBack]);
 
   return (
     <section
@@ -43,6 +45,7 @@ export function StepCard({
       role="region"
       aria-label={`Step ${step} of ${total}: ${title}`}
       aria-live="polite"
+      aria-busy={busy || undefined}
     >
       <header className="explorer-step-header">
         <div>
@@ -70,7 +73,7 @@ export function StepCard({
       {(onBack || primaryAction) && (
         <footer className="explorer-step-actions">
           {onBack && (
-            <button type="button" className="explorer-link-button" onClick={onBack}>
+            <button type="button" className="explorer-link-button" disabled={busy} onClick={onBack}>
               Back
             </button>
           )}
@@ -78,7 +81,7 @@ export function StepCard({
             <button
               type="button"
               className="primary explorer-primary-action"
-              disabled={primaryAction.disabled}
+              disabled={busy || primaryAction.disabled}
               onClick={primaryAction.onClick}
             >
               {primaryAction.label}
