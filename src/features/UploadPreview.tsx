@@ -10,18 +10,20 @@ export function UploadPreview({
   onToggle(assetId: string): void;
 }) {
   return (
-    <fieldset>
+    <fieldset className="planner-choice-list">
       <legend>Select up to 50 accepted rows</legend>
       {rows.map((row) => (
-        <label key={row.assetId}>
+        <label className="planner-choice-control" key={row.assetId}>
           <input
             type="checkbox"
             checked={selected.has(row.assetId)}
             disabled={!selected.has(row.assetId) && selected.size >= 50}
             onChange={() => onToggle(row.assetId)}
           />
-          {row.assetId} · {row.address ?? `${row.latitude}, ${row.longitude}`} ·
-          {row.modelEligible ? " model-eligible input" : " context-only"}
+          <span>
+            {row.assetId} · {row.address ?? `${row.latitude}, ${row.longitude}`} ·
+            {row.modelEligible ? " model-eligible input" : " context-only"}
+          </span>
         </label>
       ))}
     </fieldset>

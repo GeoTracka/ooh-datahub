@@ -8,6 +8,7 @@ import {
   type RfqDraft,
   type RfqWorkflowState,
 } from "@/contracts/rfq";
+import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
 import { buildInternalDownload, generateRfq } from "@/planning/rfq";
 
 const focusableSelector = [
@@ -119,42 +120,61 @@ export function RfqDrawer({
     }
   }
   const output: RfqDraft | null = workflow.status === "Generated" ? workflow.output : null;
-  return <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Supplier verification RFQ">
-    <button ref={closeRef} type="button" onClick={onClose}>Close</button>
-    <strong>DEMO — DO NOT SEND</strong>
-    <p>{workflow.status}</p>
-    {workflow.status === "Generation failed" && <p role="alert">{workflow.message}</p>}
-    <label>Buyer name<input value={buyerName} onChange={(event) => change(() => setBuyerName(event.target.value))} /></label>
-    <label>Buyer email<input type="email" value={buyerEmail} onChange={(event) => change(() => setBuyerEmail(event.target.value))} /></label>
-    <label>Response deadline<input type="date" value={responseDeadline} onChange={(event) => change(() => setResponseDeadline(event.target.value))} /></label>
-    <label>Flight start<input type="date" value={flightStart} onChange={(event) => change(() => setFlightStart(event.target.value))} /></label>
-    <label>Flight end<input type="date" value={flightEnd} onChange={(event) => change(() => setFlightEnd(event.target.value))} /></label>
-    {!datesMatchAppliedPlan && <section aria-label="Schedule revision required">
-      <p>Dates changed. Recompute a dirty plan revision before generating the RFQ.</p>
-      <button
-        type="button"
-        disabled={flightStart > flightEnd}
-        onClick={() => onScheduleRevision(flightStart, flightEnd)}
-      >
-        Recompute plan with these dates
-      </button>
-    </section>}
-    <label><input type="checkbox" checked={datesConfirmed} onChange={(event) => change(() => setDatesConfirmed(event.target.checked))} />Dates confirmed</label>
-    {supplierIds.map((supplierId) => <label key={supplierId}>
-      {supplierId} note
-      <textarea value={supplierNotes[supplierId] ?? ""} onChange={(event) => change(() => setSupplierNotes((current) => ({ ...current, [supplierId]: event.target.value })))} />
-    </label>)}
-    <button type="button" disabled={!valid || workflow.status === "Generating"} onClick={() => void generate()}>Generate RFQ</button>
-    {output?.supplierMessages.map((message) => <section key={message.supplierId}>
-      <h2>{message.supplierId}</h2>
-      <pre>{message.body}</pre>
-      <button type="button" onClick={() => void navigator.clipboard.writeText(message.body)}>Copy {message.supplierId} request</button>
-      <button type="button" onClick={() => downloadText(message.supplierId + "-rfq.txt", message.body)}>Download {message.supplierId} request</button>
-    </section>)}
-    {output && <button type="button" onClick={() => downloadText(
-      "consolidated-internal-request.json",
-      buildInternalDownload(output),
-    )}>Download consolidated internal request</button>}
-    <p>Status: draft, unbooked, unsent</p>
-  </div>;
+  return (
+    <PlannerDrawerFrame
+      ariaLabel="Supplier verification RFQ"
+      eyebrow="Supplier verification"
+      className="rfq-drawer"
+      dialogRef={dialogRef}
+      closeRef={closeRef}
+      onClose={onClose}
+    >
+      <div className="planner-drawer-status-row">
+        <strong>DEMO — DO NOT SEND</strong>
+        <span>{workflow.status}</span>
+      </div>
+      {workflow.status === "Generation failed" && <p role="alert">{workflow.message}</p>}
+      <div className="planner-drawer-form-grid">
+        <label>Buyer name<input value={buyerName} onChange={(event) => change(() => setBuyerName(event.target.value))} /></label>
+        <label>Buyer email<input type="email" value={buyerEmail} onChange={(event) => change(() => setBuyerEmail(event.target.value))} /></label>
+        <label>Response deadline<input type="date" value={responseDeadline} onChange={(event) => change(() => setResponseDeadline(event.target.value))} /></label>
+        <label>Flight start<input type="date" value={flightStart} onChange={(event) => change(() => setFlightStart(event.target.value))} /></label>
+        <label>Flight end<input type="date" value={flightEnd} onChange={(event) => change(() => setFlightEnd(event.target.value))} /></label>
+      </div>
+      {!datesMatchAppliedPlan && <section className="planner-drawer-notice" aria-label="Schedule revision required">
+        <p>Dates changed. Recompute a dirty plan revision before generating the RFQ.</p>
+        <button
+          type="button"
+          disabled={flightStart > flightEnd}
+          onClick={() => onScheduleRevision(flightStart, flightEnd)}
+        >
+          Recompute plan with these dates
+        </button>
+      </section>}
+      <label className="planner-choice-control">
+        <input type="checkbox" checked={datesConfirmed} onChange={(event) => change(() => setDatesConfirmed(event.target.checked))} />
+        <span>Dates confirmed</span>
+      </label>
+      {supplierIds.map((supplierId) => <label key={supplierId}>
+        {supplierId} note
+        <textarea value={supplierNotes[supplierId] ?? ""} onChange={(event) => change(() => setSupplierNotes((current) => ({ ...current, [supplierId]: event.target.value })))} />
+      </label>)}
+      <div className="planner-drawer-primary-row">
+        <button className="primary" type="button" disabled={!valid || workflow.status === "Generating"} onClick={() => void generate()}>Generate RFQ</button>
+      </div>
+      {output?.supplierMessages.map((message) => <section className="planner-drawer-output" key={message.supplierId}>
+        <h2>{message.supplierId}</h2>
+        <pre>{message.body}</pre>
+        <div className="planner-drawer-action-row">
+          <button type="button" onClick={() => void navigator.clipboard.writeText(message.body)}>Copy {message.supplierId} request</button>
+          <button type="button" onClick={() => downloadText(message.supplierId + "-rfq.txt", message.body)}>Download {message.supplierId} request</button>
+        </div>
+      </section>)}
+      {output && <button type="button" onClick={() => downloadText(
+        "consolidated-internal-request.json",
+        buildInternalDownload(output),
+      )}>Download consolidated internal request</button>}
+      <p className="planner-drawer-footnote">Status: draft, unbooked, unsent</p>
+    </PlannerDrawerFrame>
+  );
 }

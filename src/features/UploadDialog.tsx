@@ -24,6 +24,7 @@ import {
   type MappedInventoryRow,
   type ValidatedInventoryRow,
 } from "@/import/validateRows";
+import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
 import { UploadPreview } from "@/features/UploadPreview";
 import { MapCanvas } from "@/maps/MapCanvas";
 import {
@@ -363,21 +364,29 @@ export function UploadDialog({
   );
 
   return (
-    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Upload inventory">
-      <button ref={closeRef} type="button" onClick={onClose}>Close</button>
-      <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {
-        const file = event.target.files?.[0];
-        if (file) void selectFile(file);
-        event.target.value = "";
-      }} />
-      {sheets.length > 1 && <label>Worksheet<select value={sheetIndex} onChange={(event) => {
-        const index = Number(event.target.value);
-        setSheetIndex(index);
-        inspectSheet(sheets[index]);
-      }}>{sheets.map((sheet, index) => (
-        <option key={sheet.name} value={index}>{sheet.name}</option>
-      ))}</select></label>}
-      {pendingMappingReview && <section aria-label="Review column mappings">
+    <PlannerDrawerFrame
+      ariaLabel="Upload inventory"
+      eyebrow="Customer inventory"
+      className="upload-drawer"
+      dialogRef={dialogRef}
+      closeRef={closeRef}
+      onClose={onClose}
+    >
+      <section className="upload-intake" aria-label="Upload source">
+        <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void selectFile(file);
+          event.target.value = "";
+        }} />
+        {sheets.length > 1 && <label>Worksheet<select value={sheetIndex} onChange={(event) => {
+          const index = Number(event.target.value);
+          setSheetIndex(index);
+          inspectSheet(sheets[index]);
+        }}>{sheets.map((sheet, index) => (
+          <option key={sheet.name} value={index}>{sheet.name}</option>
+        ))}</select></label>}
+      </section>
+      {pendingMappingReview && <section className="planner-drawer-notice" aria-label="Review column mappings">
         <h2>Confirm spreadsheet columns</h2>
         <p>Some columns were recognized approximately. Confirm or correct them before the rows are used.</p>
         {headerMappings.map((mapping, index) => mapping.target && !mapping.confirmed ? (
@@ -405,7 +414,7 @@ export function UploadDialog({
         ) : null)}
         <button type="button" onClick={confirmMappings}>Confirm mappings</button>
       </section>}
-      <p>{parsing
+      <p className="upload-status-line">{parsing
         ? "Reading spreadsheet locally…"
         : accepted.length + " accepted · " + quarantineCount + " quarantined · " + rejectedCount + " rejected"}</p>
       {parseError && <p role="alert">{parseError}</p>}
@@ -424,27 +433,29 @@ export function UploadDialog({
           return next;
         })}
       />}
-      <button
-        type="button"
-        disabled={parsing || pendingMappingReview || selected.size === 0}
-        onClick={useUploadedFacts}
-      >
-        Use uploaded facts as context
-      </button>
-      <button
-        type="button"
-        disabled={parsing || pendingMappingReview || selected.size === 0}
-        onClick={() => void reviewEnrichment()}
-      >
-        Review enrichment
-      </button>
-      {preflight && <section aria-label="Enrichment preflight">
+      <div className="planner-drawer-action-row upload-context-actions">
+        <button
+          type="button"
+          disabled={parsing || pendingMappingReview || selected.size === 0}
+          onClick={useUploadedFacts}
+        >
+          Use uploaded facts as context
+        </button>
+        <button
+          type="button"
+          disabled={parsing || pendingMappingReview || selected.size === 0}
+          onClick={() => void reviewEnrichment()}
+        >
+          Review enrichment
+        </button>
+      </div>
+      {preflight && <section className="planner-drawer-output" aria-label="Enrichment preflight">
         <pre>{JSON.stringify(preflight, null, 2)}</pre>
         <button type="button" onClick={() => void enrichLocations()}>
           Enrich locations
         </button>
       </section>}
-      {snapshot && <section aria-label="Geocode review">
+      {snapshot && <section className="upload-location-review" aria-label="Geocode review">
         <h2>Review locations</h2>
         <p>Customer/open coordinates work offline. Provider candidates remain optional, context-only, and separately reviewable.</p>
         {uploadScenes.local.features.length > 0 && <div className="upload-map">
@@ -466,7 +477,7 @@ export function UploadDialog({
           />
         </div>}
         {snapshot.rows.filter((item) => selected.has(item.row.rowId)).map((item) => (
-          <article key={item.row.rowId}>
+          <article className="upload-location-card" key={item.row.rowId}>
             <h3>{item.row.address ?? item.row.rowId}</h3>
             <p>
               {[item.row.supplier, item.row.format, item.row.orientation]
@@ -487,42 +498,46 @@ export function UploadDialog({
                 Confirm {candidate.formattedAddress.value} · {candidate.granularity.value}
               </button>
             ))}
-            <label>
-              Correct latitude
-              <input
-                inputMode="decimal"
-                value={corrections[item.row.rowId]?.latitude ?? ""}
-                onChange={(event) => updateCorrection(
-                  item.row.rowId,
-                  "latitude",
-                  event.target.value,
-                )}
-              />
-            </label>
-            <label>
-              Correct longitude
-              <input
-                inputMode="decimal"
-                value={corrections[item.row.rowId]?.longitude ?? ""}
-                onChange={(event) => updateCorrection(
-                  item.row.rowId,
-                  "longitude",
-                  event.target.value,
-                )}
-              />
-            </label>
+            <div className="planner-drawer-form-grid">
+              <label>
+                Correct latitude
+                <input
+                  inputMode="decimal"
+                  value={corrections[item.row.rowId]?.latitude ?? ""}
+                  onChange={(event) => updateCorrection(
+                    item.row.rowId,
+                    "latitude",
+                    event.target.value,
+                  )}
+                />
+              </label>
+              <label>
+                Correct longitude
+                <input
+                  inputMode="decimal"
+                  value={corrections[item.row.rowId]?.longitude ?? ""}
+                  onChange={(event) => updateCorrection(
+                    item.row.rowId,
+                    "longitude",
+                    event.target.value,
+                  )}
+                />
+              </label>
+            </div>
             <button type="button" onClick={() => applyCorrection(item.row.rowId)}>
               Use customer coordinate
             </button>
           </article>
         ))}
-        <button type="button" onClick={() => onDraft(
-          applyUploadToDraft(snapshot, [...selected]),
-          snapshot,
-        )}>
-          Use reviewed facts as context
-        </button>
+        <div className="planner-drawer-primary-row">
+          <button className="primary" type="button" onClick={() => onDraft(
+            applyUploadToDraft(snapshot, [...selected]),
+            snapshot,
+          )}>
+            Use reviewed facts as context
+          </button>
+        </div>
       </section>}
-    </div>
+    </PlannerDrawerFrame>
   );
 }
