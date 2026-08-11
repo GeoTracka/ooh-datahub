@@ -25,6 +25,7 @@ import {
   type ValidatedInventoryRow,
 } from "@/import/validateRows";
 import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
+import { OperationStatus } from "@/features/OperationStatus";
 import { RecoveryNotice } from "@/features/RecoveryNotice";
 import { summarizeReasonCodes, uploadErrorCopy } from "@/features/recoveryCopy";
 import { UploadPreview } from "@/features/UploadPreview";
@@ -121,6 +122,9 @@ export function UploadDialog({
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const parsingRef = useRef(false);
+  const providerBusyRef = useRef(false);
+  const providerAbortRef = useRef<AbortController | null>(null);
   const [accepted, setAccepted] = useState<ValidatedInventoryRow[]>([]);
   const [sheets, setSheets] = useState<LocalSheet[]>([]);
   const [sheetIndex, setSheetIndex] = useState(0);
@@ -129,6 +133,7 @@ export function UploadDialog({
   const [rejected, setRejected] = useState<Array<{ reasonCodes: string[] }>>([]);
   const [selected, setSelected] = useState(new Set<string>());
   const [parsing, setParsing] = useState(false);
+  const [enrichmentBusy, setEnrichmentBusy] = useState<"preflight" | "enriching" | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [preflight, setPreflight] = useState<Record<string, unknown> | null>(null);
   const [enrichmentError, setEnrichmentError] = useState<string | null>(null);
@@ -140,6 +145,9 @@ export function UploadDialog({
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+  useEffect(() => () => {
+    providerAbortRef.current?.abort();
+  }, []);
   useEffect(() => {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
@@ -261,6 +269,8 @@ export function UploadDialog({
   }
 
   async function selectFile(file: File) {
+    if (parsingRef.current || providerBusyRef.current) return;
+    parsingRef.current = true;
     setParsing(true);
     setParseError(null);
     setAccepted([]);
@@ -285,6 +295,7 @@ export function UploadDialog({
       setSnapshot(null);
       setPreflight(null);
     } finally {
+      parsingRef.current = false;
       setParsing(false);
     }
   }
@@ -294,19 +305,36 @@ export function UploadDialog({
   }
 
   async function reviewEnrichment() {
+    if (providerBusyRef.current || parsingRef.current) return;
+    providerBusyRef.current = true;
+    setEnrichmentBusy("preflight");
+    setEnrichmentError(null);
+    const controller = new AbortController();
+    providerAbortRef.current = controller;
     try {
-      setEnrichmentError(null);
       const rows = selectedEnrichmentRows();
       if (rows.length === 0) throw new Error("SELECT_AT_LEAST_ONE_ROW");
-      setPreflight(await requestPreflight({ rows }));
+      const nextPreflight = await requestPreflight({ rows }, controller.signal);
+      if (!controller.signal.aborted) setPreflight(nextPreflight);
     } catch (error) {
-      setEnrichmentError(error instanceof Error ? error.message : "PREFLIGHT_FAILED");
+      if (!controller.signal.aborted) {
+        setEnrichmentError(error instanceof Error ? error.message : "PREFLIGHT_FAILED");
+      }
+    } finally {
+      if (providerAbortRef.current === controller) providerAbortRef.current = null;
+      providerBusyRef.current = false;
+      setEnrichmentBusy(null);
     }
   }
 
   async function enrichLocations() {
+    if (providerBusyRef.current || parsingRef.current) return;
+    providerBusyRef.current = true;
+    setEnrichmentBusy("enriching");
+    setEnrichmentError(null);
+    const controller = new AbortController();
+    providerAbortRef.current = controller;
     try {
-      setEnrichmentError(null);
       if (!preflight || typeof preflight.id !== "string") throw new Error("PREFLIGHT_REQUIRED");
       const rows = selectedEnrichmentRows();
       const responses = await runEnrichment({
@@ -314,11 +342,18 @@ export function UploadDialog({
         rows,
         authorized: true,
         idempotencyKey: crypto.randomUUID(),
-      }) as GeocodeResponse[];
+      }, controller.signal) as GeocodeResponse[];
+      if (controller.signal.aborted) return;
       const local = createLocalEnrichmentSnapshot(rows, new Date().toISOString());
       setSnapshot(mergeProviderResponses(local, responses, new Date().toISOString()));
     } catch (error) {
-      setEnrichmentError(error instanceof Error ? error.message : "ENRICHMENT_FAILED");
+      if (!controller.signal.aborted) {
+        setEnrichmentError(error instanceof Error ? error.message : "ENRICHMENT_FAILED");
+      }
+    } finally {
+      if (providerAbortRef.current === controller) providerAbortRef.current = null;
+      providerBusyRef.current = false;
+      setEnrichmentBusy(null);
     }
   }
 
@@ -375,6 +410,7 @@ export function UploadDialog({
   const pendingMappingReview = headerMappings.some(
     (mapping) => mapping.target && !mapping.confirmed,
   );
+  const busy = parsing || enrichmentBusy !== null;
   const parseRecovery = parseError ? uploadErrorCopy("parse", parseError) : null;
   const enrichmentRecovery = enrichmentError
     ? uploadErrorCopy("provider", enrichmentError)
@@ -394,14 +430,15 @@ export function UploadDialog({
       dialogRef={dialogRef}
       closeRef={closeRef}
       onClose={onClose}
+      busy={busy}
     >
       <section className="upload-intake" aria-label="Upload source">
-        <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {
+        <input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" disabled={busy} onChange={(event) => {
           const file = event.target.files?.[0];
           if (file) void selectFile(file);
           event.target.value = "";
         }} />
-        {sheets.length > 1 && <label>Worksheet<select value={sheetIndex} onChange={(event) => {
+        {sheets.length > 1 && <label>Worksheet<select disabled={busy} value={sheetIndex} onChange={(event) => {
           const index = Number(event.target.value);
           setSheetIndex(index);
           inspectSheet(sheets[index]);
@@ -419,6 +456,7 @@ export function UploadDialog({
             <select
               aria-label={"Map " + mapping.source}
               value={mapping.target ?? ""}
+              disabled={busy}
               onChange={(event) => setHeaderMappings((current) => current.map(
                 (item, itemIndex) => itemIndex === index
                   ? {
@@ -436,11 +474,28 @@ export function UploadDialog({
             </select>
           </label>
         ) : null)}
-        <button type="button" onClick={confirmMappings}>Confirm mappings</button>
+        <button type="button" disabled={busy} onClick={confirmMappings}>Confirm mappings</button>
       </section>}
-      <p className="upload-status-line">{parsing
-        ? "Reading spreadsheet locally…"
-        : accepted.length + " accepted · " + quarantined.length + " quarantined · " + rejected.length + " rejected"}</p>
+      {parsing ? (
+        <OperationStatus
+          title="Reading spreadsheet locally…"
+          detail="Checking columns and row validity on this device. No provider request is running."
+        />
+      ) : (
+        <p className="upload-status-line">{accepted.length + " accepted · " + quarantined.length + " quarantined · " + rejected.length + " rejected"}</p>
+      )}
+      {enrichmentBusy === "preflight" && (
+        <OperationStatus
+          title="Checking enrichment requirements…"
+          detail="Reviewing the selected rows and provider preflight. No location enrichment has started yet."
+        />
+      )}
+      {enrichmentBusy === "enriching" && (
+        <OperationStatus
+          title="Reviewing provider location candidates…"
+          detail="The selected rows are locked until this enrichment attempt finishes or the drawer is closed."
+        />
+      )}
       {parseRecovery && (
         <RecoveryNotice
           ariaLabel="Spreadsheet read failure"
@@ -482,37 +537,43 @@ export function UploadDialog({
       {!pendingMappingReview && accepted.length > 0 && <UploadPreview
         rows={accepted}
         selected={selected}
-        onToggle={(assetId) => setSelected((current) => {
-          const next = new Set(current);
-          if (next.has(assetId)) {
-            next.delete(assetId);
-          } else {
-            next.add(assetId);
-          }
-          if (next.size > 50) return current;
-          return next;
-        })}
+        disabled={busy}
+        onToggle={(assetId) => {
+          if (busy) return;
+          setPreflight(null);
+          setEnrichmentError(null);
+          setSelected((current) => {
+            const next = new Set(current);
+            if (next.has(assetId)) {
+              next.delete(assetId);
+            } else {
+              next.add(assetId);
+            }
+            if (next.size > 50) return current;
+            return next;
+          });
+        }}
       />}
       <div className="planner-drawer-action-row upload-context-actions">
         <button
           type="button"
-          disabled={parsing || pendingMappingReview || selected.size === 0}
+          disabled={busy || pendingMappingReview || selected.size === 0}
           onClick={useUploadedFacts}
         >
           Use uploaded facts as context
         </button>
         <button
           type="button"
-          disabled={parsing || pendingMappingReview || selected.size === 0}
+          disabled={busy || pendingMappingReview || selected.size === 0}
           onClick={() => void reviewEnrichment()}
         >
-          Review enrichment
+          {enrichmentBusy === "preflight" ? "Checking enrichment…" : "Review enrichment"}
         </button>
       </div>
       {preflight && <section className="planner-drawer-output" aria-label="Enrichment preflight">
         <pre>{JSON.stringify(preflight, null, 2)}</pre>
-        <button type="button" onClick={() => void enrichLocations()}>
-          Enrich locations
+        <button type="button" disabled={busy} onClick={() => void enrichLocations()}>
+          {enrichmentBusy === "enriching" ? "Reviewing locations…" : "Enrich locations"}
         </button>
       </section>}
       {snapshot && <section className="upload-location-review" aria-label="Geocode review">
