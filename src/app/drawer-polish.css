@@ -159,7 +159,6 @@ body:has(.planner-drawer) .explorer-step-card {
 .planner-drawer .planner-choice-control {
   display: flex;
   min-height: 42px;
-  flex-direction: row;
   align-items: center;
   gap: 9px;
   padding: 8px 10px;
@@ -168,6 +167,16 @@ body:has(.planner-drawer) .explorer-step-card {
   background: #fbfbfa;
   color: #343a46;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Beat the legacy generic dialog-label selectors deliberately: both direct RFQ
+   confirmation and upload fieldset rows should stay checkbox-left/text-right. */
+.planner-drawer-body > label.planner-choice-control,
+.planner-drawer .planner-choice-list label.planner-choice-control {
+  flex-direction: row;
+  align-items: center;
   font-size: 13px;
   font-weight: 600;
 }
