@@ -16,7 +16,7 @@ describe("explorer invalid package guard", () => {
     await userEvent.type(budget, "1");
     await userEvent.click(screen.getByRole("button", { name: "Show recommended zones" }));
 
-    const alert = screen.getByRole("alert", { name: "Package constraints" });
+    const alert = await screen.findByRole("alert", { name: "Package constraints" });
     expect(alert).toHaveTextContent("This package is over the campaign budget");
     expect(alert).toHaveTextContent("Increase the budget or remove or replace a face");
     expect(alert.querySelector(".recovery-notice-copy")).not.toHaveTextContent(
