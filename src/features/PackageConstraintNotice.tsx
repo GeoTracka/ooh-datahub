@@ -9,20 +9,19 @@ export function PackageConstraintNotice({ reasonCodes }: { reasonCodes: string[]
     : "This package needs a few changes before you can continue";
 
   return (
-    <div aria-label="Package constraints">
-      <RecoveryNotice
-        title={title}
-        tone="warning"
-        technicalCode={reasonCodes.join(", ")}
-      >
-        {reasonCodes.length === 1 ? (
-          <p>{descriptions[0].message}</p>
-        ) : (
-          <ul>
-            {descriptions.map((item) => <li key={item.code}>{item.message}</li>)}
-          </ul>
-        )}
-      </RecoveryNotice>
-    </div>
+    <RecoveryNotice
+      ariaLabel="Package constraints"
+      title={title}
+      tone="warning"
+      technicalCode={reasonCodes.join(", ")}
+    >
+      {reasonCodes.length === 1 ? (
+        <p>{descriptions[0].message}</p>
+      ) : (
+        <ul>
+          {descriptions.map((item) => <li key={item.code}>{item.message}</li>)}
+        </ul>
+      )}
+    </RecoveryNotice>
   );
 }
