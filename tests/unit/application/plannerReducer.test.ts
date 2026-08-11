@@ -28,6 +28,39 @@ const brief = {
 };
 
 describe("plannerReducer", () => {
+  it("previews a package option without adding fine-tune history", () => {
+    const applied = buildPlan(frozenLagosBundle, brief);
+    const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });
+    const alternative = applied.packageOptions[1].candidate;
+    const preview = recalculateSelectedSites(
+      frozenLagosBundle,
+      applied,
+      alternative.siteIds,
+    );
+    const selected = plannerReducer(loaded, { type: "package-previewed", plan: preview });
+    expect(selected.draftPlan?.recommended.id).toBe(alternative.id);
+    expect(selected.draftHistory).toEqual([]);
+    expect(selected.lastAction).toBe("Package option selected");
+    expect(selected.status).toBe("dirty");
+  });
+
+  it("clears an alternative preview when the applied package is selected", () => {
+    const applied = buildPlan(frozenLagosBundle, brief);
+    const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });
+    const alternative = applied.packageOptions[1].candidate;
+    const preview = recalculateSelectedSites(
+      frozenLagosBundle,
+      applied,
+      alternative.siteIds,
+    );
+    const dirty = plannerReducer(loaded, { type: "package-previewed", plan: preview });
+    const cleared = plannerReducer(dirty, { type: "package-previewed", plan: null });
+    expect(cleared.draftPlan).toBeNull();
+    expect(cleared.draftHistory).toEqual([]);
+    expect(cleared.lastAction).toBeNull();
+    expect(cleared.status).toBe("loaded");
+  });
+
   it("keeps the RFQ basis on the applied plan until Apply", { timeout: 30_000 }, () => {
     const applied = buildPlan(frozenLagosBundle, brief);
     const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });

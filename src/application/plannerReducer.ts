@@ -20,6 +20,7 @@ export const initialPlannerState: PlannerState = {
 
 export type PlannerAction =
   | { type: "loaded"; plan: PlanningResult }
+  | { type: "package-previewed"; plan: PlanningResult | null }
   | { type: "drafted"; plan: PlanningResult; reason?: string }
   | { type: "undo" }
   | { type: "reset" }
@@ -42,6 +43,14 @@ export function plannerReducer(
         draftHistory: [],
         lastAction: null,
         status: "loaded",
+      };
+    case "package-previewed":
+      return {
+        ...state,
+        draftPlan: action.plan,
+        draftHistory: [],
+        lastAction: action.plan ? "Package option selected" : null,
+        status: action.plan ? "dirty" : "loaded",
       };
     case "drafted":
       return {
