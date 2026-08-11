@@ -48,7 +48,7 @@ export function plannerReducer(
       return {
         ...state,
         draftPlan: action.plan,
-        draftHistory: [],
+        draftHistory: state.draftHistory,
         lastAction: action.plan ? "Package option selected" : null,
         status: action.plan ? "dirty" : "loaded",
       };

@@ -6,6 +6,10 @@ async function assertAccessible(page: import("@playwright/test").Page) {
   expect(results.violations).toEqual([]);
 }
 
+async function hideDevelopmentIndicator(page: import("@playwright/test").Page) {
+  await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+}
+
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
@@ -27,6 +31,7 @@ async function makeExplicitSwap(page: import("@playwright/test").Page) {
 
 test("locks the split-canvas explorer hierarchy and interaction states", async ({ page }) => {
   await page.goto("/");
+  await hideDevelopmentIndicator(page);
   await expect(page.getByRole("region", { name: /Step 1 of 5:/ })).toBeVisible();
   await expect(page).toHaveScreenshot("explorer-step1.png", { animations: "disabled" });
   await assertAccessible(page);
@@ -52,6 +57,7 @@ test("locks the split-canvas explorer hierarchy and interaction states", async (
 test("keeps the explorer legible at 390 CSS pixels", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
+  await hideDevelopmentIndicator(page);
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5:/ })).toBeVisible();
   await expect(page.getByTestId("maplibre-renderer"))

@@ -44,6 +44,23 @@ describe("plannerReducer", () => {
     expect(selected.status).toBe("dirty");
   });
 
+  it("preserves existing fine-tune history while previewing a package option", () => {
+    const applied = buildPlan(frozenLagosBundle, brief);
+    const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });
+    const firstDraft = { ...applied, contextRevision: "context-1" };
+    const secondDraft = { ...applied, contextRevision: "context-2" };
+    const drafted = {
+      ...loaded,
+      draftPlan: secondDraft,
+      draftHistory: [firstDraft],
+      status: "dirty" as const,
+    };
+
+    const previewed = plannerReducer(drafted, { type: "package-previewed", plan: firstDraft });
+
+    expect(previewed.draftHistory).toEqual(drafted.draftHistory);
+  });
+
   it("clears an alternative preview when the applied package is selected", () => {
     const applied = buildPlan(frozenLagosBundle, brief);
     const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });

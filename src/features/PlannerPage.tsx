@@ -302,7 +302,6 @@ export function PlannerPage() {
 
   function continueWithPackage() {
     if (!visible?.recommended.valid) return;
-    if (state.draftPlan) dispatch({ type: "applied" });
     setStep(4);
   }
 

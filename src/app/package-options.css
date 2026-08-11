@@ -209,6 +209,12 @@
   min-height: 44px;
 }
 
+.explorer-step-header h1 {
+  width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 @media (min-width: 1024px) {
   .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"]) {
     width: min(1000px, calc(100vw - 144px));
