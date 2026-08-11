@@ -229,6 +229,13 @@
     grid-column: 1 / -1;
   }
 
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-actions {
+    position: sticky;
+    z-index: 12;
+    bottom: 0;
+    background: #fff;
+  }
+
   /* Before recommendation geometry exists, make the blank map read as a
      deliberate spatial workspace rather than an unfinished region. */
   .explorer-shell:has(.explorer-step-card[aria-label^="Step 1 of 5:"]) .explorer-map-stage::before,
