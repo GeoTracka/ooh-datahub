@@ -8,7 +8,7 @@ vi.mock("@/maps/MapCanvas", () => ({
 }));
 
 describe("explorer invalid package guard", () => {
-  it("blocks package acceptance while keeping the invalid reason visible", async () => {
+  it("blocks package acceptance while leading with a recoverable explanation", async () => {
     render(<PlannerPage />);
     await userEvent.click(screen.getByRole("button", { name: "Continue to timing" }));
     const budget = screen.getByLabelText("Budget (NGN)");
@@ -16,8 +16,13 @@ describe("explorer invalid package guard", () => {
     await userEvent.type(budget, "1");
     await userEvent.click(screen.getByRole("button", { name: "Show recommended zones" }));
 
-    expect(screen.getByRole("alert", { name: "Package constraints" }))
-      .toHaveTextContent("BUDGET_EXCEEDED");
+    const alert = screen.getByRole("alert", { name: "Package constraints" });
+    expect(alert).toHaveTextContent("This package is over the campaign budget");
+    expect(alert).toHaveTextContent("Increase the budget or remove or replace a face");
+    expect(alert.querySelector(".recovery-notice-copy")).not.toHaveTextContent(
+      "BUDGET_EXCEEDED",
+    );
+    expect(alert.querySelector("details")).toHaveTextContent("BUDGET_EXCEEDED");
     expect(screen.getByRole("button", { name: "This package works" })).toBeDisabled();
   }, 30000);
 });

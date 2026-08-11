@@ -121,6 +121,11 @@ export async function collectUxReviewDiagnostics(page: Page): Promise<UxReviewDi
         // surface, not a nested competing container.
         if (html.matches("main.explorer-shell")) return false;
 
+        // Drawer ergonomics deliberately establish the body as the sole modal
+        // scroll owner. Keep it in the raw evidence, but do not rank the
+        // intentional drawer-body scroller as competing nested-scroll debt.
+        if (html.classList.contains("planner-drawer-body")) return false;
+
         // Tablet/mobile step cards operate as full-width bottom sheets. A
         // near-full-width sheet is an intentional primary content surface;
         // preserve it in the raw diagnostics but do not rank it as scroll debt.

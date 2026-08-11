@@ -36,10 +36,12 @@ export function MapLibreRenderer({
   scene,
   selectedFeatureId,
   onFeatureSelect,
+  ariaLabel = "Map",
 }: {
   scene: MapLibreScene;
   selectedFeatureId?: string | null;
   onFeatureSelect?(featureId: string): void;
+  ariaLabel?: string;
 }) {
   const mapRef = useRef<MapRef | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -75,6 +77,11 @@ export function MapLibreRenderer({
     if (!mapReady) return;
     focusCurrentTarget();
   }, [focusCurrentTarget, mapReady]);
+
+  useEffect(() => {
+    if (!mapReady) return;
+    mapRef.current?.getCanvas().setAttribute("aria-label", ariaLabel);
+  }, [ariaLabel, mapReady]);
 
   return (
     <div

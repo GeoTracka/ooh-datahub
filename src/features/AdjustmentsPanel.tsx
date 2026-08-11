@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { selectPlanDeltas } from "@/application/plannerSelectors";
 import type { AdjustmentOptions, AdjustmentSiteOption } from "@/application/plannerService";
+import { PackageConstraintNotice } from "@/features/PackageConstraintNotice";
 
 type PlanDeltas = NonNullable<ReturnType<typeof selectPlanDeltas>>;
 type PlanDelta = PlanDeltas["currentToDraft"];
@@ -140,10 +141,7 @@ export function AdjustmentsPanel({
       </header>
 
       {invalidReasons.length > 0 && (
-        <section role="alert" aria-label="Fine-tune constraints">
-          <strong>Package needs repair before it can be applied</strong>
-          {invalidReasons.map((reason) => <p key={reason}>{reason}</p>)}
-        </section>
+        <PackageConstraintNotice reasonCodes={invalidReasons} />
       )}
 
       {isDirty && deltas && <DecisionSummary delta={deltas.currentToDraft} />}
