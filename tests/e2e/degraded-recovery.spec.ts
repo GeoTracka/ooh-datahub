@@ -129,6 +129,7 @@ test("clears stale upload state when a replacement spreadsheet cannot be read", 
   await expect(alert).toContainText("Nothing from this file has been added to planning");
   await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Geocode review" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Select up to 50 accepted rows" })).toHaveCount(0);
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-05-upload-parse-failure", { fullPage: false });
   await assertReviewClean(page, diagnostics, "spreadsheet parse recovery");
