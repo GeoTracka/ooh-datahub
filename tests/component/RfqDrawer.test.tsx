@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -72,6 +73,23 @@ describe("RfqDrawer", () => {
     release();
     expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
     expect(screen.getByLabelText("Buyer name")).toBeEnabled();
+  });
+
+  it("preserves RFQ completion across Strict Mode effect replay", async () => {
+    render(
+      <StrictMode>
+        <RfqDrawer
+          plan={plan}
+          onClose={() => undefined}
+          onScheduleRevision={() => undefined}
+        />
+      </StrictMode>,
+    );
+    await completeReview();
+    await userEvent.click(screen.getByRole("button", { name: "Generate RFQ" }));
+    expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download consolidated internal request" }))
+      .toBeInTheDocument();
   });
 
   it("shows human recovery guidance without clearing reviewed fields", async () => {
