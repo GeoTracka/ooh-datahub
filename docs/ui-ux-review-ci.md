@@ -21,8 +21,11 @@ The review artifact contains paired `.png` and `.json` files. The JSON sidecar r
 - visible interactive-control count;
 - controls smaller than the WCAG 24px minimum candidate size;
 - potentially clipped text nodes;
-- nested scroll containers; and
+- raw nested/inner scroll containers;
+- actionable nested-scroll candidates; and
 - the active/focused element at capture time.
+
+The raw scroll list is intentionally lossless. The actionable scroll list is triage-only: it excludes the mobile explorer shell when that shell is the page's primary scroll surface, and excludes near-full-width tablet/mobile step cards that operate as the intentional bottom sheet. Narrow internal desktop scrollers remain actionable. This keeps normal responsive scrolling visible in the sidecar without ranking it as equivalent to competing nested-scroll debt.
 
 The diagnostics are review signals, not a substitute for looking at the screenshot.
 
@@ -44,7 +47,7 @@ The review suite intentionally samples the user journey rather than duplicating 
 10. keyboard-focus state;
 11. upload dialog;
 12. uploaded inventory preview; and
-13. context shortlist.
+13. uploaded planning-context status.
 
 ### Responsive
 
@@ -86,6 +89,7 @@ Review the screenshots as one workflow, not as isolated mockups.
 - Map and decision content retain sensible priority on smaller screens.
 - Mobile does not become a long sequence of equally weighted cards.
 - Dialogs remain readable without creating accidental nested-scroll traps.
+- Treat the mobile page and full-width tablet bottom sheet as primary responsive scroll surfaces; do not optimize merely for a zero raw-scroll count.
 
 ### Copy and evidence
 
