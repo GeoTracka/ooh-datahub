@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { frozenLagosBundle } from "@/bundle/loadFrozenBundle";
 import { RfqDrawer } from "@/features/RfqDrawer";
 import { generateRfq } from "@/planning/rfq";
 import { seededFmcgPlan as plan } from "../fixtures/seededPlans";
@@ -40,6 +41,38 @@ describe("RfqDrawer", () => {
     expect(storageSpy).not.toHaveBeenCalled();
     await userEvent.type(screen.getByLabelText("Buyer name"), " Updated");
     expect(screen.getByText("Review required", { exact: true })).toBeInTheDocument();
+  });
+
+  it("locks reviewed fields and rejects re-entry while generation is active", async () => {
+    let release: (() => void) | null = null;
+    const generator = vi.fn((...args: Parameters<typeof generateRfq>) =>
+      new Promise<ReturnType<typeof generateRfq>>((resolve) => {
+        release = () => resolve(generateRfq(...args));
+      }));
+    render(<RfqDrawer
+      plan={plan}
+      generator={generator}
+      onClose={() => undefined}
+      onScheduleRevision={() => undefined}
+    />);
+    await completeReview();
+
+    const generateButton = screen.getByRole("button", { name: "Generate RFQ" });
+    await userEvent.dblClick(generateButton);
+
+    expect(await screen.findByRole("status", { name: "Generating supplier request…" }))
+      .toBeInTheDocument();
+    expect(generator).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("Buyer name")).toBeDisabled();
+    expect(screen.getByLabelText("Buyer email")).toBeDisabled();
+    expect(screen.getByLabelText("Response deadline")).toBeDisabled();
+    expect(screen.getByLabelText("Dates confirmed")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generating RFQ…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Close" })).toBeEnabled();
+
+    release?.();
+    expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
+    expect(screen.getByLabelText("Buyer name")).toBeEnabled();
   });
 
   it("shows human recovery guidance without clearing reviewed fields", async () => {
