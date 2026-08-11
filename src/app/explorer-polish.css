@@ -229,13 +229,6 @@
     grid-column: 1 / -1;
   }
 
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-actions {
-    position: sticky;
-    z-index: 12;
-    bottom: 0;
-    background: #fff;
-  }
-
   /* Before recommendation geometry exists, make the blank map read as a
      deliberate spatial workspace rather than an unfinished region. */
   .explorer-shell:has(.explorer-step-card[aria-label^="Step 1 of 5:"]) .explorer-map-stage::before,
@@ -279,6 +272,51 @@
     white-space: pre-line;
     backdrop-filter: blur(10px);
     pointer-events: none;
+  }
+}
+
+/* Short laptops should keep the decision CTA in the first viewport by reducing
+   whitespace, not by shrinking type or overlaying content. */
+@media (min-width: 1024px) and (max-height: 800px) {
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] {
+    max-height: calc(100vh - 32px);
+    padding: 16px 18px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-header {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-content {
+    gap: 12px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-carousel {
+    padding-bottom: 82px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-slide-main {
+    padding: 11px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-selected-detail {
+    min-height: 68px;
+    padding: 8px 10px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip {
+    gap: 6px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip > div,
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip > button {
+    padding: 8px 9px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-actions {
+    margin-top: 12px;
+    padding-top: 12px;
   }
 }
 
