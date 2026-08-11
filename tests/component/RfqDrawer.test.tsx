@@ -43,7 +43,7 @@ describe("RfqDrawer", () => {
   });
 
   it("locks reviewed fields and rejects re-entry while generation is active", async () => {
-    let release: (() => void) | null = null;
+    let release = () => {};
     const generator = vi.fn((...args: Parameters<typeof generateRfq>) =>
       new Promise<ReturnType<typeof generateRfq>>((resolve) => {
         release = () => resolve(generateRfq(...args));
@@ -69,7 +69,7 @@ describe("RfqDrawer", () => {
     expect(screen.getByRole("button", { name: "Generating RFQ…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Close" })).toBeEnabled();
 
-    release?.();
+    release();
     expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
     expect(screen.getByLabelText("Buyer name")).toBeEnabled();
   });

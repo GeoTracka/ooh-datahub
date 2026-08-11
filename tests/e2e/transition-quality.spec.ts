@@ -46,7 +46,7 @@ test.beforeEach(async ({ page }) => {
 
 test("keeps enrichment preflight single-flight and visibly locked", async ({ page }, testInfo) => {
   let calls = 0;
-  let release: (() => void) | null = null;
+  let release = () => {};
   await page.route("**/api/enrichment/preflight", async (route) => {
     calls += 1;
     await new Promise<void>((resolve) => {
@@ -84,7 +84,7 @@ test("keeps enrichment preflight single-flight and visibly locked", async ({ pag
   );
   await assertReviewClean(page, diagnostics, "enrichment preflight transition");
 
-  release?.();
+  release();
   await expect(dialog.getByRole("status", { name: "Checking enrichment requirements…" }))
     .toHaveCount(0);
   await expect(dialog.getByRole("region", { name: "Enrichment preflight" })).toBeVisible();
@@ -93,7 +93,7 @@ test("keeps enrichment preflight single-flight and visibly locked", async ({ pag
 test("invalidates preflight on selection change and locks provider enrichment", async ({ page }, testInfo) => {
   let preflightCalls = 0;
   let runCalls = 0;
-  let releaseRun: (() => void) | null = null;
+  let releaseRun = () => {};
   await page.route("**/api/enrichment/preflight", async (route) => {
     preflightCalls += 1;
     await route.fulfill({ json: {
@@ -144,7 +144,7 @@ test("invalidates preflight on selection change and locks provider enrichment", 
   );
   await assertReviewClean(page, diagnostics, "provider enrichment transition");
 
-  releaseRun?.();
+  releaseRun();
   await expect(dialog.getByRole("status", { name: "Reviewing provider location candidates…" }))
     .toHaveCount(0);
 });
