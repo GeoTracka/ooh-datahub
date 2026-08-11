@@ -127,6 +127,106 @@
   justify-self: start;
 }
 
+/* Step 5 is an editing workspace, not a narrow wizard form. At laptop/desktop
+   widths use the available canvas for comparison/edit controls while preserving
+   meaningful map context. No interaction semantics change here. */
+@media (min-width: 1024px) {
+  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"]) {
+    width: min(960px, calc(100vw - 300px));
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] {
+    padding: 18px 20px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .explorer-step-header {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .explorer-step-content {
+    gap: 12px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .package-strip {
+    grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .package-strip > div,
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .package-strip > button {
+    min-width: 0;
+    padding: 9px 10px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"] {
+    display: grid;
+    grid-template-columns: minmax(250px, 0.8fr) minmax(0, 2fr);
+    gap: 10px 12px;
+    align-items: start;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .adjustment-header,
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"] > [role="alert"],
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"] > details {
+    grid-column: 1 / -1;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .adjustment-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .adjustment-history-actions {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .adjustment-actions-grid {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .adjustment-actions-grid > section {
+    gap: 6px;
+    padding: 10px 11px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"]:has(.adjustment-summary) .adjustment-summary {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: stretch;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"]:has(.adjustment-summary) .adjustment-actions-grid {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .explorer-step-actions {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 800px) {
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] {
+    padding: 14px 16px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .package-strip > div,
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .package-strip > button {
+    padding: 7px 8px;
+  }
+
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .adjustment-actions-grid > section {
+    padding: 8px 9px;
+  }
+}
+
 @media (max-width: 420px) {
   .adjustment-impact-grid {
     grid-template-columns: 1fr;
