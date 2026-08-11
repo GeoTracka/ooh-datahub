@@ -42,6 +42,15 @@ async function expectComparisonFitsWithoutHorizontalScroll(page: Page): Promise<
   }
 }
 
+async function keyboardFocus(page: Page, target: Locator, label: string): Promise<void> {
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  for (let index = 0; index < 40; index += 1) {
+    await page.keyboard.press("Tab");
+    if (await target.evaluate((element) => element === document.activeElement)) return;
+  }
+  throw new Error(`KEYBOARD_FOCUS_TARGET_NOT_REACHED: ${label}`);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
 });
@@ -73,7 +82,8 @@ test.describe("desktop recommendation hierarchy", () => {
     await expectComfortableTarget(fullPackage, "View full package");
     await expectComfortableTarget(back, "Back");
 
-    await deliveryStory.focus();
+    await keyboardFocus(page, deliveryStory, "View delivery story");
+    await expect(deliveryStory).toBeFocused();
     const outline = await deliveryStory.evaluate((element) => {
       const style = getComputedStyle(element);
       return { style: style.outlineStyle, width: style.outlineWidth };
