@@ -103,7 +103,7 @@ describe("explorer components", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "View delivery story" }));
     expect(onExplain).toHaveBeenCalledWith("yaba");
-    await userEvent.click(screen.getByRole("button", { name: "View full package" }));
+    await userEvent.click(screen.getByRole("button", { name: "Clear zone focus" }));
     expect(onSelect).toHaveBeenCalledWith(null);
   });
 

@@ -43,15 +43,17 @@ describe("PlannerPage explorer", () => {
       pendingFrame?.(0);
       await Promise.resolve();
     });
-    expect(await screen.findByRole("region", { name: /Step 3 of 5: Recommended package/ }))
+    expect(await screen.findByRole("region", { name: /Step 3 of 5: Choose a planning approach/ }))
       .toBeInTheDocument();
   }, 30000);
 
-  it("supports the default timing skip and shows one three-zone package", async () => {
+  it("supports the default timing skip and compares three package approaches", async () => {
     render(<PlannerPage />);
     await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
-    expect(await screen.findByRole("region", { name: /Step 3 of 5: Recommended package/ }))
+    expect(await screen.findByRole("region", { name: /Step 3 of 5: Choose a planning approach/ }))
       .toBeInTheDocument();
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByRole("radio", { name: /Best overall/ })).toBeChecked();
     expect(screen.getAllByTestId("zone-card")).toHaveLength(3);
     expect(screen.getAllByTestId("package-strip")).toHaveLength(1);
     expect(screen.getByText(/Scenario target reach/)).toBeInTheDocument();
@@ -73,11 +75,12 @@ describe("PlannerPage explorer", () => {
       .toBeInTheDocument();
   }, 30000);
 
-  it("routes package acceptance into outcomes and fine-tune", async () => {
+  it("continues with a selected package and keeps fine-tune available", async () => {
     render(<PlannerPage />);
     await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
     await screen.findByRole("region", { name: /Step 3 of 5:/ });
-    await userEvent.click(screen.getByRole("button", { name: "This package works" }));
+    await userEvent.click(screen.getByRole("radio", { name: /Budget smart/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue with selected package" }));
     expect(screen.getByRole("region", { name: /Step 4 of 5:/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Fine-tune package/ })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Fine-tune package/ }));
@@ -85,5 +88,16 @@ describe("PlannerPage explorer", () => {
       .toBeInTheDocument();
     expect(screen.getByLabelText("Plan adjustments")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
+  }, 30000);
+
+  it("fine-tunes a selected recommendation directly from Step 3", async () => {
+    render(<PlannerPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
+    await screen.findByRole("region", { name: /Step 3 of 5:/ });
+    await userEvent.click(screen.getByRole("radio", { name: /Maximum delivery/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Fine-tune selected package" }));
+    expect(screen.getByRole("region", { name: /Step 5 of 5: Make this package yours/ }))
+      .toBeInTheDocument();
+    expect(screen.getByText("Unapplied changes")).toBeInTheDocument();
   }, 30000);
 });

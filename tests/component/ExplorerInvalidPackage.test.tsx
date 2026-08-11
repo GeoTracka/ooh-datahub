@@ -23,6 +23,9 @@ describe("explorer invalid package guard", () => {
       "BUDGET_EXCEEDED",
     );
     expect(alert.querySelector("details")).toHaveTextContent("BUDGET_EXCEEDED");
-    expect(screen.getByRole("button", { name: "This package works" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Continue with selected package" }))
+      .toBeDisabled();
+    expect(screen.getByRole("button", { name: "Fine-tune selected package" }))
+      .toBeEnabled();
   }, 30000);
 });

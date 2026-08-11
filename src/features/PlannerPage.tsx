@@ -2,7 +2,7 @@
 
 import { useMemo, useReducer, useRef, useState } from "react";
 import { frozenLagosBundle as bundle } from "@/bundle/loadFrozenBundle";
-import type { Brief } from "@/contracts/domain";
+import type { Brief, PackageCandidate } from "@/contracts/domain";
 import type { MeasurementStage } from "@/contracts/metrics";
 import type { DrawerTarget, MapLens } from "@/contracts/renderer";
 import {
@@ -30,6 +30,7 @@ import { LensTabs } from "@/features/LensTabs";
 import { MapStage } from "@/features/MapStage";
 import { OperationStatus } from "@/features/OperationStatus";
 import { PackageConstraintNotice } from "@/features/PackageConstraintNotice";
+import { PackageOptionComparison } from "@/features/PackageOptionComparison";
 import { PackageStrip } from "@/features/PackageStrip";
 import { RecommendationCarousel } from "@/features/RecommendationCarousel";
 import { RfqDrawer } from "@/features/RfqDrawer";
@@ -280,6 +281,31 @@ export function PlannerPage() {
     });
   }
 
+  function selectPackage(candidate: PackageCandidate) {
+    if (!visible) return;
+    if (candidate.id === visible.recommended.id) return;
+    setSelectedZoneId(candidate.zoneIds[0] ?? null);
+    const applied = state.appliedPlan;
+    if (
+      applied &&
+      briefsMatch(applied.brief, visible.brief) &&
+      candidate.id === applied.recommended.id
+    ) {
+      dispatch({ type: "package-previewed", plan: null });
+      return;
+    }
+    dispatch({
+      type: "package-previewed",
+      plan: recalculateSelectedSites(bundle, visible, candidate.siteIds),
+    });
+  }
+
+  function continueWithPackage() {
+    if (!visible?.recommended.valid) return;
+    if (state.draftPlan) dispatch({ type: "applied" });
+    setStep(4);
+  }
+
   function navigateDrawer(target: DrawerTarget) {
     setDrawer((current) => current ? {
       target,
@@ -498,14 +524,23 @@ export function PlannerPage() {
           <StepCard
             step={3}
             total={5}
-            title="Recommended package"
+            title="Choose a planning approach"
             onBack={() => setStep(2)}
             primaryAction={{
-              label: "This package works",
-              onClick: () => setStep(4),
+              label: "Continue with selected package",
+              onClick: continueWithPackage,
               disabled: !visible.recommended.valid,
             }}
+            secondaryAction={{
+              label: "Fine-tune selected package",
+              onClick: () => setStep(5),
+            }}
           >
+            <PackageOptionComparison
+              plan={visible}
+              selectedPackageId={visible.recommended.id}
+              onSelect={selectPackage}
+            />
             <RecommendationCarousel
               cards={cards}
               objective={visible.brief.objective}
@@ -518,6 +553,7 @@ export function PlannerPage() {
               plan={visible}
               isDirty={dirty}
               canReviewRfq={visible.recommended.valid}
+              heading="Selected package"
               showRfqAction={false}
               onExplain={(metric) => openDrawer({ kind: "package", metric })}
               onReviewRfq={reviewRfq}

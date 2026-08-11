@@ -43,7 +43,7 @@ export function RecommendationCarousel({
   onExplain(zoneId: string): void;
 }) {
   return (
-    <div className="recommendation-carousel" aria-label="Recommended package zones">
+    <div className="recommendation-carousel" aria-label="Selected package zones">
       {cards.map((card) => {
         const delivery = deliveryFor(card, objective);
         const selected = card.zoneId === selectedZoneId;
@@ -92,7 +92,7 @@ export function RecommendationCarousel({
                     className="explorer-link-button"
                     onClick={() => onSelect(null)}
                   >
-                    View full package
+                    Clear zone focus
                   </button>
                 </div>
               </div>
