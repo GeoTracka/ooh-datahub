@@ -79,11 +79,12 @@ test.describe("desktop package comparison hierarchy", () => {
 
     const rail = await page.locator(".explorer-card-rail").boundingBox();
     expect(rail).not.toBeNull();
-    expect(rail!.width).toBeGreaterThanOrEqual(880);
+    expect(rail!.width).toBeGreaterThanOrEqual(720);
+    expect(rail!.width).toBeLessThanOrEqual(800);
     expect(
       1440 - (rail!.x + rail!.width),
       "desktop comparison should retain meaningful map width",
-    ).toBeGreaterThanOrEqual(300);
+    ).toBeGreaterThanOrEqual(600);
   });
 
   test("keeps Step 3 map content inside a true right-hand pane", async ({ page }) => {
@@ -114,6 +115,19 @@ test.describe("desktop package comparison hierarchy", () => {
       .toBeLessThanOrEqual(map!.x + map!.width);
     expect(lensTabs!.x).toBeGreaterThanOrEqual(map!.x);
     expect(legend!.x).toBeGreaterThanOrEqual(map!.x);
+
+    const metricLines = await page.locator(".package-option-metrics strong")
+      .evaluateAll((elements) => elements.map((element) => {
+        const style = getComputedStyle(element);
+        return {
+          height: element.getBoundingClientRect().height,
+          lineHeight: Number.parseFloat(style.lineHeight),
+        };
+      }));
+    for (const [index, metric] of metricLines.entries()) {
+      expect(metric.height, `package metric ${index + 1} should stay on one line`)
+        .toBeLessThanOrEqual(metric.lineHeight + 1);
+    }
   });
 
   test("gives workflow-critical secondary actions comfortable targets", async ({ page }) => {

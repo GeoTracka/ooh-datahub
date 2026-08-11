@@ -226,8 +226,26 @@
 }
 
 @media (min-width: 1024px) {
+  .explorer-shell:has(.explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"]) {
+    --step-three-rail-width: clamp(720px, 52vw, 800px);
+  }
+
   .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"]) {
-    width: min(1000px, calc(100vw - 144px));
+    width: var(--step-three-rail-width);
+  }
+
+  .explorer-shell:has(.explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"]) .explorer-map-stage {
+    left: var(--step-three-rail-width);
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .package-option-metrics > span {
+    padding: 6px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .package-option-metrics strong {
+    overflow-wrap: normal;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] {
