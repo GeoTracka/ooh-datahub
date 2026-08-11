@@ -75,8 +75,11 @@ export function RfqDrawer({
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
-  useEffect(() => () => {
-    mountedRef.current = false;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
   useEffect(() => {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
