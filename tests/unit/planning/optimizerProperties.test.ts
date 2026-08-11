@@ -34,6 +34,39 @@ describe("optimizePackage", () => {
     expect(result.recommended.evidenceGrade).toBe("D");
   });
 
+  it("returns three distinct planning approaches", () => {
+    const result = optimizePackage(frozenLagosBundle, brief);
+    expect(result.packageOptions.map((option) => option.style)).toEqual([
+      "best_overall",
+      "maximum_delivery",
+      "budget_smart",
+    ]);
+    expect(new Set(result.packageOptions.map((option) => option.candidate.id)).size)
+      .toBe(3);
+    expect(result.packageOptions[0].candidate.id).toBe(result.recommended.id);
+    expect(result.packageOptions.every((option) => option.candidate.valid)).toBe(true);
+  });
+
+  it("keeps the budget-smart approach within the planning-fit guardrail", () => {
+    const result = optimizePackage(frozenLagosBundle, brief);
+    const best = result.packageOptions.find((option) => option.style === "best_overall")!;
+    const budget = result.packageOptions.find((option) => option.style === "budget_smart")!;
+    expect(budget.candidate.planningFit)
+      .toBeGreaterThanOrEqual(best.candidate.planningFit! - 5);
+  });
+
+  it.each(["broad_reach", "influential_core", "near_conversion"] as const)(
+    "returns a valid maximum-delivery approach for %s",
+    (objective) => {
+      const result = optimizePackage(frozenLagosBundle, { ...brief, objective });
+      const maximum = result.packageOptions.find(
+        (option) => option.style === "maximum_delivery",
+      )!;
+      expect(maximum.candidate.valid).toBe(true);
+      expect(maximum.candidate.deliveryRaw).not.toBeNull();
+    },
+  );
+
   it("returns a repairable invalid result instead of throwing below minimum cost", () => {
     const result = optimizePackage(frozenLagosBundle, { ...brief, budgetNgn: 1 });
     expect(result.recommended.valid).toBe(false);

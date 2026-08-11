@@ -2,6 +2,8 @@ import type { FrozenBundle } from "@/bundle/bundleSchema";
 import type {
   Brief,
   PackageCandidate,
+  PackageOption,
+  PackageOptionStyle,
   PillarScores,
   PlanningResult,
 } from "@/contracts/domain";
@@ -165,6 +167,61 @@ export function comparePackageCandidates(
     left.id.localeCompare(right.id);
 }
 
+function candidateScore(candidate: PackageCandidate): number {
+  return candidate.planningFit ?? candidate.contextRankScore ?? -1;
+}
+
+function firstUnique(
+  candidates: PackageCandidate[],
+  selectedIds: Set<string>,
+): PackageCandidate | null {
+  return candidates.find((candidate) => !selectedIds.has(candidate.id)) ?? null;
+}
+
+export function selectPackageOptions(
+  ranked: PackageCandidate[],
+): PackageOption[] {
+  const valid = ranked.filter((candidate) => candidate.valid);
+  const pool = valid.length >= 3 ? valid : ranked;
+  if (pool.length === 0) return [];
+
+  const bestScore = Math.max(...pool.map(candidateScore));
+  const overallRanked = [...pool].sort(comparePackageCandidates);
+  const deliveryRanked = [...pool].sort((left, right) =>
+    ((right.deliveryRaw ?? -1) - (left.deliveryRaw ?? -1)) ||
+    comparePackageCandidates(left, right)
+  );
+  const budgetRanked = [...pool]
+    .filter((candidate) => candidateScore(candidate) >= bestScore - 5)
+    .sort((left, right) =>
+      left.costNgn - right.costNgn || comparePackageCandidates(left, right)
+    );
+  const selectedIds = new Set<string>();
+  const selected = new Map<PackageOptionStyle, PackageCandidate>();
+
+  const best = overallRanked[0];
+  selected.set("best_overall", best);
+  selectedIds.add(best.id);
+
+  const budget = firstUnique(budgetRanked, selectedIds) ?? firstUnique(overallRanked, selectedIds);
+  if (budget) {
+    selected.set("budget_smart", budget);
+    selectedIds.add(budget.id);
+  }
+
+  const maximum = firstUnique(deliveryRanked, selectedIds) ?? firstUnique(overallRanked, selectedIds);
+  if (maximum) {
+    selected.set("maximum_delivery", maximum);
+    selectedIds.add(maximum.id);
+  }
+
+  return (["best_overall", "maximum_delivery", "budget_smart"] as const)
+    .flatMap((style) => {
+      const candidate = selected.get(style);
+      return candidate ? [{ style, candidate }] : [];
+    });
+}
+
 function contextRankScore(
   sites: FrozenBundle["sites"],
   sector: Brief["sector"],
@@ -311,6 +368,7 @@ export function optimizePackage(
   return {
     brief,
     recommended,
+    packageOptions: selectPackageOptions(ranked),
     internalReplacements: ranked
       .filter((candidate) => candidate.id !== recommended.id)
       .slice(0, 2),
