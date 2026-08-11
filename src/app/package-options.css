@@ -243,9 +243,21 @@
   }
 
   .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .package-option-metrics strong {
-    overflow-wrap: normal;
+    overflow-wrap: anywhere;
     font-size: 11px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .package-option-metric-number {
     white-space: nowrap;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .package-option-metric-unit {
+    display: block;
+    margin-top: 2px;
+    color: #5c6272;
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.2;
   }
 
   .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] {

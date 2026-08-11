@@ -107,7 +107,16 @@ export function PackageOptionComparison({
                     <strong>
                       {candidate.deliveryRaw === null
                         ? "Unavailable"
-                        : `${compact(candidate.deliveryRaw)}${delivery.suffix}`}
+                        : (
+                          <>
+                            <span className="package-option-metric-number">
+                              {compact(candidate.deliveryRaw)}
+                            </span>
+                            <small className="package-option-metric-unit">
+                              {delivery.suffix.trim()}
+                            </small>
+                          </>
+                        )}
                     </strong>
                   </span>
                   <span>
