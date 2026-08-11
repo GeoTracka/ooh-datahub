@@ -125,3 +125,22 @@ test("keeps all three ranks and the decision CTA visible at 1024px", async ({ pa
   await expect(primaryAction).toBeVisible();
   await expectFullyInViewport(page, primaryAction, "This package works");
 });
+
+test("keeps a focused recommendation comparable and actionable at 1024px", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await reachRecommendedPackage(page);
+  const cards = page.getByTestId("zone-card");
+  await cards.nth(1).getByRole("button").first().click();
+  await expect(cards.nth(1)).toHaveClass(/selected/);
+  await expectComparisonFitsWithoutHorizontalScroll(page);
+
+  const deliveryStory = page.getByRole("button", { name: "View delivery story" });
+  await expect(deliveryStory).toBeVisible();
+  await expectComfortableTarget(deliveryStory, "focused View delivery story");
+  await expectFullyInViewport(page, deliveryStory, "focused View delivery story");
+  await expectFullyInViewport(
+    page,
+    page.getByRole("button", { name: "This package works" }),
+    "focused This package works",
+  );
+});
