@@ -587,7 +587,7 @@ export function UploadDialog({
           <h3>Provider candidates · Google review</h3>
           <MapCanvas
             scene={uploadScenes.provider}
-            onFeatureSelect={(featureId) => setSnapshot((current) => {
+            onFeatureSelect={busy ? undefined : (featureId) => setSnapshot((current) => {
               const rowId = featureId.replace(/^provider\//, "");
               const item = current?.rows.find((value) => value.row.rowId === rowId);
               const candidate = item?.candidates[0];
@@ -610,6 +610,7 @@ export function UploadDialog({
               <button
                 key={candidate.candidateToken}
                 type="button"
+                disabled={busy}
                 aria-pressed={item.selectedCandidateToken === candidate.candidateToken}
                 onClick={() => setSnapshot((current) => current
                   ? confirmGeocodeIdentity(current, item.row.rowId, candidate.candidateToken)
@@ -624,6 +625,7 @@ export function UploadDialog({
                 Correct latitude
                 <input
                   inputMode="decimal"
+                  disabled={busy}
                   value={corrections[item.row.rowId]?.latitude ?? ""}
                   onChange={(event) => updateCorrection(
                     item.row.rowId,
@@ -636,6 +638,7 @@ export function UploadDialog({
                 Correct longitude
                 <input
                   inputMode="decimal"
+                  disabled={busy}
                   value={corrections[item.row.rowId]?.longitude ?? ""}
                   onChange={(event) => updateCorrection(
                     item.row.rowId,
@@ -645,13 +648,13 @@ export function UploadDialog({
                 />
               </label>
             </div>
-            <button type="button" onClick={() => applyCorrection(item.row.rowId)}>
+            <button type="button" disabled={busy} onClick={() => applyCorrection(item.row.rowId)}>
               Use customer coordinate
             </button>
           </article>
         ))}
         <div className="planner-drawer-primary-row">
-          <button className="primary" type="button" onClick={() => onDraft(
+          <button className="primary" type="button" disabled={busy} onClick={() => onDraft(
             applyUploadToDraft(snapshot, [...selected]),
             snapshot,
           )}>
