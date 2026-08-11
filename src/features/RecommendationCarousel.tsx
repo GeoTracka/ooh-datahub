@@ -30,19 +30,22 @@ function deliveryFor(
 function SelectedZoneDetail({
   card,
   className,
+  includeLabel = false,
   onExplain,
   onShowFullPackage,
 }: {
   card: ZoneCard;
   className?: string;
+  includeLabel?: boolean;
   onExplain(): void;
   onShowFullPackage(): void;
 }) {
   return (
     <div className={`recommendation-selected-detail${className ? ` ${className}` : ""}`}>
       <p>
-        <strong>{card.label}</strong> · {card.role}. The delivery figure above is this
-        zone&apos;s incremental contribution to the selected package, not a standalone total.
+        {includeLabel && <><strong>{card.label}</strong> · </>}
+        {card.role}. The delivery figure above is this zone&apos;s incremental contribution
+        to the selected package, not a standalone total.
       </p>
       <div className="recommendation-focus-actions">
         <button
@@ -127,6 +130,7 @@ export function RecommendationCarousel({
         <SelectedZoneDetail
           card={selectedCard}
           className="recommendation-selected-detail-desktop"
+          includeLabel
           onExplain={() => onExplain(selectedCard.zoneId)}
           onShowFullPackage={() => onSelect(null)}
         />
