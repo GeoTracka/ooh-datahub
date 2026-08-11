@@ -48,16 +48,26 @@ export function PackageOptionComparison({
   onSelect(candidate: PackageCandidate): void;
 }) {
   const delivery = deliveryCopy[plan.brief.objective];
+  const optionCount = plan.packageOptions.length;
 
   return (
     <section className="package-options" aria-labelledby="package-options-title">
       <div className="package-options-intro">
         <div>
-          <span className="package-options-kicker">3 ways to plan</span>
+          <span className="package-options-kicker">
+            {optionCount} {optionCount === 1 ? "way" : "ways"} to plan
+          </span>
           <h2 id="package-options-title">Compare packages by approach</h2>
         </div>
         <p>Each option uses your audience, objective, timing, and budget.</p>
       </div>
+
+      {optionCount < 3 && (
+        <p className="package-options-limited" role="note">
+          Inventory or timing constraints limited this comparison. Fine-tune any available
+          package to repair constraints or shape a custom plan.
+        </p>
+      )}
 
       <div className="package-option-grid" role="radiogroup" aria-label="Planning approaches">
         {plan.packageOptions.map((option) => {

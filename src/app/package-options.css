@@ -40,6 +40,16 @@
   text-align: right;
 }
 
+.package-options-limited {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #fdf6e3;
+  color: #6c5a2e;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .package-option-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

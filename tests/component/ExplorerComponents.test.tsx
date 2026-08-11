@@ -42,6 +42,33 @@ describe("explorer components", () => {
     expect(onSelect).toHaveBeenCalledWith(plan.packageOptions[2].candidate);
   }, 30_000);
 
+  it("explains when constraints limit the package cohort", () => {
+    const plan = buildPlan(frozenLagosBundle, {
+      productName: "Demo Spark",
+      productDescription: "Affordable on-the-go refreshment launch",
+      targetAudience: "Students, young workers, and convenience shoppers",
+      sector: "fmcg",
+      objective: "broad_reach",
+      daypart: "pm",
+      budgetNgn: 18_000_000,
+      normalizationBudgetNgn: 30_000_000,
+      flightStart: "2026-09-01",
+      flightEnd: "2026-09-28",
+    });
+    const limited = { ...plan, packageOptions: plan.packageOptions.slice(0, 2) };
+
+    render(
+      <PackageOptionComparison
+        plan={limited}
+        selectedPackageId={limited.recommended.id}
+        onSelect={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("2 ways to plan")).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent(/constraints limited this comparison/i);
+  }, 30_000);
+
   it("announces step progress and supports Escape back navigation", async () => {
     const onBack = vi.fn();
     render(

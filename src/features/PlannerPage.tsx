@@ -156,6 +156,7 @@ export function PlannerPage() {
   const [brief, setBrief] = useState(initialBrief);
   const [state, dispatch] = useReducer(plannerReducer, initialPlannerState);
   const [step, setStep] = useState<ExplorerStep>(1);
+  const [fineTuneReturnStep, setFineTuneReturnStep] = useState<3 | 4>(4);
   const [lens, setLens] = useState<MapLens>("plan");
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<{
@@ -302,7 +303,13 @@ export function PlannerPage() {
 
   function continueWithPackage() {
     if (!visible?.recommended.valid) return;
+    if (state.draftPlan) dispatch({ type: "applied" });
     setStep(4);
+  }
+
+  function enterFineTune(from: 3 | 4) {
+    setFineTuneReturnStep(from);
+    setStep(5);
   }
 
   function navigateDrawer(target: DrawerTarget) {
@@ -532,21 +539,13 @@ export function PlannerPage() {
             }}
             secondaryAction={{
               label: "Fine-tune selected package",
-              onClick: () => setStep(5),
+              onClick: () => enterFineTune(3),
             }}
           >
             <PackageOptionComparison
               plan={visible}
               selectedPackageId={visible.recommended.id}
               onSelect={selectPackage}
-            />
-            <RecommendationCarousel
-              cards={cards}
-              objective={visible.brief.objective}
-              evidenceLabel={evidenceLabel}
-              selectedZoneId={selectedZoneId}
-              onSelect={setSelectedZoneId}
-              onExplain={openZoneStory}
             />
             <PackageStrip
               plan={visible}
@@ -556,6 +555,14 @@ export function PlannerPage() {
               showRfqAction={false}
               onExplain={(metric) => openDrawer({ kind: "package", metric })}
               onReviewRfq={reviewRfq}
+            />
+            <RecommendationCarousel
+              cards={cards}
+              objective={visible.brief.objective}
+              evidenceLabel={evidenceLabel}
+              selectedZoneId={selectedZoneId}
+              onSelect={setSelectedZoneId}
+              onExplain={openZoneStory}
             />
             {!visible.recommended.valid && (
               <PackageConstraintNotice reasonCodes={visible.recommended.invalidReasonCodes} />
@@ -585,7 +592,7 @@ export function PlannerPage() {
               canReviewRfq={visible.recommended.valid}
               onReviewRfq={reviewRfq}
               onUpload={() => setUploadOpen(true)}
-              onFineTune={() => setStep(5)}
+              onFineTune={() => enterFineTune(4)}
             />
           </StepCard>
         )}
@@ -595,7 +602,7 @@ export function PlannerPage() {
             step={5}
             total={5}
             title="Make this package yours"
-            onBack={() => setStep(4)}
+            onBack={() => setStep(fineTuneReturnStep)}
             primaryAction={{
               label: dirty ? "Apply & review RFQ" : "Review RFQ",
               onClick: reviewRfq,
@@ -694,6 +701,7 @@ export function PlannerPage() {
             });
             setBrief(revised.brief);
             dispatch({ type: "close-rfq-with-draft", plan: revised });
+            setFineTuneReturnStep(4);
             setStep(5);
           }}
         />

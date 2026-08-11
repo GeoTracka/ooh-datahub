@@ -87,7 +87,7 @@ describe("PlannerPage explorer", () => {
     expect(screen.getByRole("region", { name: /Step 5 of 5: Make this package yours/ }))
       .toBeInTheDocument();
     expect(screen.getByLabelText("Plan adjustments")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apply & review RFQ" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
   }, 30000);
 
   it("fine-tunes a selected recommendation directly from Step 3", async () => {
@@ -99,5 +99,7 @@ describe("PlannerPage explorer", () => {
     expect(screen.getByRole("region", { name: /Step 5 of 5: Make this package yours/ }))
       .toBeInTheDocument();
     expect(screen.getByText("Unapplied changes")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("region", { name: /Step 3 of 5:/ })).toBeInTheDocument();
   }, 30000);
 });

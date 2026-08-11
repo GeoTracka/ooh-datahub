@@ -171,48 +171,57 @@ function candidateScore(candidate: PackageCandidate): number {
   return candidate.planningFit ?? candidate.contextRankScore ?? -1;
 }
 
-function firstUnique(
+function pickCandidate(
   candidates: PackageCandidate[],
   selectedIds: Set<string>,
+  compare: (left: PackageCandidate, right: PackageCandidate) => number,
+  eligible: (candidate: PackageCandidate) => boolean = () => true,
 ): PackageCandidate | null {
-  return candidates.find((candidate) => !selectedIds.has(candidate.id)) ?? null;
+  let selected: PackageCandidate | null = null;
+  for (const candidate of candidates) {
+    if (selectedIds.has(candidate.id) || !eligible(candidate)) continue;
+    if (!selected || compare(candidate, selected) < 0) selected = candidate;
+  }
+  return selected;
 }
 
 export function selectPackageOptions(
   ranked: PackageCandidate[],
 ): PackageOption[] {
   const valid = ranked.filter((candidate) => candidate.valid);
-  const pool = valid.length >= 3 ? valid : ranked;
-  if (pool.length === 0) return [];
+  if (ranked.length === 0) return [];
 
-  const bestScore = Math.max(...pool.map(candidateScore));
-  const overallRanked = [...pool].sort(comparePackageCandidates);
-  const deliveryRanked = [...pool].sort((left, right) =>
+  const deliveryComparator = (left: PackageCandidate, right: PackageCandidate) =>
     ((right.deliveryRaw ?? -1) - (left.deliveryRaw ?? -1)) ||
-    comparePackageCandidates(left, right)
-  );
-  const budgetRanked = [...pool]
-    .filter((candidate) => candidateScore(candidate) >= bestScore - 5)
-    .sort((left, right) =>
-      left.costNgn - right.costNgn || comparePackageCandidates(left, right)
-    );
+    comparePackageCandidates(left, right);
+  const budgetComparator = (left: PackageCandidate, right: PackageCandidate) =>
+    left.costNgn - right.costNgn || comparePackageCandidates(left, right);
   const selectedIds = new Set<string>();
   const selected = new Map<PackageOptionStyle, PackageCandidate>();
 
-  const best = overallRanked[0];
+  const best = pickCandidate(valid, selectedIds, comparePackageCandidates) ??
+    pickCandidate(ranked, selectedIds, comparePackageCandidates);
+  if (!best) return [];
   selected.set("best_overall", best);
   selectedIds.add(best.id);
 
-  const budget = firstUnique(budgetRanked, selectedIds) ?? firstUnique(overallRanked, selectedIds);
-  if (budget) {
-    selected.set("budget_smart", budget);
-    selectedIds.add(budget.id);
-  }
-
-  const maximum = firstUnique(deliveryRanked, selectedIds) ?? firstUnique(overallRanked, selectedIds);
+  const maximum = pickCandidate(valid, selectedIds, deliveryComparator) ??
+    pickCandidate(ranked, selectedIds, deliveryComparator);
   if (maximum) {
     selected.set("maximum_delivery", maximum);
     selectedIds.add(maximum.id);
+  }
+
+  const bestScore = candidateScore(best);
+  const withinFitGuardrail = (candidate: PackageCandidate) =>
+    candidateScore(candidate) >= bestScore - 5;
+  const budget = pickCandidate(valid, selectedIds, budgetComparator, withinFitGuardrail) ??
+    pickCandidate(ranked, selectedIds, budgetComparator, withinFitGuardrail) ??
+    pickCandidate(valid, selectedIds, comparePackageCandidates) ??
+    pickCandidate(ranked, selectedIds, comparePackageCandidates);
+  if (budget) {
+    selected.set("budget_smart", budget);
+    selectedIds.add(budget.id);
   }
 
   return (["best_overall", "maximum_delivery", "budget_smart"] as const)

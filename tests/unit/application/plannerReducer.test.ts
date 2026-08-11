@@ -47,8 +47,8 @@ describe("plannerReducer", () => {
   it("preserves existing fine-tune history while previewing a package option", () => {
     const applied = buildPlan(frozenLagosBundle, brief);
     const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });
-    const firstDraft = { ...applied, contextRevision: "context-1" };
-    const secondDraft = { ...applied, contextRevision: "context-2" };
+    const firstDraft = { ...applied };
+    const secondDraft = { ...applied };
     const drafted = {
       ...loaded,
       draftPlan: secondDraft,
@@ -59,6 +59,22 @@ describe("plannerReducer", () => {
     const previewed = plannerReducer(drafted, { type: "package-previewed", plan: firstDraft });
 
     expect(previewed.draftHistory).toEqual(drafted.draftHistory);
+    expect(previewed.packagePreviewBasePlan).toBe(secondDraft);
+  });
+
+  it("restores the underlying adjustment when a package preview is cleared", () => {
+    const applied = buildPlan(frozenLagosBundle, brief);
+    const underlyingDraft = { ...applied };
+    const loaded = plannerReducer(initialPlannerState, { type: "loaded", plan: applied });
+    const drafted = plannerReducer(loaded, { type: "drafted", plan: underlyingDraft });
+    const preview = { ...applied, recommended: applied.packageOptions[1].candidate };
+    const previewed = plannerReducer(drafted, { type: "package-previewed", plan: preview });
+
+    const restored = plannerReducer(previewed, { type: "package-previewed", plan: null });
+
+    expect(restored.draftPlan).toBe(underlyingDraft);
+    expect(restored.packagePreviewBasePlan).toBeNull();
+    expect(restored.status).toBe("dirty");
   });
 
   it("clears an alternative preview when the applied package is selected", () => {
