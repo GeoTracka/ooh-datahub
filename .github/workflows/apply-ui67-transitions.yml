@@ -1,0 +1,319 @@
+name: Apply UI67 transition patches
+
+on:
+  push:
+    branches:
+      - agent/ui-quality-transition-states
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ui-quality-transition-states
+          fetch-depth: 0
+      - name: Apply transition consistency patches
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"missing expected block in {path}: {old[:120]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          # Planner recommendation transition.
+          replace(
+              "src/features/PlannerPage.tsx",
+              'import { useMemo, useReducer, useState } from "react";\n',
+              'import { useMemo, useReducer, useRef, useState } from "react";\n',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              'import { MapStage } from "@/features/MapStage";\n',
+              'import { MapStage } from "@/features/MapStage";\nimport { OperationStatus } from "@/features/OperationStatus";\n',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              'export function PlannerPage() {\n',
+              '''function nextPaint(): Promise<void> {\n  return new Promise((resolve) => {\n    if (typeof requestAnimationFrame === "function") {\n      requestAnimationFrame(() => resolve());\n    } else {\n      setTimeout(resolve, 0);\n    }\n  });\n}\n\nexport function PlannerPage() {\n''',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '  const [uploadOpen, setUploadOpen] = useState(false);\n',
+              '  const [uploadOpen, setUploadOpen] = useState(false);\n  const [planning, setPlanning] = useState(false);\n  const planningRef = useRef(false);\n',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '''  function showRecommendations() {\n    let plan = visible;\n    if (!visible) {\n      plan = buildPlan(bundle, brief);\n      dispatch({ type: "loaded", plan });\n    } else if (!briefsMatch(visible.brief, brief)) {\n      plan = recalculatePlan(bundle, visible, brief);\n      dispatch({\n        type: "drafted",\n        plan,\n        reason: "Campaign brief updated",\n      });\n    }\n    if (!plan) return;\n    setSelectedZoneId(plan.selectedZoneIds[0] ?? null);\n    setLens("plan");\n    setStep(3);\n  }\n''',
+              '''  async function showRecommendations() {\n    if (planningRef.current) return;\n    planningRef.current = true;\n    setPlanning(true);\n    await nextPaint();\n    try {\n      let plan = visible;\n      if (!visible) {\n        plan = buildPlan(bundle, brief);\n        dispatch({ type: "loaded", plan });\n      } else if (!briefsMatch(visible.brief, brief)) {\n        plan = recalculatePlan(bundle, visible, brief);\n        dispatch({\n          type: "drafted",\n          plan,\n          reason: "Campaign brief updated",\n        });\n      }\n      if (!plan) return;\n      setSelectedZoneId(plan.selectedZoneIds[0] ?? null);\n      setLens("plan");\n      setStep(3);\n    } finally {\n      planningRef.current = false;\n      setPlanning(false);\n    }\n  }\n''',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '            title="Who is this campaign for?"\n            primaryAction={{ label: "Continue to timing", onClick: () => setStep(2) }}\n',
+              '            title="Who is this campaign for?"\n            busy={planning}\n            primaryAction={{ label: "Continue to timing", onClick: () => setStep(2) }}\n',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '                  type="button"\n                  aria-pressed={selectedPresetId === preset.id}\n',
+              '                  type="button"\n                  disabled={planning}\n                  aria-pressed={selectedPresetId === preset.id}\n',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '<input value={brief.productName} onChange={(event) => changeBrief({ productName: event.target.value })} />',
+              '<input disabled={planning} value={brief.productName} onChange={(event) => changeBrief({ productName: event.target.value })} />',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '<textarea value={brief.productDescription} onChange={(event) => changeBrief({ productDescription: event.target.value })} />',
+              '<textarea disabled={planning} value={brief.productDescription} onChange={(event) => changeBrief({ productDescription: event.target.value })} />',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '<textarea value={brief.targetAudience} onChange={(event) => changeBrief({ targetAudience: event.target.value })} />',
+              '<textarea disabled={planning} value={brief.targetAudience} onChange={(event) => changeBrief({ targetAudience: event.target.value })} />',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '<select value={brief.sector} onChange={(event) => changeBrief({ sector: event.target.value as Brief["sector"] })}>',
+              '<select disabled={planning} value={brief.sector} onChange={(event) => changeBrief({ sector: event.target.value as Brief["sector"] })}>',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '<select value={brief.objective} onChange={(event) => changeBrief({ objective: event.target.value as Brief["objective"] })}>',
+              '<select disabled={planning} value={brief.objective} onChange={(event) => changeBrief({ objective: event.target.value as Brief["objective"] })}>',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '''            <button\n              type="button"\n              className="explorer-link-button explorer-skip"\n              onClick={showRecommendations}\n            >\n              Use default timing & budget\n            </button>\n''',
+              '''            {planning && (\n              <OperationStatus\n                title="Building recommendation…"\n                detail="Checking timing, budget, eligible faces, and available evidence."\n              />\n            )}\n            <button\n              type="button"\n              className="explorer-link-button explorer-skip"\n              disabled={planning}\n              onClick={() => void showRecommendations()}\n            >\n              {planning ? "Building recommendation…" : "Use default timing & budget"}\n            </button>\n''',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '            title="When and how much?"\n            onBack={() => setStep(1)}\n            primaryAction={{\n              label: "Show recommended zones",\n              onClick: showRecommendations,\n',
+              '            title="When and how much?"\n            onBack={() => setStep(1)}\n            busy={planning}\n            primaryAction={{\n              label: planning ? "Building recommendation…" : "Show recommended zones",\n              onClick: () => void showRecommendations(),\n',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '                    type="button"\n                    aria-pressed={brief.daypart === choice.value}\n',
+              '                    type="button"\n                    disabled={planning}\n                    aria-pressed={brief.daypart === choice.value}\n',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '                    type="button"\n                    aria-pressed={brief.budgetNgn === budget}\n',
+              '                    type="button"\n                    disabled={planning}\n                    aria-pressed={brief.budgetNgn === budget}\n',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '''                  type="number"\n                  min={1}\n                  value={brief.budgetNgn}\n''',
+              '''                  type="number"\n                  min={1}\n                  disabled={planning}\n                  value={brief.budgetNgn}\n''',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '<input type="date" value={brief.flightStart} onChange={(event) => changeBrief({ flightStart: event.target.value })} />',
+              '<input type="date" disabled={planning} value={brief.flightStart} onChange={(event) => changeBrief({ flightStart: event.target.value })} />',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '<input type="date" value={brief.flightEnd} onChange={(event) => changeBrief({ flightEnd: event.target.value })} />',
+              '<input type="date" disabled={planning} value={brief.flightEnd} onChange={(event) => changeBrief({ flightEnd: event.target.value })} />',
+          )
+          replace(
+              "src/features/PlannerPage.tsx",
+              '            {!stepTwoValid && <p role="alert">Budget must be positive and flight end must not precede flight start.</p>}\n',
+              '''            {planning && (\n              <OperationStatus\n                title="Building recommendation…"\n                detail="Checking timing, budget, eligible faces, and available evidence."\n              />\n            )}\n            {!stepTwoValid && <p role="alert">Budget must be positive and flight end must not precede flight start.</p>}\n''',
+          )
+
+          # Upload parsing/provider transition consistency.
+          replace(
+              "src/features/UploadDialog.tsx",
+              'import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";\n',
+              'import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";\nimport { OperationStatus } from "@/features/OperationStatus";\n',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '  const [parsing, setParsing] = useState(false);\n',
+              '  const [parsing, setParsing] = useState(false);\n  const [enrichmentBusy, setEnrichmentBusy] = useState<"preflight" | "enriching" | null>(null);\n',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '  const onCloseRef = useRef(onClose);\n',
+              '  const onCloseRef = useRef(onClose);\n  const parsingRef = useRef(false);\n  const providerBusyRef = useRef(false);\n  const providerAbortRef = useRef<AbortController | null>(null);\n',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '''  useEffect(() => {\n    onCloseRef.current = onClose;\n  }, [onClose]);\n''',
+              '''  useEffect(() => {\n    onCloseRef.current = onClose;\n  }, [onClose]);\n  useEffect(() => () => {\n    providerAbortRef.current?.abort();\n  }, []);\n''',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '''  async function selectFile(file: File) {\n    setParsing(true);\n    setParseError(null);\n    setAccepted([]);\n    setSelected(new Set());\n    setQuarantined([]);\n    setRejected([]);\n    setSnapshot(null);\n    setPreflight(null);\n    setEnrichmentError(null);\n    try {\n      const workbook = await readLocalSpreadsheet(file);\n      setSheets(workbook.sheets);\n      setSheetIndex(0);\n      inspectSheet(workbook.sheets[0]);\n    } catch (error) {\n      setParseError(error instanceof Error ? error.message : "SPREADSHEET_PARSE_FAILED");\n      setAccepted([]);\n      setSelected(new Set());\n      setHeaderMappings([]);\n      setQuarantined([]);\n      setRejected([]);\n      setSnapshot(null);\n      setPreflight(null);\n    } finally {\n      setParsing(false);\n    }\n  }\n''',
+              '''  async function selectFile(file: File) {\n    if (parsingRef.current || providerBusyRef.current) return;\n    parsingRef.current = true;\n    setParsing(true);\n    setParseError(null);\n    setAccepted([]);\n    setSelected(new Set());\n    setQuarantined([]);\n    setRejected([]);\n    setSnapshot(null);\n    setPreflight(null);\n    setEnrichmentError(null);\n    try {\n      const workbook = await readLocalSpreadsheet(file);\n      setSheets(workbook.sheets);\n      setSheetIndex(0);\n      inspectSheet(workbook.sheets[0]);\n    } catch (error) {\n      setParseError(error instanceof Error ? error.message : "SPREADSHEET_PARSE_FAILED");\n      setAccepted([]);\n      setSelected(new Set());\n      setHeaderMappings([]);\n      setQuarantined([]);\n      setRejected([]);\n      setSnapshot(null);\n      setPreflight(null);\n    } finally {\n      parsingRef.current = false;\n      setParsing(false);\n    }\n  }\n''',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '''  async function reviewEnrichment() {\n    try {\n      setEnrichmentError(null);\n      const rows = selectedEnrichmentRows();\n      if (rows.length === 0) throw new Error("SELECT_AT_LEAST_ONE_ROW");\n      setPreflight(await requestPreflight({ rows }));\n    } catch (error) {\n      setEnrichmentError(error instanceof Error ? error.message : "PREFLIGHT_FAILED");\n    }\n  }\n\n  async function enrichLocations() {\n    try {\n      setEnrichmentError(null);\n      if (!preflight || typeof preflight.id !== "string") throw new Error("PREFLIGHT_REQUIRED");\n      const rows = selectedEnrichmentRows();\n      const responses = await runEnrichment({\n        preflightId: preflight.id,\n        rows,\n        authorized: true,\n        idempotencyKey: crypto.randomUUID(),\n      }) as GeocodeResponse[];\n      const local = createLocalEnrichmentSnapshot(rows, new Date().toISOString());\n      setSnapshot(mergeProviderResponses(local, responses, new Date().toISOString()));\n    } catch (error) {\n      setEnrichmentError(error instanceof Error ? error.message : "ENRICHMENT_FAILED");\n    }\n  }\n''',
+              '''  async function reviewEnrichment() {\n    if (providerBusyRef.current || parsingRef.current) return;\n    providerBusyRef.current = true;\n    setEnrichmentBusy("preflight");\n    setEnrichmentError(null);\n    const controller = new AbortController();\n    providerAbortRef.current = controller;\n    try {\n      const rows = selectedEnrichmentRows();\n      if (rows.length === 0) throw new Error("SELECT_AT_LEAST_ONE_ROW");\n      const nextPreflight = await requestPreflight({ rows }, controller.signal);\n      if (!controller.signal.aborted) setPreflight(nextPreflight);\n    } catch (error) {\n      if (!controller.signal.aborted) {\n        setEnrichmentError(error instanceof Error ? error.message : "PREFLIGHT_FAILED");\n      }\n    } finally {\n      if (providerAbortRef.current === controller) providerAbortRef.current = null;\n      providerBusyRef.current = false;\n      setEnrichmentBusy(null);\n    }\n  }\n\n  async function enrichLocations() {\n    if (providerBusyRef.current || parsingRef.current) return;\n    providerBusyRef.current = true;\n    setEnrichmentBusy("enriching");\n    setEnrichmentError(null);\n    const controller = new AbortController();\n    providerAbortRef.current = controller;\n    try {\n      if (!preflight || typeof preflight.id !== "string") throw new Error("PREFLIGHT_REQUIRED");\n      const rows = selectedEnrichmentRows();\n      const responses = await runEnrichment({\n        preflightId: preflight.id,\n        rows,\n        authorized: true,\n        idempotencyKey: crypto.randomUUID(),\n      }, controller.signal) as GeocodeResponse[];\n      if (controller.signal.aborted) return;\n      const local = createLocalEnrichmentSnapshot(rows, new Date().toISOString());\n      setSnapshot(mergeProviderResponses(local, responses, new Date().toISOString()));\n    } catch (error) {\n      if (!controller.signal.aborted) {\n        setEnrichmentError(error instanceof Error ? error.message : "ENRICHMENT_FAILED");\n      }\n    } finally {\n      if (providerAbortRef.current === controller) providerAbortRef.current = null;\n      providerBusyRef.current = false;\n      setEnrichmentBusy(null);\n    }\n  }\n''',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '''  const pendingMappingReview = headerMappings.some(\n    (mapping) => mapping.target && !mapping.confirmed,\n  );\n''',
+              '''  const pendingMappingReview = headerMappings.some(\n    (mapping) => mapping.target && !mapping.confirmed,\n  );\n  const busy = parsing || enrichmentBusy !== null;\n''',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '      onClose={onClose}\n    >\n',
+              '      onClose={onClose}\n      busy={busy}\n    >\n',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '<input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" onChange={(event) => {',
+              '<input aria-label="Inventory spreadsheet" type="file" accept=".csv,.tsv,.xlsx" disabled={busy} onChange={(event) => {',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '{sheets.length > 1 && <label>Worksheet<select value={sheetIndex} onChange={(event) => {',
+              '{sheets.length > 1 && <label>Worksheet<select disabled={busy} value={sheetIndex} onChange={(event) => {',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '              value={mapping.target ?? ""}\n',
+              '              value={mapping.target ?? ""}\n              disabled={busy}\n',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '<button type="button" onClick={confirmMappings}>Confirm mappings</button>',
+              '<button type="button" disabled={busy} onClick={confirmMappings}>Confirm mappings</button>',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '''      <p className="upload-status-line">{parsing\n        ? "Reading spreadsheet locally…"\n        : accepted.length + " accepted · " + quarantined.length + " quarantined · " + rejected.length + " rejected"}</p>\n''',
+              '''      {parsing ? (\n        <OperationStatus\n          title="Reading spreadsheet locally…"\n          detail="Checking columns and row validity on this device. No provider request is running."\n        />\n      ) : (\n        <p className="upload-status-line">{accepted.length + " accepted · " + quarantined.length + " quarantined · " + rejected.length + " rejected"}</p>\n      )}\n      {enrichmentBusy === "preflight" && (\n        <OperationStatus\n          title="Checking enrichment requirements…"\n          detail="Reviewing the selected rows and provider preflight. No location enrichment has started yet."\n        />\n      )}\n      {enrichmentBusy === "enriching" && (\n        <OperationStatus\n          title="Reviewing provider location candidates…"\n          detail="The selected rows are locked until this enrichment attempt finishes or the drawer is closed."\n        />\n      )}\n''',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '''      {!pendingMappingReview && accepted.length > 0 && <UploadPreview\n        rows={accepted}\n        selected={selected}\n        onToggle={(assetId) => setSelected((current) => {\n          const next = new Set(current);\n          if (next.has(assetId)) {\n            next.delete(assetId);\n          } else {\n            next.add(assetId);\n          }\n          if (next.size > 50) return current;\n          return next;\n        })}\n      />}\n''',
+              '''      {!pendingMappingReview && accepted.length > 0 && <UploadPreview\n        rows={accepted}\n        selected={selected}\n        disabled={busy}\n        onToggle={(assetId) => {\n          if (busy) return;\n          setPreflight(null);\n          setEnrichmentError(null);\n          setSelected((current) => {\n            const next = new Set(current);\n            if (next.has(assetId)) {\n              next.delete(assetId);\n            } else {\n              next.add(assetId);\n            }\n            if (next.size > 50) return current;\n            return next;\n          });\n        }}\n      />}\n''',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '          disabled={parsing || pendingMappingReview || selected.size === 0}\n',
+              '          disabled={busy || pendingMappingReview || selected.size === 0}\n',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '          disabled={parsing || pendingMappingReview || selected.size === 0}\n          onClick={() => void reviewEnrichment()}\n        >\n          Review enrichment\n',
+              '          disabled={busy || pendingMappingReview || selected.size === 0}\n          onClick={() => void reviewEnrichment()}\n        >\n          {enrichmentBusy === "preflight" ? "Checking enrichment…" : "Review enrichment"}\n',
+          )
+          replace(
+              "src/features/UploadDialog.tsx",
+              '''        <button type="button" onClick={() => void enrichLocations()}>\n          Enrich locations\n        </button>\n''',
+              '''        <button type="button" disabled={busy} onClick={() => void enrichLocations()}>\n          {enrichmentBusy === "enriching" ? "Reviewing locations…" : "Enrich locations"}\n        </button>\n''',
+          )
+
+          # RFQ generation transition consistency.
+          replace(
+              "src/features/RfqDrawer.tsx",
+              'import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";\n',
+              'import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";\nimport { OperationStatus } from "@/features/OperationStatus";\n',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              'export function RfqDrawer({\n',
+              '''type RfqGenerator = (...args: Parameters<typeof generateRfq>) => RfqDraft | Promise<RfqDraft>;\n\nfunction nextPaint(): Promise<void> {\n  return new Promise((resolve) => {\n    if (typeof requestAnimationFrame === "function") {\n      requestAnimationFrame(() => resolve());\n    } else {\n      setTimeout(resolve, 0);\n    }\n  });\n}\n\nexport function RfqDrawer({\n''',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '  generator?: typeof generateRfq;\n',
+              '  generator?: RfqGenerator;\n',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '  const onCloseRef = useRef(onClose);\n',
+              '  const onCloseRef = useRef(onClose);\n  const generatingRef = useRef(false);\n  const mountedRef = useRef(true);\n',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '''  useEffect(() => {\n    onCloseRef.current = onClose;\n  }, [onClose]);\n''',
+              '''  useEffect(() => {\n    onCloseRef.current = onClose;\n  }, [onClose]);\n  useEffect(() => () => {\n    mountedRef.current = false;\n  }, []);\n''',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '''  const valid = plan.recommended.valid && datesMatchAppliedPlan &&\n    RfqReviewInputSchema.safeParse(review).success;\n  function change(action: () => void) {\n    action();\n    setWorkflow({ status: "Review required" });\n  }\n  async function generate() {\n    setWorkflow({ status: "Generating" });\n    await Promise.resolve();\n    try {\n      setWorkflow({ status: "Generated", output: generator(frozenLagosBundle, plan, review) });\n    } catch (error) {\n      setWorkflow({\n        status: "Generation failed",\n        message: error instanceof Error ? error.message : "RFQ_GENERATION_FAILED",\n      });\n    }\n  }\n''',
+              '''  const valid = plan.recommended.valid && datesMatchAppliedPlan &&\n    RfqReviewInputSchema.safeParse(review).success;\n  const generating = workflow.status === "Generating";\n  function change(action: () => void) {\n    if (generatingRef.current) return;\n    action();\n    setWorkflow({ status: "Review required" });\n  }\n  async function generate() {\n    if (generatingRef.current || !valid) return;\n    generatingRef.current = true;\n    setWorkflow({ status: "Generating" });\n    await nextPaint();\n    try {\n      const output = await generator(frozenLagosBundle, plan, review);\n      if (mountedRef.current) setWorkflow({ status: "Generated", output });\n    } catch (error) {\n      if (mountedRef.current) {\n        setWorkflow({\n          status: "Generation failed",\n          message: error instanceof Error ? error.message : "RFQ_GENERATION_FAILED",\n        });\n      }\n    } finally {\n      generatingRef.current = false;\n    }\n  }\n''',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '      onClose={onClose}\n    >\n',
+              '      onClose={onClose}\n      busy={generating}\n    >\n',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '''      <div className="planner-drawer-status-row">\n        <strong>DEMO — DO NOT SEND</strong>\n        <span>{workflow.status}</span>\n      </div>\n''',
+              '''      <div className="planner-drawer-status-row">\n        <strong>DEMO — DO NOT SEND</strong>\n        <span>{workflow.status}</span>\n      </div>\n      {generating && (\n        <OperationStatus\n          title="Generating supplier request…"\n          detail="Using the reviewed package and contact details. Nothing is being sent, booked, or reserved."\n        />\n      )}\n''',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '<label>Buyer name<input value={buyerName}',
+              '<label>Buyer name<input disabled={generating} value={buyerName}',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '<label>Buyer email<input type="email" value={buyerEmail}',
+              '<label>Buyer email<input type="email" disabled={generating} value={buyerEmail}',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '<label>Response deadline<input type="date" value={responseDeadline}',
+              '<label>Response deadline<input type="date" disabled={generating} value={responseDeadline}',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '<label>Flight start<input type="date" value={flightStart}',
+              '<label>Flight start<input type="date" disabled={generating} value={flightStart}',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '<label>Flight end<input type="date" value={flightEnd}',
+              '<label>Flight end<input type="date" disabled={generating} value={flightEnd}',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '          disabled={flightStart > flightEnd}\n',
+              '          disabled={generating || flightStart > flightEnd}\n',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '<input type="checkbox" checked={datesConfirmed}',
+              '<input type="checkbox" disabled={generating} checked={datesConfirmed}',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '<textarea value={supplierNotes[supplierId] ?? ""}',
+              '<textarea disabled={generating} value={supplierNotes[supplierId] ?? ""}',
+          )
+          replace(
+              "src/features/RfqDrawer.tsx",
+              '<button className="primary" type="button" disabled={!valid || workflow.status === "Generating"} onClick={() => void generate()}>{workflow.status === "Generation failed" ? "Retry RFQ generation" : "Generate RFQ"}</button>',
+              '<button className="primary" type="button" disabled={!valid || generating} onClick={() => void generate()}>{generating ? "Generating RFQ…" : workflow.status === "Generation failed" ? "Retry RFQ generation" : "Generate RFQ"}</button>',
+          )
+          PY
+      - name: Commit product patches
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/PlannerPage.tsx src/features/UploadDialog.tsx src/features/RfqDrawer.tsx
+          git commit -m "ui: make active transitions explicit and idempotent"
+          git push origin HEAD:agent/ui-quality-transition-states
+      - name: Remove temporary helper
+        run: |
+          git rm .github/workflows/apply-ui67-transitions.yml
+          git commit -m "chore: remove UI67 transition helper"
+          git push origin HEAD:agent/ui-quality-transition-states
