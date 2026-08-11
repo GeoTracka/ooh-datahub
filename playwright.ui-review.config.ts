@@ -2,7 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testMatch: ["visual-accessibility.spec.ts", "ux-review.spec.ts"],
+  testMatch: [
+    "visual-accessibility.spec.ts",
+    "ux-review.spec.ts",
+    "ui-quality-hierarchy.spec.ts",
+  ],
   fullyParallel: false,
   workers: 1,
   retries: 0,
