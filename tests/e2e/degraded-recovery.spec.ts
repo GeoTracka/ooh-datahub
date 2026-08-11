@@ -28,7 +28,7 @@ async function assertReviewClean(page: Page, diagnostics: UxReviewDiagnostics, l
 async function reachActionStep(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
-  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
 }
 
@@ -54,7 +54,7 @@ test("reviews invalid package recovery without leading with machine codes", asyn
   await expect(alert).toContainText("over the campaign budget");
   await expect(alert.locator(".recovery-notice-copy")).not.toContainText("BUDGET_EXCEEDED");
   await expect(alert.locator("details")).toContainText("BUDGET_EXCEEDED");
-  await expect(page.getByRole("button", { name: "This package works" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Continue with selected package" })).toBeDisabled();
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-01-invalid-package");
   await assertReviewClean(page, diagnostics, "invalid package recovery");

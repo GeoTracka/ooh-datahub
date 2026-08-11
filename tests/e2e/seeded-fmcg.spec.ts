@@ -10,7 +10,7 @@ test("five-step FMCG explorer reaches a verification RFQ", async ({ page }) => {
     .getByRole("button", { name: "Evening" }).click();
   await page.getByRole("button", { name: "Show recommended zones" }).click();
 
-  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
   await expect(page.getByTestId("zone-card")).toHaveCount(3);
   await expect(page.getByText(/Scenario target reach/)).toBeVisible();
   await expect(page.getByText(/Evidence D/).first()).toBeVisible();
@@ -27,7 +27,7 @@ test("five-step FMCG explorer reaches a verification RFQ", async ({ page }) => {
   }
   await explanation.getByRole("button", { name: "Close" }).click();
 
-  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
   await expect(page.getByRole("region", { name: /Step 5 of 5:/ })).toBeVisible();

@@ -25,8 +25,8 @@ async function assertReviewClean(page: Page, diagnostics: UxReviewDiagnostics, l
 async function reachActionStep(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
-  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
-  await page.getByRole("button", { name: "This package works" }).click();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
 }
 

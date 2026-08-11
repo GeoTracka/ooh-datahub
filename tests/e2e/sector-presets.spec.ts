@@ -20,14 +20,14 @@ for (const preset of [
 test("default-profile skip goes directly to the recommendation decision", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
-  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
   await expect(page.getByTestId("zone-card")).toHaveCount(3);
 });
 
 test("fine-tune blocks an invalid removal until Undo restores the package", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
-  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
 
   await page.getByLabel("Face to remove").selectOption({ index: 1 });
