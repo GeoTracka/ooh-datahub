@@ -479,7 +479,7 @@ export function UploadDialog({
           </RecoveryNotice>
         </section>
       )}
-      {!pendingMappingReview && <UploadPreview
+      {!pendingMappingReview && accepted.length > 0 && <UploadPreview
         rows={accepted}
         selected={selected}
         onToggle={(assetId) => setSelected((current) => {
