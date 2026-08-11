@@ -7,6 +7,7 @@ export default defineConfig({
     "ux-review.spec.ts",
     "ui-quality-hierarchy.spec.ts",
     "drawer-ergonomics.spec.ts",
+    "fine-tune-workspace.spec.ts",
   ],
   fullyParallel: false,
   workers: 1,
