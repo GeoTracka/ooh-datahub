@@ -86,6 +86,36 @@ test.describe("desktop package comparison hierarchy", () => {
     ).toBeGreaterThanOrEqual(300);
   });
 
+  test("keeps Step 3 map content inside a true right-hand pane", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await reachRecommendedPackage(page);
+    await expect(page.getByTestId("maplibre-renderer"))
+      .toHaveAttribute("data-camera-focus-state", "selected");
+
+    const rail = await page.locator(".explorer-card-rail").boundingBox();
+    const map = await page.locator(".explorer-map-stage").boundingBox();
+    const selectedMarker = await page.locator(".map-marker.selected").boundingBox();
+    const lensTabs = await page.getByRole("tablist", { name: "Map lens" }).boundingBox();
+    const legend = await page
+      .getByRole("complementary", { name: "Map lens legend" })
+      .boundingBox();
+
+    expect(rail).not.toBeNull();
+    expect(map).not.toBeNull();
+    expect(selectedMarker).not.toBeNull();
+    expect(lensTabs).not.toBeNull();
+    expect(legend).not.toBeNull();
+    expect(rail!.width).toBeGreaterThanOrEqual(720);
+    expect(rail!.width).toBeLessThanOrEqual(800);
+    expect(map!.x).toBeGreaterThanOrEqual(rail!.x + rail!.width - 1);
+    expect(map!.width).toBeGreaterThanOrEqual(600);
+    expect(selectedMarker!.x).toBeGreaterThanOrEqual(map!.x);
+    expect(selectedMarker!.x + selectedMarker!.width)
+      .toBeLessThanOrEqual(map!.x + map!.width);
+    expect(lensTabs!.x).toBeGreaterThanOrEqual(map!.x);
+    expect(legend!.x).toBeGreaterThanOrEqual(map!.x);
+  });
+
   test("gives workflow-critical secondary actions comfortable targets", async ({ page }) => {
     await reachRecommendedPackage(page);
 
