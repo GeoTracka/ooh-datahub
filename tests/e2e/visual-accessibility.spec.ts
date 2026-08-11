@@ -32,7 +32,7 @@ test("locks the split-canvas explorer hierarchy and interaction states", async (
   await assertAccessible(page);
 
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
-  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
   await expect(page).toHaveScreenshot("explorer-step3.png", { animations: "disabled" });
 
   const zones = page.getByTestId("zone-card");
@@ -41,7 +41,7 @@ test("locks the split-canvas explorer hierarchy and interaction states", async (
   await expect(page).toHaveScreenshot("explorer-step3-focused.png", { animations: "disabled" });
   await assertAccessible(page);
 
-  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
   await makeExplicitSwap(page);
   await expect(page.getByText("Unapplied changes")).toBeVisible();

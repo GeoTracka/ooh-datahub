@@ -174,61 +174,7 @@
   outline-offset: 2px;
 }
 
-/* Desktop/laptop Step 3 is a comparison task. Give the decision surface enough
-   width to show all three ranks while retaining a meaningful map context. */
 @media (min-width: 1024px) {
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) {
-    width: min(800px, calc(100vw - 300px));
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-carousel {
-    position: relative;
-    grid-auto-flow: row;
-    grid-auto-columns: auto;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    overflow-x: visible;
-    padding: 2px 2px 94px;
-    scroll-snap-type: none;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-slide {
-    min-width: 0;
-    align-self: start;
-    scroll-snap-align: none;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-slide.selected {
-    overflow: visible;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-selected-detail {
-    position: absolute;
-    right: 2px;
-    bottom: 2px;
-    left: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    min-height: 76px;
-    padding: 10px 12px;
-    border: 1px solid #e4e5e8;
-    border-radius: 11px;
-    background: #fbfbfa;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-selected-detail p {
-    max-width: 68%;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .package-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .package-strip > :first-child {
-    grid-column: 1 / -1;
-  }
-
   /* Before recommendation geometry exists, make the blank map read as a
      deliberate spatial workspace rather than an unfinished region. */
   .explorer-shell:has(.explorer-step-card[aria-label^="Step 1 of 5:"]) .explorer-map-stage::before,
@@ -272,51 +218,6 @@
     white-space: pre-line;
     backdrop-filter: blur(10px);
     pointer-events: none;
-  }
-}
-
-/* Short laptops should keep the decision CTA in the first viewport by reducing
-   whitespace, not by shrinking type or overlaying content. */
-@media (min-width: 1024px) and (max-height: 800px) {
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] {
-    max-height: calc(100vh - 32px);
-    padding: 16px 18px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-header {
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-content {
-    gap: 12px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-carousel {
-    padding-bottom: 82px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-slide-main {
-    padding: 11px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-selected-detail {
-    min-height: 68px;
-    padding: 8px 10px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip {
-    gap: 6px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip > div,
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip > button {
-    padding: 8px 9px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-actions {
-    margin-top: 12px;
-    padding-top: 12px;
   }
 }
 

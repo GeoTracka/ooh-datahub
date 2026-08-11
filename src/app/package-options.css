@@ -1,0 +1,345 @@
+.package-options {
+  display: grid;
+  gap: 12px;
+}
+
+.package-options-intro {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.package-options-intro > div {
+  display: grid;
+  gap: 3px;
+}
+
+.package-options-kicker {
+  color: #0f5b4e;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.package-options-intro h2 {
+  margin: 0;
+  color: #1c2026;
+  font-size: 17px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.package-options-intro p {
+  max-width: 330px;
+  margin: 0;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.package-option-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.package-option-card {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 44px;
+  overflow: hidden;
+  border: 1px solid #dfe2e6;
+  border-radius: 14px;
+  background: #fff;
+  color: #343a46;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.package-option-card:hover {
+  border-color: #98bbb3;
+  box-shadow: 0 8px 24px rgb(28 32 38 / 7%);
+  transform: translateY(-1px);
+}
+
+.package-option-card.selected {
+  border-color: #0f5b4e;
+  box-shadow: 0 0 0 2px rgb(15 91 78 / 12%);
+}
+
+.package-option-card > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.package-option-card:has(input:focus-visible) {
+  outline: 3px solid rgb(15 91 78 / 28%);
+  outline-offset: 2px;
+}
+
+.package-option-card-body {
+  display: grid;
+  gap: 11px;
+  height: 100%;
+  padding: 14px;
+}
+
+.package-option-heading,
+.package-option-heading > span,
+.package-option-footnote {
+  display: flex;
+  align-items: center;
+}
+
+.package-option-heading {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.package-option-heading > span {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.package-option-style {
+  color: #1c2026;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.package-option-recommended,
+.package-option-selection {
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.package-option-recommended {
+  padding: 3px 6px;
+  background: #fdf2d4;
+  color: #765314;
+}
+
+.package-option-selection {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  background: #f1f3f5;
+  color: #5c6272;
+}
+
+.package-option-card.selected .package-option-selection {
+  background: #e7f1ee;
+  color: #0f5b4e;
+}
+
+.package-option-description {
+  min-height: 34px;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.package-option-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.package-option-metrics > span {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 9px;
+  background: #f7f8f7;
+}
+
+.package-option-metrics small {
+  color: #5c6272;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.package-option-metrics strong {
+  overflow-wrap: anywhere;
+  color: #1c2026;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+.package-option-footnote {
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  color: #667085;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.package-option-invalid {
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: #fff0ee;
+  color: #9b3a31;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.explorer-step-action-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.explorer-secondary-action,
+.explorer-primary-action {
+  min-height: 44px;
+}
+
+@media (min-width: 1024px) {
+  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"]) {
+    width: min(1000px, calc(100vw - 144px));
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] {
+    scrollbar-gutter: stable;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .recommendation-carousel {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    overflow-x: visible;
+    padding: 2px;
+    scroll-snap-type: none;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .recommendation-slide {
+    min-width: 0;
+    scroll-snap-align: none;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .recommendation-selected-detail {
+    position: static;
+    display: grid;
+    min-height: 0;
+    padding: 0 12px 12px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .recommendation-selected-detail p {
+    max-width: none;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .package-strip {
+    grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr));
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .explorer-step-actions {
+    position: sticky;
+    z-index: 4;
+    bottom: -22px;
+    margin-inline: -22px;
+    padding: 14px 22px 22px;
+    background: linear-gradient(to bottom, rgb(255 255 255 / 92%), #fff 20%);
+    box-shadow: 0 -8px 18px rgb(255 255 255 / 88%);
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 800px) {
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] {
+    max-height: calc(100vh - 32px);
+    padding: 16px 18px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .explorer-step-header {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .explorer-step-content {
+    gap: 12px;
+  }
+
+  .explorer-step-card[aria-label^="Step 3 of 5: Choose a planning approach"] .explorer-step-actions {
+    bottom: -16px;
+    margin-inline: -18px;
+    padding: 12px 18px 16px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .package-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .package-option-card-body {
+    gap: 9px;
+  }
+
+  .package-option-description {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .package-options-intro {
+    display: grid;
+    gap: 6px;
+  }
+
+  .package-options-intro p {
+    max-width: none;
+    text-align: left;
+  }
+
+  .package-option-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .package-option-metrics > span {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .package-option-footnote,
+  .explorer-step-actions,
+  .explorer-step-action-group {
+    align-items: stretch;
+  }
+
+  .explorer-step-actions {
+    flex-direction: column;
+  }
+
+  .explorer-step-action-group {
+    flex-direction: column-reverse;
+  }
+
+  .explorer-step-action-group button {
+    width: 100%;
+  }
+
+  .explorer-primary-action {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .package-option-card {
+    transition-duration: 0.01ms !important;
+  }
+}

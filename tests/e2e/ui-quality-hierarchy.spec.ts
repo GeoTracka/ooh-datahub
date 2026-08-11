@@ -4,7 +4,7 @@ async function reachRecommendedPackage(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(
-    page.getByRole("region", { name: /Step 3 of 5: Recommended package/ }),
+    page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ }),
   ).toBeVisible();
 }
 
@@ -34,25 +34,25 @@ async function expectFullyInViewport(
 }
 
 async function expectComparisonFitsWithoutHorizontalScroll(page: Page): Promise<void> {
-  const geometry = await page.locator(".recommendation-carousel").evaluate((element) => ({
+  const geometry = await page.locator(".package-option-grid").evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
   expect(
     geometry.scrollWidth,
-    "desktop recommendation comparison should not require horizontal scrolling",
+    "desktop package comparison should not require horizontal scrolling",
   ).toBeLessThanOrEqual(geometry.clientWidth + 2);
 
-  const carousel = await page.locator(".recommendation-carousel").boundingBox();
-  expect(carousel).not.toBeNull();
-  const cards = page.getByTestId("zone-card");
+  const comparison = await page.locator(".package-option-grid").boundingBox();
+  expect(comparison).not.toBeNull();
+  const cards = page.locator(".package-option-card");
   await expect(cards).toHaveCount(3);
   for (let index = 0; index < 3; index += 1) {
     const card = await cards.nth(index).boundingBox();
-    expect(card, `recommendation ${index + 1} should have geometry`).not.toBeNull();
-    expect(card!.x).toBeGreaterThanOrEqual(carousel!.x - 1);
+    expect(card, `package option ${index + 1} should have geometry`).not.toBeNull();
+    expect(card!.x).toBeGreaterThanOrEqual(comparison!.x - 1);
     expect(card!.x + card!.width).toBeLessThanOrEqual(
-      carousel!.x + carousel!.width + 1,
+      comparison!.x + comparison!.width + 1,
     );
   }
 }
@@ -70,16 +70,16 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
 });
 
-test.describe("desktop recommendation hierarchy", () => {
+test.describe("desktop package comparison hierarchy", () => {
   test.use({ viewport: { width: 1440, height: 1000 } });
 
-  test("shows all three recommendation ranks without clipping", async ({ page }) => {
+  test("shows all three planning approaches without clipping", async ({ page }) => {
     await reachRecommendedPackage(page);
     await expectComparisonFitsWithoutHorizontalScroll(page);
 
     const rail = await page.locator(".explorer-card-rail").boundingBox();
     expect(rail).not.toBeNull();
-    expect(rail!.width).toBeGreaterThanOrEqual(760);
+    expect(rail!.width).toBeGreaterThanOrEqual(880);
     expect(
       1440 - (rail!.x + rail!.width),
       "desktop comparison should retain meaningful map width",
@@ -90,11 +90,11 @@ test.describe("desktop recommendation hierarchy", () => {
     await reachRecommendedPackage(page);
 
     const deliveryStory = page.getByRole("button", { name: "View delivery story" });
-    const fullPackage = page.getByRole("button", { name: "View full package" });
+    const fineTune = page.getByRole("button", { name: "Fine-tune selected package" });
     const back = page.getByRole("button", { name: "Back" });
 
     await expectComfortableTarget(deliveryStory, "View delivery story");
-    await expectComfortableTarget(fullPackage, "View full package");
+    await expectComfortableTarget(fineTune, "Fine-tune selected package", 44);
     await expectComfortableTarget(back, "Back");
 
     await keyboardFocus(page, deliveryStory, "View delivery story");
@@ -117,13 +117,15 @@ test.describe("desktop recommendation hierarchy", () => {
   });
 });
 
-test("keeps all three ranks and the decision CTA visible at 1024px", async ({ page }) => {
+test("keeps all three approaches and both decision paths visible at 1024px", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await reachRecommendedPackage(page);
   await expectComparisonFitsWithoutHorizontalScroll(page);
-  const primaryAction = page.getByRole("button", { name: "This package works" });
+  const primaryAction = page.getByRole("button", { name: "Continue with selected package" });
+  const fineTuneAction = page.getByRole("button", { name: "Fine-tune selected package" });
   await expect(primaryAction).toBeVisible();
-  await expectFullyInViewport(page, primaryAction, "This package works");
+  await expectFullyInViewport(page, primaryAction, "Continue with selected package");
+  await expectFullyInViewport(page, fineTuneAction, "Fine-tune selected package");
 });
 
 test("keeps a focused recommendation comparable and actionable at 1024px", async ({ page }) => {
@@ -140,7 +142,7 @@ test("keeps a focused recommendation comparable and actionable at 1024px", async
   await expectFullyInViewport(page, deliveryStory, "focused View delivery story");
   await expectFullyInViewport(
     page,
-    page.getByRole("button", { name: "This package works" }),
-    "focused This package works",
+    page.getByRole("button", { name: "Continue with selected package" }),
+    "focused Continue with selected package",
   );
 });
