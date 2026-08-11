@@ -9,6 +9,7 @@ export default defineConfig({
     "drawer-ergonomics.spec.ts",
     "fine-tune-workspace.spec.ts",
     "degraded-recovery.spec.ts",
+    "transition-quality.spec.ts",
   ],
   fullyParallel: false,
   workers: 1,

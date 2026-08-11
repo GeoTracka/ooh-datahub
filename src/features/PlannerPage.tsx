@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useReducer, useState } from "react";
+import { useMemo, useReducer, useRef, useState } from "react";
 import { frozenLagosBundle as bundle } from "@/bundle/loadFrozenBundle";
 import type { Brief } from "@/contracts/domain";
 import type { MeasurementStage } from "@/contracts/metrics";
@@ -28,6 +28,7 @@ import { AdjustmentsPanel } from "@/features/AdjustmentsPanel";
 import { CausalDrawer } from "@/features/CausalDrawer";
 import { LensTabs } from "@/features/LensTabs";
 import { MapStage } from "@/features/MapStage";
+import { OperationStatus } from "@/features/OperationStatus";
 import { PackageConstraintNotice } from "@/features/PackageConstraintNotice";
 import { PackageStrip } from "@/features/PackageStrip";
 import { RecommendationCarousel } from "@/features/RecommendationCarousel";
@@ -140,6 +141,16 @@ function briefsMatch(left: Brief, right: Brief): boolean {
     left.flightEnd === right.flightEnd;
 }
 
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve());
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
+
 export function PlannerPage() {
   const [brief, setBrief] = useState(initialBrief);
   const [state, dispatch] = useReducer(plannerReducer, initialPlannerState);
@@ -152,6 +163,8 @@ export function PlannerPage() {
     history: DrawerTarget[];
   } | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [planning, setPlanning] = useState(false);
+  const planningRef = useRef(false);
 
   const visible = selectVisiblePlan(state);
   const dirty = selectIsDirty(state);
@@ -184,23 +197,32 @@ export function PlannerPage() {
     setBrief((current) => ({ ...current, ...profile }));
   }
 
-  function showRecommendations() {
-    let plan = visible;
-    if (!visible) {
-      plan = buildPlan(bundle, brief);
-      dispatch({ type: "loaded", plan });
-    } else if (!briefsMatch(visible.brief, brief)) {
-      plan = recalculatePlan(bundle, visible, brief);
-      dispatch({
-        type: "drafted",
-        plan,
-        reason: "Campaign brief updated",
-      });
+  async function showRecommendations() {
+    if (planningRef.current) return;
+    planningRef.current = true;
+    setPlanning(true);
+    await nextPaint();
+    try {
+      let plan = visible;
+      if (!visible) {
+        plan = buildPlan(bundle, brief);
+        dispatch({ type: "loaded", plan });
+      } else if (!briefsMatch(visible.brief, brief)) {
+        plan = recalculatePlan(bundle, visible, brief);
+        dispatch({
+          type: "drafted",
+          plan,
+          reason: "Campaign brief updated",
+        });
+      }
+      if (!plan) return;
+      setSelectedZoneId(plan.selectedZoneIds[0] ?? null);
+      setLens("plan");
+      setStep(3);
+    } finally {
+      planningRef.current = false;
+      setPlanning(false);
     }
-    if (!plan) return;
-    setSelectedZoneId(plan.selectedZoneIds[0] ?? null);
-    setLens("plan");
-    setStep(3);
   }
 
   function draftSites(siteIds: string[], reason = "Selected-face change") {
@@ -323,6 +345,7 @@ export function PlannerPage() {
             step={1}
             total={5}
             title="Who is this campaign for?"
+            busy={planning}
             primaryAction={{ label: "Continue to timing", onClick: () => setStep(2) }}
           >
             <div className="explorer-preset-grid" aria-label="Campaign presets">
@@ -330,6 +353,7 @@ export function PlannerPage() {
                 <button
                   key={preset.id}
                   type="button"
+                  disabled={planning}
                   aria-pressed={selectedPresetId === preset.id}
                   onClick={() => applyPreset(preset.profile)}
                 >
@@ -348,20 +372,20 @@ export function PlannerPage() {
               <div className="explorer-fields">
                 <label>
                   Product name
-                  <input value={brief.productName} onChange={(event) => changeBrief({ productName: event.target.value })} />
+                  <input disabled={planning} value={brief.productName} onChange={(event) => changeBrief({ productName: event.target.value })} />
                 </label>
                 <label>
                   Product information
-                  <textarea value={brief.productDescription} onChange={(event) => changeBrief({ productDescription: event.target.value })} />
+                  <textarea disabled={planning} value={brief.productDescription} onChange={(event) => changeBrief({ productDescription: event.target.value })} />
                 </label>
                 <label>
                   Target audience
-                  <textarea value={brief.targetAudience} onChange={(event) => changeBrief({ targetAudience: event.target.value })} />
+                  <textarea disabled={planning} value={brief.targetAudience} onChange={(event) => changeBrief({ targetAudience: event.target.value })} />
                 </label>
                 <div className="explorer-field-pair">
                   <label>
                     Sector
-                    <select value={brief.sector} onChange={(event) => changeBrief({ sector: event.target.value as Brief["sector"] })}>
+                    <select disabled={planning} value={brief.sector} onChange={(event) => changeBrief({ sector: event.target.value as Brief["sector"] })}>
                       <option value="fmcg">FMCG</option>
                       <option value="real_estate">Real Estate</option>
                       <option value="bank_fintech">Bank / Fintech</option>
@@ -369,7 +393,7 @@ export function PlannerPage() {
                   </label>
                   <label>
                     Objective
-                    <select value={brief.objective} onChange={(event) => changeBrief({ objective: event.target.value as Brief["objective"] })}>
+                    <select disabled={planning} value={brief.objective} onChange={(event) => changeBrief({ objective: event.target.value as Brief["objective"] })}>
                       <option value="broad_reach">Broad reach</option>
                       <option value="influential_core">Influential core</option>
                       <option value="near_conversion">Near conversion</option>
@@ -378,12 +402,19 @@ export function PlannerPage() {
                 </div>
               </div>
             </details>
+            {planning && (
+              <OperationStatus
+                title="Building recommendation…"
+                detail="Checking timing, budget, eligible faces, and available evidence."
+              />
+            )}
             <button
               type="button"
               className="explorer-link-button explorer-skip"
-              onClick={showRecommendations}
+              disabled={planning}
+              onClick={() => void showRecommendations()}
             >
-              Use default timing & budget
+              {planning ? "Building recommendation…" : "Use default timing & budget"}
             </button>
           </StepCard>
         )}
@@ -394,9 +425,10 @@ export function PlannerPage() {
             total={5}
             title="When and how much?"
             onBack={() => setStep(1)}
+            busy={planning}
             primaryAction={{
-              label: "Show recommended zones",
-              onClick: showRecommendations,
+              label: planning ? "Building recommendation…" : "Show recommended zones",
+              onClick: () => void showRecommendations(),
               disabled: !stepTwoValid,
             }}
           >
@@ -407,6 +439,7 @@ export function PlannerPage() {
                   <button
                     key={choice.value}
                     type="button"
+                    disabled={planning}
                     aria-pressed={brief.daypart === choice.value}
                     onClick={() => changeBrief({ daypart: choice.value })}
                   >
@@ -422,6 +455,7 @@ export function PlannerPage() {
                   <button
                     key={budget}
                     type="button"
+                    disabled={planning}
                     aria-pressed={brief.budgetNgn === budget}
                     onClick={() => changeBrief({ budgetNgn: budget })}
                   >
@@ -434,6 +468,7 @@ export function PlannerPage() {
                 <input
                   type="number"
                   min={1}
+                  disabled={planning}
                   value={brief.budgetNgn}
                   onChange={(event) => changeBrief({ budgetNgn: Number(event.target.value) })}
                 />
@@ -442,13 +477,19 @@ export function PlannerPage() {
             <div className="explorer-field-pair">
               <label>
                 Flight start
-                <input type="date" value={brief.flightStart} onChange={(event) => changeBrief({ flightStart: event.target.value })} />
+                <input type="date" disabled={planning} value={brief.flightStart} onChange={(event) => changeBrief({ flightStart: event.target.value })} />
               </label>
               <label>
                 Flight end
-                <input type="date" value={brief.flightEnd} onChange={(event) => changeBrief({ flightEnd: event.target.value })} />
+                <input type="date" disabled={planning} value={brief.flightEnd} onChange={(event) => changeBrief({ flightEnd: event.target.value })} />
               </label>
             </div>
+            {planning && (
+              <OperationStatus
+                title="Building recommendation…"
+                detail="Checking timing, budget, eligible faces, and available evidence."
+              />
+            )}
             {!stepTwoValid && <p role="alert">Budget must be positive and flight end must not precede flight start.</p>}
           </StepCard>
         )}

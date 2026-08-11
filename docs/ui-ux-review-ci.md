@@ -70,6 +70,19 @@ RFQ generator failure remains component-injected for deterministic testing; the 
 
 When more than one map is visible, each map landmark must have a distinguishable accessible name. Embedded MapLibre review maps therefore receive context-specific labels instead of sharing the default `Map` landmark name with the planning canvas.
 
+### Active transition states
+
+Longer or expensive operations must be visibly explicit without inventing fake progress. The UI uses indeterminate `role="status"` surfaces and never displays a made-up percentage, artificial countdown, or synthetic stage completion claim.
+
+The review pack holds real network requests open to capture two deterministic provider states at 1440 × 1000:
+
+1. enrichment preflight pending — the selected-row basis is locked while provider requirements are checked; and
+2. provider enrichment pending — row/file/geocode-review mutations are locked while location candidates are requested.
+
+These states must remain single-flight. Repeated clicks must not create duplicate requests, Close/Escape must remain available, and changing selected rows after a completed preflight must invalidate that preflight before enrichment can run again.
+
+Short local transitions are tested semantically rather than delayed just to make screenshots possible. Recommendation building yields one browser paint before synchronous planning computation so `Building recommendation…` can render and conflicting Step 1/2 controls can lock. RFQ generation likewise paints a generating state, freezes reviewed fields, rejects re-entry, and supports both the current synchronous generator and future asynchronous generators. No artificial wait is added solely for visual evidence.
+
 ### Responsive
 
 - compact laptop: 1024 × 768 recommended package;
@@ -104,6 +117,9 @@ Review the screenshots as one workflow, not as isolated mockups.
 - Does the RFQ transition feel like a continuation of the applied plan rather than a separate product?
 - On failure, is the next recoverable action obvious without reading an internal code?
 - Does a failed replacement/upload avoid showing stale data from the previous successful state?
+- During an active operation, is it obvious what is happening and which controls are intentionally locked?
+- Can the operation be accidentally submitted twice, or can its input basis change underneath it?
+- Is Close/Escape still available while provider or RFQ work is active?
 
 ### Responsive behavior
 
@@ -122,6 +138,7 @@ Review the screenshots as one workflow, not as isolated mockups.
 - No unavailable or degraded state should look equivalent to a confirmed result.
 - Internal reason codes belong in technical detail, not as the recovery message.
 - Quarantine summaries must explain why rows were excluded without reproducing sensitive row values.
+- Busy copy must describe real work without claiming a percentage or completion estimate the application does not know.
 
 ## Local usage
 

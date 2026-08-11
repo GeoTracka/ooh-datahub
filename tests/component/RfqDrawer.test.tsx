@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RfqDrawer } from "@/features/RfqDrawer";
@@ -40,6 +41,55 @@ describe("RfqDrawer", () => {
     expect(storageSpy).not.toHaveBeenCalled();
     await userEvent.type(screen.getByLabelText("Buyer name"), " Updated");
     expect(screen.getByText("Review required", { exact: true })).toBeInTheDocument();
+  });
+
+  it("locks reviewed fields and rejects re-entry while generation is active", async () => {
+    let release = () => {};
+    const generator = vi.fn((...args: Parameters<typeof generateRfq>) =>
+      new Promise<ReturnType<typeof generateRfq>>((resolve) => {
+        release = () => resolve(generateRfq(...args));
+      }));
+    render(<RfqDrawer
+      plan={plan}
+      generator={generator}
+      onClose={() => undefined}
+      onScheduleRevision={() => undefined}
+    />);
+    await completeReview();
+
+    const generateButton = screen.getByRole("button", { name: "Generate RFQ" });
+    await userEvent.dblClick(generateButton);
+
+    expect(await screen.findByRole("status", { name: "Generating supplier request…" }))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText("Buyer name")).toBeDisabled();
+    expect(screen.getByLabelText("Buyer email")).toBeDisabled();
+    expect(screen.getByLabelText("Response deadline")).toBeDisabled();
+    expect(screen.getByLabelText("Dates confirmed")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Generating RFQ…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Close" })).toBeEnabled();
+    await waitFor(() => expect(generator).toHaveBeenCalledTimes(1));
+
+    release();
+    expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
+    expect(screen.getByLabelText("Buyer name")).toBeEnabled();
+  });
+
+  it("preserves RFQ completion across Strict Mode effect replay", async () => {
+    render(
+      <StrictMode>
+        <RfqDrawer
+          plan={plan}
+          onClose={() => undefined}
+          onScheduleRevision={() => undefined}
+        />
+      </StrictMode>,
+    );
+    await completeReview();
+    await userEvent.click(screen.getByRole("button", { name: "Generate RFQ" }));
+    expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download consolidated internal request" }))
+      .toBeInTheDocument();
   });
 
   it("shows human recovery guidance without clearing reviewed fields", async () => {

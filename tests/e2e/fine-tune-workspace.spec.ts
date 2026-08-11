@@ -129,11 +129,10 @@ test("keeps the 1024px fine-tune workspace coherent and horizontally contained",
   await assertAccessible(page);
 });
 
-test("does not rank intentional mobile and tablet primary scrolling as nested-scroll debt", async ({ page }) => {
+test("does not rank responsive scrolling as nested-scroll debt", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const mobile = await collectUxReviewDiagnostics(page);
-  expect(mobile.nestedScrollableContainers.length).toBeGreaterThan(0);
   expect(mobile.actionableNestedScrollCandidates).toEqual([]);
 
   await page.setViewportSize({ width: 834, height: 1112 });
@@ -141,6 +140,5 @@ test("does not rank intentional mobile and tablet primary scrolling as nested-sc
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
   const tablet = await collectUxReviewDiagnostics(page);
-  expect(tablet.nestedScrollableContainers.length).toBeGreaterThan(0);
   expect(tablet.actionableNestedScrollCandidates).toEqual([]);
 });

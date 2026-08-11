@@ -8,6 +8,7 @@ export function PlannerDrawerFrame({
   closeRef,
   onClose,
   children,
+  busy = false,
 }: {
   ariaLabel: string;
   eyebrow: string;
@@ -16,6 +17,7 @@ export function PlannerDrawerFrame({
   closeRef: RefObject<HTMLButtonElement | null>;
   onClose(): void;
   children: ReactNode;
+  busy?: boolean;
 }) {
   return (
     <div
@@ -36,7 +38,7 @@ export function PlannerDrawerFrame({
           Close
         </button>
       </header>
-      <div className="planner-drawer-body">{children}</div>
+      <div className="planner-drawer-body" aria-busy={busy || undefined}>{children}</div>
     </div>
   );
 }

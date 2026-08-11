@@ -9,6 +9,7 @@ import {
   type RfqWorkflowState,
 } from "@/contracts/rfq";
 import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
+import { OperationStatus } from "@/features/OperationStatus";
 import { RecoveryNotice } from "@/features/RecoveryNotice";
 import { buildInternalDownload, generateRfq } from "@/planning/rfq";
 
@@ -30,6 +31,18 @@ export function downloadText(fileName: string, value: string): void {
   URL.revokeObjectURL(url);
 }
 
+type RfqGenerator = (...args: Parameters<typeof generateRfq>) => RfqDraft | Promise<RfqDraft>;
+
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve());
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
+
 export function RfqDrawer({
   plan,
   onClose,
@@ -39,7 +52,7 @@ export function RfqDrawer({
   plan: PlanningResult;
   onClose(): void;
   onScheduleRevision(flightStart: string, flightEnd: string): void;
-  generator?: typeof generateRfq;
+  generator?: RfqGenerator;
 }) {
   const supplierIds = [...new Set(plan.recommended.siteIds.flatMap((siteId) => {
     const site = frozenLagosBundle.sites.find((s) => s.id === siteId);
@@ -57,9 +70,17 @@ export function RfqDrawer({
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const generatingRef = useRef(false);
+  const mountedRef = useRef(true);
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   useEffect(() => {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
@@ -104,20 +125,29 @@ export function RfqDrawer({
     flightEnd === plan.brief.flightEnd;
   const valid = plan.recommended.valid && datesMatchAppliedPlan &&
     RfqReviewInputSchema.safeParse(review).success;
+  const generating = workflow.status === "Generating";
   function change(action: () => void) {
+    if (generatingRef.current) return;
     action();
     setWorkflow({ status: "Review required" });
   }
   async function generate() {
+    if (generatingRef.current || !valid) return;
+    generatingRef.current = true;
     setWorkflow({ status: "Generating" });
-    await Promise.resolve();
+    await nextPaint();
     try {
-      setWorkflow({ status: "Generated", output: generator(frozenLagosBundle, plan, review) });
+      const output = await generator(frozenLagosBundle, plan, review);
+      if (mountedRef.current) setWorkflow({ status: "Generated", output });
     } catch (error) {
-      setWorkflow({
-        status: "Generation failed",
-        message: error instanceof Error ? error.message : "RFQ_GENERATION_FAILED",
-      });
+      if (mountedRef.current) {
+        setWorkflow({
+          status: "Generation failed",
+          message: error instanceof Error ? error.message : "RFQ_GENERATION_FAILED",
+        });
+      }
+    } finally {
+      generatingRef.current = false;
     }
   }
   const output: RfqDraft | null = workflow.status === "Generated" ? workflow.output : null;
@@ -129,11 +159,18 @@ export function RfqDrawer({
       dialogRef={dialogRef}
       closeRef={closeRef}
       onClose={onClose}
+      busy={generating}
     >
       <div className="planner-drawer-status-row">
         <strong>DEMO — DO NOT SEND</strong>
         <span>{workflow.status}</span>
       </div>
+      {generating && (
+        <OperationStatus
+          title="Generating supplier request…"
+          detail="Using the reviewed package and contact details. Nothing is being sent, booked, or reserved."
+        />
+      )}
       {workflow.status === "Generation failed" && (
         <RecoveryNotice
           ariaLabel="RFQ generation failure"
@@ -145,32 +182,32 @@ export function RfqDrawer({
         </RecoveryNotice>
       )}
       <div className="planner-drawer-form-grid">
-        <label>Buyer name<input value={buyerName} onChange={(event) => change(() => setBuyerName(event.target.value))} /></label>
-        <label>Buyer email<input type="email" value={buyerEmail} onChange={(event) => change(() => setBuyerEmail(event.target.value))} /></label>
-        <label>Response deadline<input type="date" value={responseDeadline} onChange={(event) => change(() => setResponseDeadline(event.target.value))} /></label>
-        <label>Flight start<input type="date" value={flightStart} onChange={(event) => change(() => setFlightStart(event.target.value))} /></label>
-        <label>Flight end<input type="date" value={flightEnd} onChange={(event) => change(() => setFlightEnd(event.target.value))} /></label>
+        <label>Buyer name<input disabled={generating} value={buyerName} onChange={(event) => change(() => setBuyerName(event.target.value))} /></label>
+        <label>Buyer email<input type="email" disabled={generating} value={buyerEmail} onChange={(event) => change(() => setBuyerEmail(event.target.value))} /></label>
+        <label>Response deadline<input type="date" disabled={generating} value={responseDeadline} onChange={(event) => change(() => setResponseDeadline(event.target.value))} /></label>
+        <label>Flight start<input type="date" disabled={generating} value={flightStart} onChange={(event) => change(() => setFlightStart(event.target.value))} /></label>
+        <label>Flight end<input type="date" disabled={generating} value={flightEnd} onChange={(event) => change(() => setFlightEnd(event.target.value))} /></label>
       </div>
       {!datesMatchAppliedPlan && <section className="planner-drawer-notice" aria-label="Schedule revision required">
         <p>Dates changed. Recompute a dirty plan revision before generating the RFQ.</p>
         <button
           type="button"
-          disabled={flightStart > flightEnd}
+          disabled={generating || flightStart > flightEnd}
           onClick={() => onScheduleRevision(flightStart, flightEnd)}
         >
           Recompute plan with these dates
         </button>
       </section>}
       <label className="planner-choice-control">
-        <input type="checkbox" checked={datesConfirmed} onChange={(event) => change(() => setDatesConfirmed(event.target.checked))} />
+        <input type="checkbox" disabled={generating} checked={datesConfirmed} onChange={(event) => change(() => setDatesConfirmed(event.target.checked))} />
         <span>Dates confirmed</span>
       </label>
       {supplierIds.map((supplierId) => <label key={supplierId}>
         {supplierId} note
-        <textarea value={supplierNotes[supplierId] ?? ""} onChange={(event) => change(() => setSupplierNotes((current) => ({ ...current, [supplierId]: event.target.value })))} />
+        <textarea disabled={generating} value={supplierNotes[supplierId] ?? ""} onChange={(event) => change(() => setSupplierNotes((current) => ({ ...current, [supplierId]: event.target.value })))} />
       </label>)}
       <div className="planner-drawer-primary-row">
-        <button className="primary" type="button" disabled={!valid || workflow.status === "Generating"} onClick={() => void generate()}>{workflow.status === "Generation failed" ? "Retry RFQ generation" : "Generate RFQ"}</button>
+        <button className="primary" type="button" disabled={!valid || generating} onClick={() => void generate()}>{generating ? "Generating RFQ…" : workflow.status === "Generation failed" ? "Retry RFQ generation" : "Generate RFQ"}</button>
       </div>
       {output?.supplierMessages.map((message) => <section className="planner-drawer-output" key={message.supplierId}>
         <h2>{message.supplierId}</h2>

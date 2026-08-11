@@ -7,6 +7,7 @@ import "./explorer-polish.css";
 import "./finetune-polish.css";
 import "./drawer-polish.css";
 import "./recovery-polish.css";
+import "./transition-polish.css";
 
 export const metadata: Metadata = {
   title: "OOH Promotion Wizard",
