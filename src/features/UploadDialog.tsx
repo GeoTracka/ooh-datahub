@@ -520,7 +520,7 @@ export function UploadDialog({
         <p>Customer/open coordinates work offline. Provider candidates remain optional, context-only, and separately reviewable.</p>
         {uploadScenes.local.features.length > 0 && <div className="upload-map">
           <h3>Uploaded coordinates · offline MapLibre preview</h3>
-          <MapCanvas scene={uploadScenes.local} />
+          <MapCanvas scene={uploadScenes.local} ariaLabel="Uploaded inventory map" />
         </div>}
         {uploadScenes.provider.features.length > 0 && <div className="upload-map">
           <h3>Provider candidates · Google review</h3>
