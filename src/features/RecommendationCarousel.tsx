@@ -27,6 +27,43 @@ function deliveryFor(
   };
 }
 
+function SelectedZoneDetail({
+  card,
+  className,
+  onExplain,
+  onShowFullPackage,
+}: {
+  card: ZoneCard;
+  className?: string;
+  onExplain(): void;
+  onShowFullPackage(): void;
+}) {
+  return (
+    <div className={`recommendation-selected-detail${className ? ` ${className}` : ""}`}>
+      <p>
+        <strong>{card.label}</strong> · {card.role}. The delivery figure above is this
+        zone&apos;s incremental contribution to the selected package, not a standalone total.
+      </p>
+      <div className="recommendation-focus-actions">
+        <button
+          type="button"
+          className="explorer-link-button recommendation-story"
+          onClick={onExplain}
+        >
+          View delivery story
+        </button>
+        <button
+          type="button"
+          className="explorer-link-button"
+          onClick={onShowFullPackage}
+        >
+          View full package
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function RecommendationCarousel({
   cards,
   objective,
@@ -42,6 +79,8 @@ export function RecommendationCarousel({
   onSelect(zoneId: string | null): void;
   onExplain(zoneId: string): void;
 }) {
+  const selectedCard = cards.find((card) => card.zoneId === selectedZoneId) ?? null;
+
   return (
     <div className="recommendation-carousel" aria-label="Recommended package zones">
       {cards.map((card) => {
@@ -74,32 +113,24 @@ export function RecommendationCarousel({
               <span className="recommendation-evidence">{evidenceLabel}</span>
             </button>
             {selected && (
-              <div className="recommendation-selected-detail">
-                <p>
-                  {card.role}. The delivery figure above is this zone&apos;s incremental
-                  contribution to the selected package, not a standalone total.
-                </p>
-                <div className="recommendation-focus-actions">
-                  <button
-                    type="button"
-                    className="explorer-link-button recommendation-story"
-                    onClick={() => onExplain(card.zoneId)}
-                  >
-                    View delivery story
-                  </button>
-                  <button
-                    type="button"
-                    className="explorer-link-button"
-                    onClick={() => onSelect(null)}
-                  >
-                    View full package
-                  </button>
-                </div>
-              </div>
+              <SelectedZoneDetail
+                card={card}
+                className="recommendation-selected-detail-mobile"
+                onExplain={() => onExplain(card.zoneId)}
+                onShowFullPackage={() => onSelect(null)}
+              />
             )}
           </article>
         );
       })}
+      {selectedCard && (
+        <SelectedZoneDetail
+          card={selectedCard}
+          className="recommendation-selected-detail-desktop"
+          onExplain={() => onExplain(selectedCard.zoneId)}
+          onShowFullPackage={() => onSelect(null)}
+        />
+      )}
     </div>
   );
 }
