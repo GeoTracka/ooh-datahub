@@ -40,7 +40,7 @@ function safeName(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-async function collectDiagnostics(page: Page): Promise<UxReviewDiagnostics> {
+export async function collectUxReviewDiagnostics(page: Page): Promise<UxReviewDiagnostics> {
   return page.evaluate(() => {
     const describe = (element: Element): ElementDiagnostic => {
       const html = element as HTMLElement;
@@ -188,7 +188,7 @@ export async function captureUxReview(
     animations: "disabled",
     caret: "hide",
   });
-  const diagnostics = await collectDiagnostics(page);
+  const diagnostics = await collectUxReviewDiagnostics(page);
   await writeFile(diagnosticsPath, `${JSON.stringify(diagnostics, null, 2)}\n`, "utf8");
 
   await testInfo.attach(`ux-review-${artifactName}`, {
