@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RfqDrawer } from "@/features/RfqDrawer";
@@ -61,13 +61,13 @@ describe("RfqDrawer", () => {
 
     expect(await screen.findByRole("status", { name: "Generating supplier request…" }))
       .toBeInTheDocument();
-    expect(generator).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("Buyer name")).toBeDisabled();
     expect(screen.getByLabelText("Buyer email")).toBeDisabled();
     expect(screen.getByLabelText("Response deadline")).toBeDisabled();
     expect(screen.getByLabelText("Dates confirmed")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Generating RFQ…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Close" })).toBeEnabled();
+    await waitFor(() => expect(generator).toHaveBeenCalledTimes(1));
 
     release();
     expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
