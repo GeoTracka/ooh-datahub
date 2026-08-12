@@ -92,7 +92,8 @@ describe("PlannerPage explorer", () => {
     await userEvent.click(screen.getByRole("button", { name: /Adjust package/ }));
     expect(screen.getByRole("region", { name: /Step 5 of 5: Make this package yours/ }))
       .toBeInTheDocument();
-    expect(screen.getByLabelText("Package adjustments")).toBeInTheDocument();
+    expect(screen.getByLabelText("Package adjustments"))
+      .toHaveClass("package-adjustments");
     expect(screen.getByRole("button", { name: "Review supplier request" })).toBeEnabled();
   }, 30000);
 

@@ -79,7 +79,7 @@ describe("generateRfq", () => {
         coordinate: { longitude: expect.any(Number), latitude: expect.any(Number) },
         dimensions: null,
         requestedSchedule: { quantity: 1 },
-        indicativeRate: { currency: "NGN", basis: "indicative_planning_rate" },
+        indicativeRate: { currency: "NGN", basis: "illustrative_demo_line_rate" },
       });
     }
     expect(rfq.internalRequest.lines.every((line) =>
@@ -87,6 +87,8 @@ describe("generateRfq", () => {
     )).toBe(true);
     expect(buildInternalDownload(rfq)).toContain(plan.replay!.bundleId);
     expect(buildInternalDownload(rfq)).toContain(plan.replay!.modelVersion);
+    expect(rfq.internalRequest.audiencePlanningBasis.exposureBasis)
+      .toBe("target people with at least one modelled OOH opportunity to see");
   });
 
   it("isolates supplier copy from internal budget, audience, replay and other suppliers", () => {

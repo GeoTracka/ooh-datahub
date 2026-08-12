@@ -282,7 +282,7 @@ button, input, select { font: inherit; }
 .package-strip > div strong { color: #172033; font-size: 1rem; }
 
 /* Adjustments panel */
-[aria-label="Plan adjustments"] {
+.package-adjustments {
   grid-column: 1 / -1;
   padding: 14px 20px;
   background: #f9fafc;
@@ -292,12 +292,12 @@ button, input, select { font: inherit; }
   gap: 10px;
   align-items: flex-start;
 }
-[aria-label="Plan adjustments"] > strong {
+.package-adjustments > strong {
   width: 100%;
   font-size: 0.9rem;
   color: #172033;
 }
-[aria-label="Plan adjustments"] button {
+.package-adjustments button {
   padding: 6px 12px;
   border: 1px solid #c8cfdc;
   border-radius: 7px;
@@ -307,26 +307,26 @@ button, input, select { font: inherit; }
   cursor: pointer;
   color: #172033;
 }
-[aria-label="Plan adjustments"] button:hover { background: #eef1f6; }
-[aria-label="Plan adjustments"] > section,
-[aria-label="Plan adjustments"] > details {
+.package-adjustments button:hover { background: #eef1f6; }
+.package-adjustments > section,
+.package-adjustments > details {
   width: 100%;
 }
-[aria-label="Plan adjustments"] h2,
-[aria-label="Plan adjustments"] h3 {
+.package-adjustments h2,
+.package-adjustments h3 {
   font-size: 0.9rem;
   margin: 0 0 6px;
 }
-[aria-label="Plan adjustments"] dl {
+.package-adjustments dl {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 2px 12px;
   margin: 4px 0;
   font-size: 0.8rem;
 }
-[aria-label="Plan adjustments"] dt { color: #5a6478; font-weight: 600; }
-[aria-label="Plan adjustments"] dd { margin: 0; color: #172033; }
-[aria-label="Plan adjustments"] code {
+.package-adjustments dt { color: #5a6478; font-weight: 600; }
+.package-adjustments dd { margin: 0; color: #172033; }
+.package-adjustments code {
   font-size: 0.75rem;
   background: #eef1f6;
   padding: 1px 4px;

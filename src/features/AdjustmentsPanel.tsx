@@ -129,7 +129,7 @@ export function AdjustmentsPanel({
     : [];
 
   return (
-    <aside aria-label="Package adjustments">
+    <aside className="package-adjustments" aria-label="Package adjustments">
       <header className="adjustment-header">
         <div>
           <span>{isDirty ? "Changes not yet applied" : PUBLIC_COPY.fineTune.title}</span>

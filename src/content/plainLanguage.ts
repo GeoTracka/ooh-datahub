@@ -37,7 +37,7 @@ export const PUBLIC_COPY = {
     additional: "Additional coverage area",
   },
   inventory: {
-    visibilityBasis: "Inventory locations and mapped visibility inputs",
+    visibilityBasis: "Inventory locations and how visible each placement is",
     selectedLocations: "selected media locations",
     uploaded: "Uploaded inventory",
     uploadedNote: "Added for map and package comparison only. Audience estimates stay unchanged until supporting data is available.",
@@ -87,7 +87,7 @@ export const PUBLIC_COPY = {
   },
   metadata: {
     title: "Outdoor Campaign Planner",
-    description: "Plan outdoor campaigns with real inventory, clear audience estimates, and supplier-ready requests.",
+    description: "Plan outdoor campaigns with inventory locations, clear audience estimates, and supplier-ready requests.",
   },
 } as const;
 

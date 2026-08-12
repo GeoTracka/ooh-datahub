@@ -377,7 +377,7 @@
   background: #fbfbfa;
 }
 
-.explorer-step-card [aria-label="Plan adjustments"] {
+.explorer-step-card .package-adjustments {
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -386,11 +386,11 @@
   background: transparent;
 }
 
-.explorer-step-card [aria-label="Plan adjustments"] > strong {
+.explorer-step-card .package-adjustments > strong {
   font-size: 14px;
 }
 
-.explorer-step-card [aria-label="Plan adjustments"] button {
+.explorer-step-card .package-adjustments button {
   align-self: flex-start;
 }
 

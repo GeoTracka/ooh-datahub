@@ -82,6 +82,40 @@ describe("CausalDrawer", () => {
     expect(first.measurement.fingerprint).not.toBe(second.measurement.fingerprint);
   });
 
+  it("keeps raw source provenance available behind a technical disclosure", async () => {
+    const siteId = plan.recommended.siteIds[0];
+    const siteView = selectCausalDrawerViewModel(bundle, plan, {
+      kind: "site", id: siteId, metric: "reach",
+    });
+    const target = siteView.nextTargets.find(
+      (candidate) => candidate.kind === "evidence",
+    )!;
+    const view = selectCausalDrawerViewModel(bundle, plan, target);
+    render(<CausalDrawer
+      measurement={view.measurement}
+      target={target}
+      entityLabel={view.label}
+      scopeNote={view.scopeNote}
+      activeStage="location"
+      ancestors={[]}
+      nextTargets={view.nextTargets}
+      sourceRecord={view.sourceRecord}
+      onStage={() => undefined}
+      onNavigate={() => undefined}
+      onAncestor={() => undefined}
+      onBack={() => undefined}
+      onClose={() => undefined}
+    />);
+
+    expect(screen.getByRole("heading", { name: "Source information" }))
+      .toBeInTheDocument();
+    await userEvent.click(screen.getByText("Technical source details"));
+    expect(screen.getByText(view.sourceRecord!.id)).toBeInTheDocument();
+    expect(screen.getByText(view.sourceRecord!.geographyId)).toBeInTheDocument();
+    expect(screen.getByText(view.sourceRecord!.provenance)).toBeInTheDocument();
+    expect(screen.getByText(view.sourceRecord!.modelUse)).toBeInTheDocument();
+  });
+
   it("renders entity identity, a back action, understandable sources, and distinct metric focus", async () => {
     const siteId = plan.recommended.siteIds[0];
     const target: DrawerTarget = { kind: "site", id: siteId, metric: "reach" };

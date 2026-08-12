@@ -23,8 +23,9 @@ describe("plain-language public copy", () => {
     expect(PUBLIC_COPY.metrics.additionalReach).toBe("Additional people reached");
     expect(PUBLIC_COPY.metrics.planScore).toBe("Plan score");
     expect(PUBLIC_COPY.budget.remaining).toBe("Budget remaining");
-    expect(PUBLIC_COPY.inventory.visibilityBasis).toBe("Inventory locations and mapped visibility inputs");
+    expect(PUBLIC_COPY.inventory.visibilityBasis).toBe("Inventory locations and how visible each placement is");
     expect(PUBLIC_COPY.rfq.watermark).toBe("DRAFT — NOT YET SENT");
+    expect(PUBLIC_COPY.metadata.description).not.toMatch(/\breal inventory\b/i);
   });
 
   it("translates internal evidence grades into understandable confidence labels", () => {

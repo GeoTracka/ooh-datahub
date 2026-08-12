@@ -62,7 +62,7 @@ export type SupplierRfqLine = {
   indicativeRate: {
     amount: number;
     currency: "NGN";
-    basis: "indicative_planning_rate";
+    basis: "illustrative_demo_line_rate";
   };
   confirmationRequests: {
     identityAndOrientation: "REQUESTED";
@@ -95,7 +95,7 @@ export type AudiencePlanningBasis = {
   targetReachSharePercent: RfqRange | null;
   influenceCapture: MetricClaim | null;
   priorityInfluenceArchetypes: string[];
-  exposureBasis: "people in the chosen audience who may see the campaign at least once";
+  exposureBasis: "target people with at least one modelled OOH opportunity to see";
   exposureThreshold: "1+";
   modelVersion: string;
   targetUniverseVersion: string;

@@ -222,6 +222,17 @@ export function CausalDrawer({
             <div><dt>Available dates</dt><dd>{sourceRecord.periodStart} → {sourceRecord.periodEnd}</dd></div>
             <div><dt>Use</dt><dd>Planning use only</dd></div>
           </dl>
+          <details>
+            <summary>Technical source details</summary>
+            <dl>
+              <div><dt>Source ID</dt><dd><code>{sourceRecord.id}</code></dd></div>
+              <div><dt>Source type</dt><dd><code>{sourceRecord.kind}</code></dd></div>
+              <div><dt>Product scope</dt><dd><code>{sourceRecord.productScope}</code></dd></div>
+              <div><dt>Geography ID</dt><dd><code>{sourceRecord.geographyId}</code></dd></div>
+              <div><dt>Provenance</dt><dd><code>{sourceRecord.provenance}</code></dd></div>
+              <div><dt>Model use</dt><dd><code>{sourceRecord.modelUse}</code></dd></div>
+            </dl>
+          </details>
         </section>}
         {activeStage === "unique" && target.metric === "influence" && measurement.influence && (
           <section>
