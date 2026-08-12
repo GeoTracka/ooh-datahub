@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import type { selectZoneCards } from "@/application/plannerSelectors";
 
 type ZoneCard = ReturnType<typeof selectZoneCards>[number];
@@ -42,14 +45,31 @@ export function RecommendationCarousel({
   onSelect(zoneId: string | null): void;
   onExplain(zoneId: string): void;
 }) {
+  const selectedCardRef = useRef<HTMLElement | null>(null);
+  const previousSelectedZoneId = useRef(selectedZoneId);
+
+  useEffect(() => {
+    if (previousSelectedZoneId.current === selectedZoneId) return;
+    previousSelectedZoneId.current = selectedZoneId;
+    if (!selectedZoneId || !selectedCardRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      const selectedCard = selectedCardRef.current;
+      if (typeof selectedCard?.scrollIntoView === "function") {
+        selectedCard.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selectedZoneId]);
+
   return (
-    <div className="recommendation-carousel" aria-label="Recommended package zones">
+    <div className="recommendation-carousel" aria-label="Selected package zones">
       {cards.map((card) => {
         const delivery = deliveryFor(card, objective);
         const selected = card.zoneId === selectedZoneId;
         return (
           <article
             key={card.zoneId}
+            ref={selected ? selectedCardRef : undefined}
             className={selected ? "recommendation-slide selected" : "recommendation-slide"}
             data-testid="zone-card"
           >
@@ -92,7 +112,7 @@ export function RecommendationCarousel({
                     className="explorer-link-button"
                     onClick={() => onSelect(null)}
                   >
-                    View full package
+                    Clear zone focus
                   </button>
                 </div>
               </div>

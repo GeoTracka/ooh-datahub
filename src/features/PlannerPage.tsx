@@ -2,7 +2,7 @@
 
 import { useMemo, useReducer, useRef, useState } from "react";
 import { frozenLagosBundle as bundle } from "@/bundle/loadFrozenBundle";
-import type { Brief } from "@/contracts/domain";
+import type { Brief, PackageCandidate } from "@/contracts/domain";
 import type { MeasurementStage } from "@/contracts/metrics";
 import type { DrawerTarget, MapLens } from "@/contracts/renderer";
 import {
@@ -30,6 +30,7 @@ import { LensTabs } from "@/features/LensTabs";
 import { MapStage } from "@/features/MapStage";
 import { OperationStatus } from "@/features/OperationStatus";
 import { PackageConstraintNotice } from "@/features/PackageConstraintNotice";
+import { PackageOptionComparison } from "@/features/PackageOptionComparison";
 import { PackageStrip } from "@/features/PackageStrip";
 import { RecommendationCarousel } from "@/features/RecommendationCarousel";
 import { RfqDrawer } from "@/features/RfqDrawer";
@@ -155,6 +156,7 @@ export function PlannerPage() {
   const [brief, setBrief] = useState(initialBrief);
   const [state, dispatch] = useReducer(plannerReducer, initialPlannerState);
   const [step, setStep] = useState<ExplorerStep>(1);
+  const [fineTuneReturnStep, setFineTuneReturnStep] = useState<3 | 4>(4);
   const [lens, setLens] = useState<MapLens>("plan");
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<{
@@ -216,7 +218,7 @@ export function PlannerPage() {
         });
       }
       if (!plan) return;
-      setSelectedZoneId(plan.selectedZoneIds[0] ?? null);
+      setSelectedZoneId(null);
       setLens("plan");
       setStep(3);
     } finally {
@@ -278,6 +280,35 @@ export function PlannerPage() {
       id: zoneId,
       metric: visible.brief.objective === "influential_core" ? "influence" : "reach",
     });
+  }
+
+  function selectPackage(candidate: PackageCandidate) {
+    if (!visible) return;
+    if (candidate.id === visible.recommended.id) return;
+    setSelectedZoneId(null);
+    if (
+      candidate.id === state.appliedPlan?.recommended.id &&
+      state.packagePreviewActive &&
+      state.packagePreviewBasePlan === null
+    ) {
+      dispatch({ type: "package-previewed", plan: null });
+      return;
+    }
+    dispatch({
+      type: "package-previewed",
+      plan: recalculateSelectedSites(bundle, visible, candidate.siteIds),
+    });
+  }
+
+  function continueWithPackage() {
+    if (!visible?.recommended.valid) return;
+    if (state.draftPlan) dispatch({ type: "applied" });
+    setStep(4);
+  }
+
+  function enterFineTune(from: 3 | 4) {
+    setFineTuneReturnStep(from);
+    setStep(5);
   }
 
   function navigateDrawer(target: DrawerTarget) {
@@ -498,14 +529,32 @@ export function PlannerPage() {
           <StepCard
             step={3}
             total={5}
-            title="Recommended package"
+            title="Choose a planning approach"
             onBack={() => setStep(2)}
             primaryAction={{
-              label: "This package works",
-              onClick: () => setStep(4),
+              label: "Continue with selected package",
+              onClick: continueWithPackage,
               disabled: !visible.recommended.valid,
             }}
+            secondaryAction={{
+              label: "Fine-tune selected package",
+              onClick: () => enterFineTune(3),
+            }}
           >
+            <PackageOptionComparison
+              plan={visible}
+              selectedPackageId={visible.recommended.id}
+              onSelect={selectPackage}
+            />
+            <PackageStrip
+              plan={visible}
+              isDirty={dirty}
+              canReviewRfq={visible.recommended.valid}
+              heading="Selected package"
+              showRfqAction={false}
+              onExplain={(metric) => openDrawer({ kind: "package", metric })}
+              onReviewRfq={reviewRfq}
+            />
             <RecommendationCarousel
               cards={cards}
               objective={visible.brief.objective}
@@ -513,14 +562,6 @@ export function PlannerPage() {
               selectedZoneId={selectedZoneId}
               onSelect={setSelectedZoneId}
               onExplain={openZoneStory}
-            />
-            <PackageStrip
-              plan={visible}
-              isDirty={dirty}
-              canReviewRfq={visible.recommended.valid}
-              showRfqAction={false}
-              onExplain={(metric) => openDrawer({ kind: "package", metric })}
-              onReviewRfq={reviewRfq}
             />
             {!visible.recommended.valid && (
               <PackageConstraintNotice reasonCodes={visible.recommended.invalidReasonCodes} />
@@ -550,7 +591,7 @@ export function PlannerPage() {
               canReviewRfq={visible.recommended.valid}
               onReviewRfq={reviewRfq}
               onUpload={() => setUploadOpen(true)}
-              onFineTune={() => setStep(5)}
+              onFineTune={() => enterFineTune(4)}
             />
           </StepCard>
         )}
@@ -560,7 +601,7 @@ export function PlannerPage() {
             step={5}
             total={5}
             title="Make this package yours"
-            onBack={() => setStep(4)}
+            onBack={() => setStep(fineTuneReturnStep)}
             primaryAction={{
               label: dirty ? "Apply & review RFQ" : "Review RFQ",
               onClick: reviewRfq,
@@ -637,7 +678,7 @@ export function PlannerPage() {
               plan: next,
               reason: "Apply uploaded context · " + contextRevision.dataRevision,
             });
-            setSelectedZoneId(next.selectedZoneIds[0] ?? null);
+            setSelectedZoneId(null);
             setLens("plan");
             setStep(3);
             setUploadOpen(false);
@@ -659,6 +700,7 @@ export function PlannerPage() {
             });
             setBrief(revised.brief);
             dispatch({ type: "close-rfq-with-draft", plan: revised });
+            setFineTuneReturnStep(4);
             setStep(5);
           }}
         />

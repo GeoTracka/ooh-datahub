@@ -18,6 +18,7 @@ export function PackageStrip({
   onExplain,
   onReviewRfq,
   showRfqAction = true,
+  heading = "Recommended package",
 }: {
   plan: PlanningResult;
   isDirty: boolean;
@@ -25,6 +26,7 @@ export function PackageStrip({
   onExplain(metric: "reach" | "influence"): void;
   onReviewRfq(): void;
   showRfqAction?: boolean;
+  heading?: string;
 }) {
   if (!plan.measurement) return null;
   const claim = plan.measurement.claim;
@@ -56,7 +58,7 @@ export function PackageStrip({
   return (
     <section className="package-strip" data-testid="package-strip">
       <div>
-        <strong>Recommended package</strong>
+        <strong>{heading}</strong>
         <span>
           {plan.recommended.siteIds.length} sites · ₦{compact(plan.recommended.costNgn)} planned of ₦{compact(plan.brief.budgetNgn)} budget
         </span>

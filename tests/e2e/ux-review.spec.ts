@@ -42,12 +42,12 @@ async function makeExplicitSwap(page: Page): Promise<void> {
 async function reachRecommendedPackage(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
-  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
 }
 
 async function reachActionStep(page: Page): Promise<void> {
   await reachRecommendedPackage(page);
-  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
 }
 
@@ -73,7 +73,7 @@ test.describe("desktop workflow review", () => {
     await captureUxReview(page, testInfo, "desktop-02-timing-budget");
 
     await page.getByRole("button", { name: "Show recommended zones" }).click();
-    await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
     await expect(page.getByTestId("zone-card")).toHaveCount(3);
     await assertNoHorizontalOverflow(page, "desktop step 3");
     await captureUxReview(page, testInfo, "desktop-03-recommended-package");
@@ -94,7 +94,7 @@ test.describe("desktop workflow review", () => {
     await causalDialog.getByRole("button", { name: "Close" }).click();
     await expect(deliveryStoryTrigger).toBeFocused();
 
-    await page.getByRole("button", { name: "This package works" }).click();
+    await page.getByRole("button", { name: "Continue with selected package" }).click();
     await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
     await captureUxReview(page, testInfo, "desktop-06-package-confirmed");
 
@@ -137,7 +137,7 @@ test.describe("desktop workflow review", () => {
     await captureUxReview(page, testInfo, "desktop-12-upload-preview", { fullPage: false });
 
     await page.getByRole("button", { name: "Use uploaded facts as context" }).click();
-    await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
     const uploadStatus = page.getByRole("complementary", { name: "Uploaded planning status" });
     await expect(uploadStatus).toContainText("Customer inventory · context only");
     await expect(uploadStatus).toContainText("1 reviewed rows");

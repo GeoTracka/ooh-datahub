@@ -82,9 +82,20 @@ export type PackageCandidate = {
   estimateFingerprint: string | null;
 };
 
+export type PackageOptionStyle =
+  | "best_overall"
+  | "maximum_delivery"
+  | "budget_smart";
+
+export type PackageOption = {
+  style: PackageOptionStyle;
+  candidate: PackageCandidate;
+};
+
 export type PlanningResult = {
   brief: Brief;
   recommended: PackageCandidate;
+  packageOptions: PackageOption[];
   internalReplacements: PackageCandidate[];
   selectedZoneIds: string[];
   measurement: import("@/contracts/metrics").EstimatePackageResult | null;

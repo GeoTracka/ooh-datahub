@@ -70,17 +70,16 @@ describe("semantic explorer UX", () => {
     render(<PlannerPage />);
 
     await user.click(screen.getByRole("button", { name: "Use default timing & budget" }));
-    await screen.findByRole("region", { name: /Step 3 of 5: Recommended package/ });
+    await screen.findByRole("region", { name: /Step 3 of 5: Choose a planning approach/ });
     await user.click(screen.getByRole("button", { name: "Back" }));
 
     const budget = screen.getByLabelText("Budget (NGN)");
     await user.clear(budget);
     await user.type(budget, "20000000");
     await user.click(screen.getByRole("button", { name: "Show recommended zones" }));
-    await screen.findByRole("region", { name: /Step 3 of 5: Recommended package/ });
+    await screen.findByRole("region", { name: /Step 3 of 5: Choose a planning approach/ });
 
-    await user.click(screen.getByRole("button", { name: "This package works" }));
-    await user.click(screen.getByRole("button", { name: /Fine-tune package/ }));
+    await user.click(screen.getByRole("button", { name: "Fine-tune selected package" }));
     expect(screen.getByText("Unapplied changes")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Undo last change" }));

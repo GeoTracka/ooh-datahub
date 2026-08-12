@@ -10,6 +10,7 @@ export function StepCard({
   children,
   onBack,
   primaryAction,
+  secondaryAction,
   busy = false,
 }: {
   step: number;
@@ -19,6 +20,11 @@ export function StepCard({
   children: ReactNode;
   onBack?: () => void;
   primaryAction?: {
+    label: string;
+    onClick(): void;
+    disabled?: boolean;
+  };
+  secondaryAction?: {
     label: string;
     onClick(): void;
     disabled?: boolean;
@@ -70,23 +76,35 @@ export function StepCard({
         </div>
       </header>
       <div className="explorer-step-content">{children}</div>
-      {(onBack || primaryAction) && (
+      {(onBack || primaryAction || secondaryAction) && (
         <footer className="explorer-step-actions">
           {onBack && (
             <button type="button" className="explorer-link-button" disabled={busy} onClick={onBack}>
               Back
             </button>
           )}
-          {primaryAction && (
-            <button
-              type="button"
-              className="primary explorer-primary-action"
-              disabled={busy || primaryAction.disabled}
-              onClick={primaryAction.onClick}
-            >
-              {primaryAction.label}
-            </button>
-          )}
+          <div className="explorer-step-action-group">
+            {secondaryAction && (
+              <button
+                type="button"
+                className="secondary explorer-secondary-action"
+                disabled={busy || secondaryAction.disabled}
+                onClick={secondaryAction.onClick}
+              >
+                {secondaryAction.label}
+              </button>
+            )}
+            {primaryAction && (
+              <button
+                type="button"
+                className="primary explorer-primary-action"
+                disabled={busy || primaryAction.disabled}
+                onClick={primaryAction.onClick}
+              >
+                {primaryAction.label}
+              </button>
+            )}
+          </div>
         </footer>
       )}
     </section>

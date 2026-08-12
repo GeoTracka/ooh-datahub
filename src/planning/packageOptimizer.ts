@@ -2,6 +2,8 @@ import type { FrozenBundle } from "@/bundle/bundleSchema";
 import type {
   Brief,
   PackageCandidate,
+  PackageOption,
+  PackageOptionStyle,
   PillarScores,
   PlanningResult,
 } from "@/contracts/domain";
@@ -165,6 +167,70 @@ export function comparePackageCandidates(
     left.id.localeCompare(right.id);
 }
 
+function candidateScore(candidate: PackageCandidate): number {
+  return candidate.planningFit ?? candidate.contextRankScore ?? -1;
+}
+
+function pickCandidate(
+  candidates: PackageCandidate[],
+  selectedIds: Set<string>,
+  compare: (left: PackageCandidate, right: PackageCandidate) => number,
+  eligible: (candidate: PackageCandidate) => boolean = () => true,
+): PackageCandidate | null {
+  let selected: PackageCandidate | null = null;
+  for (const candidate of candidates) {
+    if (selectedIds.has(candidate.id) || !eligible(candidate)) continue;
+    if (!selected || compare(candidate, selected) < 0) selected = candidate;
+  }
+  return selected;
+}
+
+export function selectPackageOptions(
+  ranked: PackageCandidate[],
+): PackageOption[] {
+  const valid = ranked.filter((candidate) => candidate.valid);
+  if (ranked.length === 0) return [];
+
+  const deliveryComparator = (left: PackageCandidate, right: PackageCandidate) =>
+    ((right.deliveryRaw ?? -1) - (left.deliveryRaw ?? -1)) ||
+    comparePackageCandidates(left, right);
+  const budgetComparator = (left: PackageCandidate, right: PackageCandidate) =>
+    left.costNgn - right.costNgn || comparePackageCandidates(left, right);
+  const selectedIds = new Set<string>();
+  const selected = new Map<PackageOptionStyle, PackageCandidate>();
+
+  const best = pickCandidate(valid, selectedIds, comparePackageCandidates) ??
+    pickCandidate(ranked, selectedIds, comparePackageCandidates);
+  if (!best) return [];
+  selected.set("best_overall", best);
+  selectedIds.add(best.id);
+
+  const maximum = pickCandidate(valid, selectedIds, deliveryComparator) ??
+    pickCandidate(ranked, selectedIds, deliveryComparator);
+  if (maximum) {
+    selected.set("maximum_delivery", maximum);
+    selectedIds.add(maximum.id);
+  }
+
+  const bestScore = candidateScore(best);
+  const withinFitGuardrail = (candidate: PackageCandidate) =>
+    candidateScore(candidate) >= bestScore - 5;
+  const budget = pickCandidate(valid, selectedIds, budgetComparator, withinFitGuardrail) ??
+    pickCandidate(ranked, selectedIds, budgetComparator, withinFitGuardrail) ??
+    pickCandidate(valid, selectedIds, comparePackageCandidates) ??
+    pickCandidate(ranked, selectedIds, comparePackageCandidates);
+  if (budget) {
+    selected.set("budget_smart", budget);
+    selectedIds.add(budget.id);
+  }
+
+  return (["best_overall", "maximum_delivery", "budget_smart"] as const)
+    .flatMap((style) => {
+      const candidate = selected.get(style);
+      return candidate ? [{ style, candidate }] : [];
+    });
+}
+
 function contextRankScore(
   sites: FrozenBundle["sites"],
   sector: Brief["sector"],
@@ -311,6 +377,7 @@ export function optimizePackage(
   return {
     brief,
     recommended,
+    packageOptions: selectPackageOptions(ranked),
     internalReplacements: ranked
       .filter((candidate) => candidate.id !== recommended.id)
       .slice(0, 2),

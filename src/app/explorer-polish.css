@@ -123,6 +123,124 @@
   white-space: nowrap;
 }
 
+.map-marker-caption.selected {
+  border-color: rgb(15 91 78 / 20%);
+  background: rgb(237 245 242 / 96%);
+  color: #0f5b4e;
+  box-shadow: 0 3px 10px rgb(15 91 78 / 13%);
+  font-weight: 750;
+}
+
+.map-orientation-label {
+  display: block;
+  max-width: 150px;
+  overflow: hidden;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgb(250 248 245 / 72%);
+  color: #69716f;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 90%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.map-orientation-label[data-kind="water"] {
+  background: rgb(239 244 244 / 68%);
+  color: #56747a;
+  font-style: italic;
+}
+
+.map-context-status {
+  position: absolute;
+  z-index: 7;
+  top: 78px;
+  left: calc(min(440px, 38vw) + 24px);
+  display: flex;
+  max-width: min(360px, calc(100% - 36px));
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid rgb(28 32 38 / 7%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 92%);
+  color: #5c6272;
+  box-shadow: 0 3px 14px rgb(28 32 38 / 7%);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+  backdrop-filter: blur(10px);
+}
+
+.map-context-status-error {
+  border-color: rgb(155 58 49 / 16%);
+  background: rgb(255 249 247 / 95%);
+  color: #71332d;
+}
+
+.map-context-status button {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid rgb(15 91 78 / 20%);
+  border-radius: 8px;
+  background: #edf5f2;
+  color: #0f5b4e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.map-context-status button:focus-visible {
+  outline: 3px solid rgb(15 91 78 / 28%);
+  outline-offset: 2px;
+}
+
+.explorer-map-camera-toolbar {
+  position: absolute;
+  z-index: 6;
+  top: 18px;
+  left: calc(min(440px, 38vw) + 24px);
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgb(28 32 38 / 7%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 4px 18px rgb(28 32 38 / 8%);
+  backdrop-filter: blur(12px);
+}
+
+.explorer-map-camera-toolbar button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #5c6272;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.explorer-map-camera-toolbar button[aria-pressed="true"] {
+  background: #e7f1ee;
+  color: #0f5b4e;
+}
+
+.explorer-map-camera-toolbar button:disabled {
+  color: #9298a4;
+  cursor: not-allowed;
+}
+
+.explorer-map-camera-toolbar button:focus-visible {
+  outline: 3px solid rgb(15 91 78 / 28%);
+  outline-offset: 2px;
+}
+
 .explorer-map-legend {
   position: absolute;
   right: 18px;
@@ -151,6 +269,61 @@
   line-height: 1.35;
 }
 
+.explorer-map-overlays {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 5;
+  display: grid;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  justify-items: end;
+  gap: 8px;
+}
+
+.explorer-map-overlays .explorer-map-legend,
+.explorer-map-overlays .explorer-map-note {
+  position: static;
+}
+
+.explorer-map-note {
+  display: flex;
+  max-width: calc(100% - 24px);
+  align-items: center;
+  gap: 7px;
+  background: rgb(255 255 255 / 94%);
+  color: #343a46;
+  line-height: 1.35;
+  backdrop-filter: blur(10px);
+}
+
+.explorer-map-overlays .explorer-map-note {
+  max-width: 100%;
+}
+
+.explorer-map-note a {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  padding-left: 7px;
+  border-left: 1px solid rgb(52 58 70 / 20%);
+  border-radius: 3px;
+  color: #0f5b4e;
+  font-weight: 650;
+  text-underline-offset: 2px;
+}
+
+.explorer-map-note a:hover {
+  background: rgb(15 91 78 / 9%);
+  color: #09483d;
+}
+
+.explorer-map-note a:focus-visible {
+  outline: 3px solid rgb(15 91 78 / 35%);
+  outline-offset: 2px;
+}
+
 /* Workflow-critical text actions keep a lightweight visual treatment while
    exposing a comfortable pointer/touch/focus target. */
 .explorer-step-card .explorer-link-button {
@@ -174,59 +347,13 @@
   outline-offset: 2px;
 }
 
-/* Desktop/laptop Step 3 is a comparison task. Give the decision surface enough
-   width to show all three ranks while retaining a meaningful map context. */
 @media (min-width: 1024px) {
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) {
-    width: min(800px, calc(100vw - 300px));
+  .explorer-shell:has(.explorer-step-card[aria-label^="Step 3 of 5:"]) .explorer-map-camera-toolbar {
+    left: 18px;
   }
 
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-carousel {
-    position: relative;
-    grid-auto-flow: row;
-    grid-auto-columns: auto;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    overflow-x: visible;
-    padding: 2px 2px 94px;
-    scroll-snap-type: none;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-slide {
-    min-width: 0;
-    align-self: start;
-    scroll-snap-align: none;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-slide.selected {
-    overflow: visible;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-selected-detail {
-    position: absolute;
-    right: 2px;
-    bottom: 2px;
-    left: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    min-height: 76px;
-    padding: 10px 12px;
-    border: 1px solid #e4e5e8;
-    border-radius: 11px;
-    background: #fbfbfa;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .recommendation-selected-detail p {
-    max-width: 68%;
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .package-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .explorer-card-rail:has(.explorer-step-card[aria-label^="Step 3 of 5: Recommended package"]) .package-strip > :first-child {
-    grid-column: 1 / -1;
+  .explorer-shell:has(.explorer-step-card[aria-label^="Step 3 of 5:"]) .map-context-status {
+    left: 18px;
   }
 
   /* Before recommendation geometry exists, make the blank map read as a
@@ -275,52 +402,48 @@
   }
 }
 
-/* Short laptops should keep the decision CTA in the first viewport by reducing
-   whitespace, not by shrinking type or overlaying content. */
-@media (min-width: 1024px) and (max-height: 800px) {
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] {
-    max-height: calc(100vh - 32px);
-    padding: 16px 18px;
+@media (min-width: 768px) and (max-width: 1023px) {
+  .explorer-map-camera-toolbar {
+    top: 12px;
+    left: 12px;
   }
 
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-header {
-    gap: 8px;
-    margin-bottom: 12px;
+  .map-context-status {
+    top: 68px;
+    left: 12px;
   }
 
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-content {
-    gap: 12px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-carousel {
-    padding-bottom: 82px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-slide-main {
-    padding: 11px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .recommendation-selected-detail {
-    min-height: 68px;
-    padding: 8px 10px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip {
-    gap: 6px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip > div,
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .package-strip > button {
-    padding: 8px 9px;
-  }
-
-  .explorer-step-card[aria-label^="Step 3 of 5: Recommended package"] .explorer-step-actions {
-    margin-top: 12px;
-    padding-top: 12px;
+  .explorer-map-overlays {
+    bottom: calc(55vh + 25px);
   }
 }
 
 @media (max-width: 767px) {
+  .explorer-map-camera-toolbar {
+    top: 48px;
+    left: 8px;
+    max-width: calc(100% - 16px);
+  }
+
+  .explorer-map-camera-toolbar button {
+    padding-inline: 9px;
+    font-size: 11px;
+  }
+
+  .map-context-status {
+    top: 104px;
+    left: 8px;
+    max-width: calc(100% - 16px);
+  }
+
+  .map-context-status-error {
+    padding-block: 4px;
+  }
+
+  .explorer-shell:has(.map-context-status-error) .explorer-card-rail {
+    top: 31vh;
+  }
+
   .explorer-map-legend {
     right: 8px;
     bottom: 34px;
@@ -335,5 +458,22 @@
   .map-marker-caption {
     max-width: 90px;
     font-size: 9px;
+  }
+
+  .explorer-map-overlays {
+    right: 8px;
+    bottom: calc(4vh + 3px);
+    max-width: calc(100% - 16px);
+  }
+
+  .explorer-map-note {
+    right: 8px;
+    bottom: 6px;
+    max-width: calc(100% - 16px);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 2px 7px;
+    padding: 4px 7px;
+    font-size: 10px;
   }
 }

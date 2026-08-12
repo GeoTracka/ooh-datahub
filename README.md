@@ -14,7 +14,7 @@ The primary UI is a persistent-map, five-step split-canvas explorer:
 
 1. **Campaign profile** — product information, target audience, sector and objective.
 2. **Timing & budget** — daypart, budget and flight dates. A default-profile shortcut can skip directly from Step 1 to Step 3.
-3. **Recommended package** — one three-zone package. Selecting a zone focuses the map; **View delivery story** deliberately opens the causal explanation.
+3. **Choose a planning approach** — compare **Best overall**, **Maximum delivery**, and **Budget smart** packages derived from the same brief. Select any package, continue with it, or fine-tune it directly without accepting the recommended option first. Selecting a zone focuses the map; **View delivery story** opens its causal explanation.
 4. **Choose outcome** — review RFQ, upload customer inventory, or fine-tune the package.
 5. **Fine-tune** — include/swap/remove faces or replace zones, inspect deterministic trade-offs, Undo/Reset, then apply and review the RFQ.
 

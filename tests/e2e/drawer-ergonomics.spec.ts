@@ -22,7 +22,7 @@ async function expectDrawerOwnsScroll(page: Page, dialog: Locator, background: L
 async function reachRecommendedPackage(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
-  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
 }
 
 async function openDeliveryStory(page: Page): Promise<Locator> {
@@ -37,7 +37,7 @@ async function openDeliveryStory(page: Page): Promise<Locator> {
 
 async function reachActionStep(page: Page): Promise<void> {
   await reachRecommendedPackage(page);
-  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
 }
 
@@ -76,7 +76,7 @@ test.describe("drawer ergonomics", () => {
 
   test("makes causal navigation and close comfortably interactive", async ({ page }) => {
     const dialog = await openDeliveryStory(page);
-    const background = page.getByRole("region", { name: /Step 3 of 5: Recommended package/ });
+    const background = page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ });
     await expectDrawerOwnsScroll(page, dialog, background);
 
     const stageNames = ["Location", "Places", "Movement", "OTS", "Target", "Unique"];
@@ -132,7 +132,7 @@ test.describe("drawer ergonomics", () => {
 test("keeps tablet causal navigation comfortable with one scroll owner", async ({ page }) => {
   await page.setViewportSize({ width: 834, height: 1112 });
   const dialog = await openDeliveryStory(page);
-  const background = page.getByRole("region", { name: /Step 3 of 5: Recommended package/ });
+  const background = page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ });
   await expectDrawerOwnsScroll(page, dialog, background);
 
   const stageButtons = dialog.getByRole("navigation", { name: "Causal stages" }).getByRole("button");

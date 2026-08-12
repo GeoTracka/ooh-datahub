@@ -94,7 +94,10 @@ export async function collectUxReviewDiagnostics(page: Page): Promise<UxReviewDi
         const html = element as HTMLElement;
         const text = (html.innerText ?? html.textContent ?? "").trim();
         if (!text) return false;
-        return html.scrollWidth > html.clientWidth + 1 || html.scrollHeight > html.clientHeight + 1;
+        // CSS subpixels are rounded differently by scroll and client metrics,
+        // especially for headings on Windows. Ignore only the 2px rounding
+        // envelope; larger deltas still identify genuine clipped content.
+        return html.scrollWidth > html.clientWidth + 2 || html.scrollHeight > html.clientHeight + 2;
       })
       .slice(0, 40)
       .map(describe);

@@ -4,8 +4,8 @@ import { expect, test, type Page } from "@playwright/test";
 async function reachActionStep(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
-  await expect(page.getByRole("region", { name: /Step 3 of 5: Recommended package/ })).toBeVisible();
-  await page.getByRole("button", { name: "This package works" }).click();
+  await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
 }
 
@@ -86,9 +86,8 @@ test("local upload stays context-only and requires preflight before provider enr
   await expect(firstStatus).toContainText("CALIBRATION_BUNDLE_MISMATCH");
   await expect(firstStatus).toContainText("Unapplied context change");
 
-  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
-  await page.getByRole("button", { name: "Undo" }).click();
   await page.getByRole("button", { name: "Back" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
 
@@ -110,9 +109,9 @@ test("local upload stays context-only and requires preflight before provider enr
   await expect(reviewedStatus).toContainText("CALIBRATION_BUNDLE_MISMATCH");
   await expect(reviewedStatus).toContainText("Unapplied context change");
 
-  await page.getByRole("button", { name: "This package works" }).click();
+  await page.getByRole("button", { name: "Continue with selected package" }).click();
   await page.getByRole("button", { name: /Fine-tune package/ }).click();
-  await page.getByRole("button", { name: "Apply & review RFQ" }).click();
+  await page.getByRole("button", { name: "Review RFQ" }).click();
   const rfq = page.getByRole("dialog", { name: "Supplier verification RFQ" });
   await expect(rfq).toBeVisible();
   await rfq.getByRole("button", { name: "Close" }).click();
