@@ -28,7 +28,7 @@ describe("estimatePackage", () => {
     ]);
     expect(result.stages[0]).toMatchObject({ id: "location", state: "assumed" });
     expect(result.stages.find((stage) => stage.id === "places"))
-      .toMatchObject({ valueText: expect.stringMatching(/per-feature values not materialized/) });
+      .toMatchObject({ valueText: "Area information used by the movement model" });
   });
 
   it("degrades to target OTS when panel scaling is outside its envelope", () => {
@@ -39,7 +39,7 @@ describe("estimatePackage", () => {
     expect(result.influence).toBeNull();
     expect(result.stages.find((stage) => stage.id === "unique")?.state)
       .toBe("unavailable");
-    expect(result.claim.caveats).toContain("Unique reach unavailable: SCALING_OUTSIDE_ENVELOPE");
+    expect(result.claim.caveats).toContain("A unique audience estimate is not available for the current data.");
   });
 
   it("reuses results only for an exact fingerprint", () => {
@@ -149,7 +149,7 @@ describe("estimatePackage", () => {
     expect(result.influence).toBeNull();
     expect(result.stages.find((stage) => stage.id === "ots")).toMatchObject({
       state: "unavailable",
-      recoveryAction: expect.stringMatching(/orientation|view zone/i),
+      recoveryAction: expect.stringMatching(/viewing direction|visible area/i),
     });
   });
 

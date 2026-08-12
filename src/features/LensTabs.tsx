@@ -13,13 +13,13 @@ export function LensTabs({
 }) {
   const lenses: { id: MapLens; label: string; disabled: boolean; reason?: string }[] = [
     { id: "plan", label: "Plan", disabled: false },
-    { id: "activity", label: "Activity", disabled: false },
+    { id: "activity", label: "Area activity", disabled: false },
     { id: "reach", label: "Reach", disabled: false },
     {
       id: "influence",
-      label: "Influence",
+      label: "Priority audience",
       disabled: !influenceAvailable,
-      reason: influenceAvailable ? undefined : "Influence profile not configured",
+      reason: influenceAvailable ? undefined : "Priority-audience data is not available",
     },
   ];
   const effectiveActive = active === "influence" && !influenceAvailable
@@ -37,7 +37,7 @@ export function LensTabs({
         onValueChange={(value) => onChange(value as MapLens)}
         activationMode="automatic"
       >
-        <Tabs.List aria-label="Map lens">
+        <Tabs.List aria-label="Map views">
           {lenses.map((lens) => (
             <Tabs.Trigger
               key={lens.id}
@@ -56,7 +56,7 @@ export function LensTabs({
             forceMount
             className="sr-only"
           >
-            {lens.label} map lens
+            {lens.label} map view
           </Tabs.Content>
         ))}
       </Tabs.Root>

@@ -62,7 +62,7 @@ export type SupplierRfqLine = {
   indicativeRate: {
     amount: number;
     currency: "NGN";
-    basis: "illustrative_demo_line_rate";
+    basis: "indicative_planning_rate";
   };
   confirmationRequests: {
     identityAndOrientation: "REQUESTED";
@@ -95,7 +95,7 @@ export type AudiencePlanningBasis = {
   targetReachSharePercent: RfqRange | null;
   influenceCapture: MetricClaim | null;
   priorityInfluenceArchetypes: string[];
-  exposureBasis: "target people with at least one modelled OOH opportunity to see";
+  exposureBasis: "people in the chosen audience who may see the campaign at least once";
   exposureThreshold: "1+";
   modelVersion: string;
   targetUniverseVersion: string;
@@ -118,12 +118,12 @@ export type SupplierMessage = {
   subject: string;
   body: string;
   lines: SupplierRfqLine[];
-  watermark: "DEMO — DO NOT SEND";
+  watermark: "DRAFT — NOT YET SENT";
   status: "draft_unbooked_unsent";
 };
 
 export type InternalRfqRequest = {
-  watermark: "DEMO — DO NOT SEND";
+  watermark: "DRAFT — NOT YET SENT";
   status: "draft_unbooked_unsent";
   planFingerprint: string;
   campaign: CampaignRfqFields;
@@ -135,7 +135,7 @@ export type InternalRfqRequest = {
 };
 
 export type RfqDraft = {
-  watermark: "DEMO — DO NOT SEND";
+  watermark: "DRAFT — NOT YET SENT";
   status: "draft_unbooked_unsent";
   supplierMessages: SupplierMessage[];
   internalRequest: InternalRfqRequest;

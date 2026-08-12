@@ -19,34 +19,34 @@ const zoneCard = {
   marginalInfluencePoints: null,
   marginalInfluenceMass: null,
   marginalServiceableReach: null,
-  role: "Lead delivery zone",
+  role: "Main area",
 };
 
 describe("semantic explorer UX", () => {
-  it("labels zone contribution metrics as marginal and surfaces role/evidence", () => {
+  it("explains each area's additional value and data confidence in plain language", () => {
     render(
       <RecommendationCarousel
         cards={[zoneCard]}
         objective="broad_reach"
-        evidenceLabel="Evidence D"
+        evidenceLabel="Early estimate"
         selectedZoneId="yaba"
         onSelect={() => undefined}
         onExplain={() => undefined}
       />,
     );
 
-    expect(screen.getByText("Marginal target reach")).toBeInTheDocument();
+    expect(screen.getByText("Additional people reached")).toBeInTheDocument();
     expect(screen.queryByText(/^Target reach$/)).not.toBeInTheDocument();
-    expect(screen.getAllByText("Lead delivery zone").length).toBeGreaterThan(0);
-    expect(screen.getByText("Evidence D")).toBeInTheDocument();
-    expect(screen.getByText(/incremental contribution to the selected package/)).toBeInTheDocument();
+    expect(screen.getAllByText("Main area").length).toBeGreaterThan(0);
+    expect(screen.getByText("Early estimate")).toBeInTheDocument();
+    expect(screen.getByText(/additional audience this area brings to the package/)).toBeInTheDocument();
   });
 
   it("applies coherent campaign-profile presets and exposes persistent selection state", async () => {
     const user = userEvent.setup();
     render(<PlannerPage />);
 
-    const preset = screen.getByRole("button", { name: "Real Estate · Influential core" });
+    const preset = screen.getByRole("button", { name: "Real Estate · Priority audience" });
     await user.click(preset);
 
     expect(preset).toHaveAttribute("aria-pressed", "true");
@@ -76,14 +76,14 @@ describe("semantic explorer UX", () => {
     const budget = screen.getByLabelText("Budget (NGN)");
     await user.clear(budget);
     await user.type(budget, "20000000");
-    await user.click(screen.getByRole("button", { name: "Show recommended zones" }));
+    await user.click(screen.getByRole("button", { name: "Show recommended areas" }));
     await screen.findByRole("region", { name: /Step 3 of 5: Choose a planning approach/ });
 
-    await user.click(screen.getByRole("button", { name: "Fine-tune selected package" }));
-    expect(screen.getByText("Unapplied changes")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Adjust selected package" }));
+    expect(screen.getByText("Changes not yet applied")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Undo last change" }));
-    expect(screen.getByText("Fine-tune package")).toBeInTheDocument();
-    expect(screen.queryByText("Unapplied changes")).not.toBeInTheDocument();
+    expect(screen.getByText("Adjust package")).toBeInTheDocument();
+    expect(screen.queryByText("Changes not yet applied")).not.toBeInTheDocument();
   }, 30000);
 });

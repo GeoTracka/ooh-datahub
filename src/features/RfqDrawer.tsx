@@ -12,6 +12,7 @@ import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
 import { OperationStatus } from "@/features/OperationStatus";
 import { RecoveryNotice } from "@/features/RecoveryNotice";
 import { buildInternalDownload, generateRfq } from "@/planning/rfq";
+import { PUBLIC_COPY } from "@/content/plainLanguage";
 
 const focusableSelector = [
   "button:not([disabled])",
@@ -153,8 +154,8 @@ export function RfqDrawer({
   const output: RfqDraft | null = workflow.status === "Generated" ? workflow.output : null;
   return (
     <PlannerDrawerFrame
-      ariaLabel="Supplier verification RFQ"
-      eyebrow="Supplier verification"
+      ariaLabel={PUBLIC_COPY.rfq.title}
+      eyebrow="Supplier details"
       className="rfq-drawer"
       dialogRef={dialogRef}
       closeRef={closeRef}
@@ -162,7 +163,7 @@ export function RfqDrawer({
       busy={generating}
     >
       <div className="planner-drawer-status-row">
-        <strong>DEMO — DO NOT SEND</strong>
+        <strong>{PUBLIC_COPY.rfq.watermark}</strong>
         <span>{workflow.status}</span>
       </div>
       {generating && (
@@ -173,7 +174,7 @@ export function RfqDrawer({
       )}
       {workflow.status === "Generation failed" && (
         <RecoveryNotice
-          ariaLabel="RFQ generation failure"
+          ariaLabel="Supplier request generation failure"
           title="We couldn't generate the supplier request"
           tone="error"
           technicalCode={workflow.message}
@@ -189,13 +190,13 @@ export function RfqDrawer({
         <label>Flight end<input type="date" disabled={generating} value={flightEnd} onChange={(event) => change(() => setFlightEnd(event.target.value))} /></label>
       </div>
       {!datesMatchAppliedPlan && <section className="planner-drawer-notice" aria-label="Schedule revision required">
-        <p>Dates changed. Recompute a dirty plan revision before generating the RFQ.</p>
+        <p>Dates changed. Update the plan with these dates before creating the supplier request.</p>
         <button
           type="button"
           disabled={generating || flightStart > flightEnd}
           onClick={() => onScheduleRevision(flightStart, flightEnd)}
         >
-          Recompute plan with these dates
+          Update plan with these dates
         </button>
       </section>}
       <label className="planner-choice-control">
@@ -207,21 +208,21 @@ export function RfqDrawer({
         <textarea disabled={generating} value={supplierNotes[supplierId] ?? ""} onChange={(event) => change(() => setSupplierNotes((current) => ({ ...current, [supplierId]: event.target.value })))} />
       </label>)}
       <div className="planner-drawer-primary-row">
-        <button className="primary" type="button" disabled={!valid || generating} onClick={() => void generate()}>{generating ? "Generating RFQ…" : workflow.status === "Generation failed" ? "Retry RFQ generation" : "Generate RFQ"}</button>
+        <button className="primary" type="button" disabled={!valid || generating} onClick={() => void generate()}>{generating ? "Creating supplier request…" : workflow.status === "Generation failed" ? "Retry supplier request" : "Create supplier request"}</button>
       </div>
       {output?.supplierMessages.map((message) => <section className="planner-drawer-output" key={message.supplierId}>
         <h2>{message.supplierId}</h2>
         <pre>{message.body}</pre>
         <div className="planner-drawer-action-row">
           <button type="button" onClick={() => void navigator.clipboard.writeText(message.body)}>Copy {message.supplierId} request</button>
-          <button type="button" onClick={() => downloadText(message.supplierId + "-rfq.txt", message.body)}>Download {message.supplierId} request</button>
+          <button type="button" onClick={() => downloadText(message.supplierId + "-supplier-request.txt", message.body)}>Download {message.supplierId} request</button>
         </div>
       </section>)}
       {output && <button type="button" onClick={() => downloadText(
         "consolidated-internal-request.json",
         buildInternalDownload(output),
       )}>Download consolidated internal request</button>}
-      <p className="planner-drawer-footnote">Status: draft, unbooked, unsent</p>
+      <p className="planner-drawer-footnote">Status: {PUBLIC_COPY.rfq.status}</p>
     </PlannerDrawerFrame>
   );
 }

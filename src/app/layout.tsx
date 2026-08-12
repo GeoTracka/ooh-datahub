@@ -3,6 +3,7 @@ import { ModalFocusContainment } from "@/features/ModalFocusContainment";
 import { MAP_CONTEXT_URL } from "@/maps/mapAssets";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
+import { PUBLIC_COPY } from "@/content/plainLanguage";
 import "./explorer.css";
 import "./explorer-polish.css";
 import "./package-options.css";
@@ -12,8 +13,8 @@ import "./recovery-polish.css";
 import "./transition-polish.css";
 
 export const metadata: Metadata = {
-  title: "OOH Promotion Wizard",
-  description: "Evidence-labelled campaign planning demo",
+  title: PUBLIC_COPY.metadata.title,
+  description: PUBLIC_COPY.metadata.description,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

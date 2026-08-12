@@ -16,7 +16,7 @@ function LensHarness({
   const [lens, setLens] = useState<MapLens>(initialLens);
   return (
     <>
-      <output aria-label="Current map lens">{lens}</output>
+      <output aria-label="Current map view">{lens}</output>
       <LensTabs active={lens} onChange={setLens} influenceAvailable={influenceAvailable} />
     </>
   );
@@ -50,13 +50,13 @@ describe("keyboard accessibility primitives", () => {
     expect(first).toHaveFocus();
   });
 
-  it("uses arrow-key navigation for map lenses", async () => {
+  it("uses arrow-key navigation for map views", async () => {
     const user = userEvent.setup();
     render(<LensHarness />);
     const plan = screen.getByRole("tab", { name: "Plan" });
     plan.focus();
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("tab", { name: "Activity" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Area activity" })).toHaveAttribute(
       "data-state",
       "active",
     );
@@ -67,17 +67,17 @@ describe("keyboard accessibility primitives", () => {
     );
   });
 
-  it("keeps the disabled Influence name separate from its reason", () => {
+  it("keeps the disabled priority-audience view separate from its reason", () => {
     render(<LensHarness influenceAvailable={false} />);
-    const influence = screen.getByRole("tab", { name: "Influence" });
+    const influence = screen.getByRole("tab", { name: "Priority audience" });
     expect(influence).toBeDisabled();
-    expect(influence).toHaveAccessibleDescription("Influence profile not configured");
+    expect(influence).toHaveAccessibleDescription("Priority-audience data is not available");
   });
 
   it("returns the controlled map state to plan when Influence becomes unavailable", async () => {
     render(<LensHarness influenceAvailable={false} initialLens="influence" />);
     await waitFor(() => {
-      expect(screen.getByLabelText("Current map lens")).toHaveTextContent("plan");
+      expect(screen.getByLabelText("Current map view")).toHaveTextContent("plan");
     });
     expect(screen.getByRole("tab", { name: "Plan" })).toHaveAttribute(
       "data-state",

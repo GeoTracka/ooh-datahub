@@ -215,9 +215,9 @@ test.describe("desktop package comparison hierarchy", () => {
     const rail = await page.locator(".explorer-card-rail").boundingBox();
     const map = await page.locator(".explorer-map-stage").boundingBox();
     const packageMarkers = page.locator(".map-marker");
-    const lensTabs = await page.getByRole("tablist", { name: "Map lens" }).boundingBox();
+    const lensTabs = await page.getByRole("tablist", { name: "Map views" }).boundingBox();
     const legend = await page
-      .getByRole("complementary", { name: "Map lens legend" })
+      .getByRole("complementary", { name: "Map view legend" })
       .boundingBox();
     const planningNote = await page.locator(".explorer-map-note").boundingBox();
 
@@ -255,9 +255,9 @@ test.describe("desktop package comparison hierarchy", () => {
 
   test("contains package metrics for every objective at desktop breakpoints", async ({ page }) => {
     const presets = [
-      /^FMCG .* Broad reach$/,
-      /^Real Estate .* Influential core$/,
-      /^Bank \/ Fintech .* Near conversion$/,
+      /^Consumer goods .* Broad reach$/,
+      /^Real Estate .* Priority audience$/,
+      /^Bank \/ Fintech .* Likely customers$/,
     ];
     for (const width of [1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
@@ -272,15 +272,15 @@ test.describe("desktop package comparison hierarchy", () => {
     await reachRecommendedPackage(page);
     await page.getByTestId("zone-card").nth(1).getByRole("button").first().click();
 
-    const deliveryStory = page.getByRole("button", { name: "View delivery story" });
-    const fineTune = page.getByRole("button", { name: "Fine-tune selected package" });
+    const deliveryStory = page.getByRole("button", { name: "See how this was estimated" });
+    const fineTune = page.getByRole("button", { name: "Adjust selected package" });
     const back = page.getByRole("button", { name: "Back" });
 
-    await expectComfortableTarget(deliveryStory, "View delivery story");
-    await expectComfortableTarget(fineTune, "Fine-tune selected package", 44);
+    await expectComfortableTarget(deliveryStory, "See how this was estimated");
+    await expectComfortableTarget(fineTune, "Adjust selected package", 44);
     await expectComfortableTarget(back, "Back");
 
-    await keyboardFocus(page, deliveryStory, "View delivery story");
+    await keyboardFocus(page, deliveryStory, "See how this was estimated");
     await expect(deliveryStory).toBeFocused();
     const outline = await deliveryStory.evaluate((element) => {
       const style = getComputedStyle(element);
@@ -319,10 +319,10 @@ test("keeps all three approaches and both decision paths visible at 1024px", asy
   await reachRecommendedPackage(page);
   await expectComparisonFitsWithoutHorizontalScroll(page);
   const primaryAction = page.getByRole("button", { name: "Continue with selected package" });
-  const fineTuneAction = page.getByRole("button", { name: "Fine-tune selected package" });
+  const fineTuneAction = page.getByRole("button", { name: "Adjust selected package" });
   await expect(primaryAction).toBeVisible();
   await expectFullyInViewport(page, primaryAction, "Continue with selected package");
-  await expectFullyInViewport(page, fineTuneAction, "Fine-tune selected package");
+  await expectFullyInViewport(page, fineTuneAction, "Adjust selected package");
 });
 
 for (const viewport of [
@@ -345,10 +345,10 @@ test("keeps a focused recommendation comparable and actionable at 1024px", async
   await expect(cards.nth(1)).toHaveClass(/selected/);
   await expectComparisonFitsWithoutHorizontalScroll(page);
 
-  const deliveryStory = page.getByRole("button", { name: "View delivery story" });
+  const deliveryStory = page.getByRole("button", { name: "See how this was estimated" });
   await expect(deliveryStory).toBeVisible();
-  await expectComfortableTarget(deliveryStory, "focused View delivery story");
-  await expectFullyInViewport(page, deliveryStory, "focused View delivery story");
+  await expectComfortableTarget(deliveryStory, "focused estimate explanation");
+  await expectFullyInViewport(page, deliveryStory, "focused estimate explanation");
   await expectFullyInViewport(
     page,
     page.getByRole("button", { name: "Continue with selected package" }),

@@ -22,10 +22,10 @@ const scene: MapLibreScene = {
     sourceProduct: "synthetic",
     visual: {
       label: "Yaba / Akoka",
-      metricLabel: "Marginal target reach",
+      metricLabel: "Additional people reached",
       value: 12000,
       unit: "people",
-      evidenceLabel: "Evidence D",
+      evidenceLabel: "Early estimate",
     },
   }],
 };
@@ -42,10 +42,11 @@ describe("MapStage", () => {
       />,
     );
 
-    const legend = screen.getByRole("complementary", { name: "Map lens legend" });
-    expect(legend).toHaveTextContent("Marginal target reach");
-    expect(legend).toHaveTextContent("Evidence D");
-    expect(legend).toHaveTextContent(/Marker number\/size shows the active lens value/);
+    const legend = screen.getByRole("complementary", { name: "Map view legend" });
+    expect(legend).toHaveTextContent("Additional people reached");
+    expect(legend).toHaveTextContent("Early estimate");
+    expect(screen.getByText("Planning map · not for directions")).toBeInTheDocument();
+    expect(legend).toHaveTextContent(/Marker size and number reflect the selected view/);
   });
 
   it("credits OpenStreetMap contributors", () => {
@@ -93,7 +94,7 @@ describe("MapStage", () => {
     expect(toolbar).toHaveClass("explorer-map-camera-toolbar");
     const overview = screen.getByRole("button", { name: "Package overview" });
     expect(overview).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Focus selected zone" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Focus selected area" })).toBeDisabled();
 
     await userEvent.click(overview);
     await waitFor(() => expect(mapCanvasProps.mock.lastCall?.[0]).toMatchObject({
@@ -110,7 +111,7 @@ describe("MapStage", () => {
       />,
     );
 
-    const focus = screen.getByRole("button", { name: "Focus selected zone" });
+    const focus = screen.getByRole("button", { name: "Focus selected area" });
     expect(focus).toBeEnabled();
     expect(focus).toHaveAttribute("aria-pressed", "true");
 

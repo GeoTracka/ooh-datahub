@@ -5,39 +5,39 @@ export type RecoveryCopy = {
 
 const packageConstraintCopy: Record<string, RecoveryCopy> = {
   DUPLICATE_SITE: {
-    title: "A face is selected more than once",
-    message: "Undo the duplicate selection or replace it with a different eligible face.",
+    title: "A media location is selected more than once",
+    message: "Undo the duplicate selection or choose a different available location.",
   },
   SITE_COUNT_OUTSIDE_3_TO_6: {
-    title: "Choose between 3 and 6 faces",
-    message: "Add or remove faces until the package contains between three and six unique faces.",
+    title: "Choose between 3 and 6 media locations",
+    message: "Add or remove locations until the package contains between three and six unique locations.",
   },
   EXACTLY_THREE_ZONES_REQUIRED: {
-    title: "Keep the package across exactly three zones",
-    message: "Adjust the selected faces or replace a zone so the package covers exactly three zones.",
+    title: "Keep the package across exactly three areas",
+    message: "Adjust the selected locations or replace an area so the package covers exactly three areas.",
   },
   BUDGET_EXCEEDED: {
     title: "This package is over the campaign budget",
-    message: "Increase the budget or remove or replace a face with a lower-cost eligible option.",
+    message: "Increase the budget or replace a location with a lower-cost available option.",
   },
   NORMALIZATION_ENVELOPE_EXCEEDED: {
-    title: "This package is outside the planning comparison envelope",
-    message: "Reduce package cost so the recommendation can be compared on the same planning basis.",
+    title: "This package costs too much for a fair comparison",
+    message: "Reduce the package cost so it can be compared with the other options using the same budget range.",
   },
   SITE_UNAVAILABLE: {
-    title: "A selected face is unavailable",
-    message: "Remove or replace the unavailable face before accepting the package.",
+    title: "A selected media location is unavailable",
+    message: "Remove or replace the unavailable location before accepting the package.",
   },
   SITE_UNAVAILABLE_FOR_FLIGHT: {
-    title: "A selected face is unavailable for these campaign dates",
-    message: "Change the flight dates or replace the affected face with an available option.",
+    title: "A selected media location is unavailable for these campaign dates",
+    message: "Change the campaign dates or replace the affected location with an available option.",
   },
 };
 
 export function describePackageConstraint(code: string): RecoveryCopy {
   return packageConstraintCopy[code] ?? {
     title: "This package needs attention",
-    message: "Review the selected faces, zones, budget, and campaign dates before continuing.",
+    message: "Review the selected locations, areas, budget, and campaign dates before continuing.",
   };
 }
 
@@ -74,11 +74,11 @@ export function uploadErrorCopy(kind: "parse" | "provider", technicalCode: strin
   if (technicalCode === "SELECT_AT_LEAST_ONE_ROW") {
     return {
       title: "Select at least one accepted row",
-      message: "Choose one or more accepted inventory rows before requesting enrichment.",
+      message: "Choose one or more accepted inventory rows before checking their locations.",
     };
   }
   return {
-    title: "Location enrichment is temporarily unavailable",
-    message: "Your uploaded facts are still available offline. You can use them as context now or retry enrichment without re-uploading the file.",
+    title: "Location checking is temporarily unavailable",
+    message: "Your uploaded details are still available. You can add them to the map now or retry location checking without uploading the file again.",
   };
 }

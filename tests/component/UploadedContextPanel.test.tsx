@@ -21,11 +21,11 @@ const row = {
 describe("UploadedContextPanel", () => {
   it("shows commercial/spatial comparison without presenting delivery metrics", async () => {
     render(<UploadedContextPanel rows={[row]} />);
-    await userEvent.click(screen.getByText(/Customer inventory context/));
+    await userEvent.click(screen.getByText(/Uploaded inventory/));
     expect(screen.getByText(/Yaba \/ Akoka · 0.8 km/)).toBeInTheDocument();
     expect(screen.getByText(/matches package formats/)).toBeInTheDocument();
-    expect(screen.getByText(/-8% vs selected-face median/)).toBeInTheDocument();
-    expect(screen.getByText(/do not receive reach, Planning Fit, or evidence upgrades/))
+    expect(screen.getByText(/-8% vs the typical selected-location rate/)).toBeInTheDocument();
+    expect(screen.getByText(/do not change audience estimates or the plan score/))
       .toBeInTheDocument();
   });
 });

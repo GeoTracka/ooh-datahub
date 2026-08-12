@@ -159,7 +159,7 @@
     padding: 9px 10px;
   }
 
-  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"] {
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Package adjustments"] {
     display: grid;
     grid-template-columns: minmax(250px, 0.8fr) minmax(0, 2fr);
     gap: 10px 12px;
@@ -167,8 +167,8 @@
   }
 
   .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] .adjustment-header,
-  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"] > [role="alert"],
-  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"] > details {
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Package adjustments"] > [role="alert"],
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Package adjustments"] > details {
     grid-column: 1 / -1;
   }
 
@@ -195,13 +195,13 @@
     padding: 10px 11px;
   }
 
-  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"]:has(.adjustment-summary) .adjustment-summary {
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Package adjustments"]:has(.adjustment-summary) .adjustment-summary {
     grid-column: 1;
     grid-row: 2;
     align-self: stretch;
   }
 
-  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Plan adjustments"]:has(.adjustment-summary) .adjustment-actions-grid {
+  .explorer-step-card[aria-label^="Step 5 of 5: Make this package yours"] [aria-label="Package adjustments"]:has(.adjustment-summary) .adjustment-actions-grid {
     grid-column: 2;
     grid-row: 2;
   }

@@ -29,8 +29,8 @@ async function openDeliveryStory(page: Page): Promise<Locator> {
   await reachRecommendedPackage(page);
   const zones = page.getByTestId("zone-card");
   await zones.nth(1).getByRole("button").first().click();
-  await page.getByRole("button", { name: "View delivery story" }).click();
-  const dialog = page.getByRole("dialog", { name: "How delivery was estimated" });
+  await page.getByRole("button", { name: "See how this was estimated" }).click();
+  const dialog = page.getByRole("dialog", { name: "How the estimate was built" });
   await expect(dialog).toBeVisible();
   return dialog;
 }
@@ -42,14 +42,14 @@ async function reachActionStep(page: Page): Promise<void> {
 }
 
 async function makeExplicitSwap(page: Page): Promise<void> {
-  const currentFace = page.getByLabel("Current face to swap");
-  const replacementFace = page.getByLabel("Replacement face");
+  const currentFace = page.getByLabel("Current media location to swap");
+  const replacementFace = page.getByLabel("Replacement media location");
   const candidateCount = await currentFace.locator("option").count();
   for (let index = 1; index < candidateCount; index += 1) {
     await currentFace.selectOption({ index });
     if (await replacementFace.locator("option").count() > 1) {
       await replacementFace.selectOption({ index: 1 });
-      await page.getByRole("button", { name: "Swap selected face" }).click();
+      await page.getByRole("button", { name: "Swap selected location" }).click();
       return;
     }
   }
@@ -58,11 +58,11 @@ async function makeExplicitSwap(page: Page): Promise<void> {
 
 async function openRfq(page: Page): Promise<Locator> {
   await reachActionStep(page);
-  await page.getByRole("button", { name: /Fine-tune package/ }).click();
+  await page.getByRole("button", { name: /^Adjust package/ }).click();
   await expect(page.getByRole("region", { name: /Step 5 of 5:/ })).toBeVisible();
   await makeExplicitSwap(page);
-  await page.getByRole("button", { name: "Apply & review RFQ" }).click();
-  const dialog = page.getByRole("dialog", { name: "Supplier verification RFQ" });
+  await page.getByRole("button", { name: "Apply & review supplier request" }).click();
+  const dialog = page.getByRole("dialog", { name: "Supplier request" });
   await expect(dialog).toBeVisible();
   return dialog;
 }
@@ -79,7 +79,7 @@ test.describe("drawer ergonomics", () => {
     const background = page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ });
     await expectDrawerOwnsScroll(page, dialog, background);
 
-    const stageNames = ["Location", "Places", "Movement", "OTS", "Target", "Unique"];
+    const stageNames = ["Media locations", "Area information", "Estimated movement", "Possible ad views", "Relevant audience", "Estimated people reached"];
     for (const name of stageNames) {
       await expectTarget(dialog.getByRole("button", { name, exact: true }), `Causal stage ${name}`);
     }
@@ -135,7 +135,7 @@ test("keeps tablet causal navigation comfortable with one scroll owner", async (
   const background = page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ });
   await expectDrawerOwnsScroll(page, dialog, background);
 
-  const stageButtons = dialog.getByRole("navigation", { name: "Causal stages" }).getByRole("button");
+  const stageButtons = dialog.getByRole("navigation", { name: "How the estimate was built" }).getByRole("button");
   await expect(stageButtons).toHaveCount(6);
   for (let index = 0; index < 6; index += 1) {
     await expectTarget(stageButtons.nth(index), `tablet causal stage ${index + 1}`);

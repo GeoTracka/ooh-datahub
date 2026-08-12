@@ -5,7 +5,7 @@ import { frozenLagosBundle as bundle } from "@/bundle/loadFrozenBundle";
 import { PackageStrip } from "@/features/PackageStrip";
 
 const plan = buildPlan(bundle, {
-  productName: "Demo Spark",
+  productName: "Spark Refresh",
   productDescription: "Affordable on-the-go refreshment launch",
   targetAudience: "Students, young workers, and convenience shoppers",
   sector: "fmcg",
@@ -18,7 +18,7 @@ const plan = buildPlan(bundle, {
 });
 
 describe("PackageStrip", () => {
-  it("renders the recommended package info and RFQ button", () => {
+  it("renders the recommended package info and supplier-request button", () => {
     render(
       <PackageStrip
         plan={plan}
@@ -30,10 +30,10 @@ describe("PackageStrip", () => {
     );
     expect(screen.getByTestId("package-strip")).toBeInTheDocument();
     expect(screen.getByText(/Recommended package/)).toBeInTheDocument();
-    expect(screen.getByText(/sites ·/)).toBeInTheDocument();
+    expect(screen.getByText(/media locations ·/)).toBeInTheDocument();
   });
 
-  it("enables the Review RFQ button when canReviewRfq is true", () => {
+  it("enables the supplier-request button when canReviewRfq is true", () => {
     render(
       <PackageStrip
         plan={plan}
@@ -43,11 +43,11 @@ describe("PackageStrip", () => {
         onReviewRfq={() => undefined}
       />,
     );
-    const button = screen.getByRole("button", { name: "Review RFQ" });
+    const button = screen.getByRole("button", { name: "Review supplier request" });
     expect(button).toBeEnabled();
   });
 
-  it("disables the Review RFQ button when canReviewRfq is false", () => {
+  it("disables the supplier-request button when canReviewRfq is false", () => {
     render(
       <PackageStrip
         plan={plan}
@@ -57,11 +57,11 @@ describe("PackageStrip", () => {
         onReviewRfq={() => undefined}
       />,
     );
-    const button = screen.getByRole("button", { name: "Review RFQ" });
+    const button = screen.getByRole("button", { name: "Review supplier request" });
     expect(button).toBeDisabled();
   });
 
-  it("shows Apply & review RFQ label when isDirty is true", () => {
+  it("shows the apply-and-review label when isDirty is true", () => {
     render(
       <PackageStrip
         plan={plan}
@@ -71,7 +71,7 @@ describe("PackageStrip", () => {
         onReviewRfq={() => undefined}
       />,
     );
-    expect(screen.getByRole("button", { name: "Apply & review RFQ" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply & review supplier request" })).toBeInTheDocument();
   });
 
   it("renders delivery labels and evidence scores", () => {
@@ -84,7 +84,7 @@ describe("PackageStrip", () => {
         onReviewRfq={() => undefined}
       />,
     );
-    expect(screen.getByText(/Scenario target reach/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Evidence D/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Estimated audience reach/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Early estimate/).length).toBeGreaterThan(0);
   });
 });

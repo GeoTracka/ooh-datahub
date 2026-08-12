@@ -38,9 +38,10 @@ import { StepCard } from "@/features/StepCard";
 import { UploadDialog } from "@/features/UploadDialog";
 import { UploadedContextPanel } from "@/features/UploadedContextPanel";
 import { projectMapLibreScene } from "@/maps/projectScene";
+import { PUBLIC_COPY, confidenceLabel } from "@/content/plainLanguage";
 
 const initialBrief: Brief = {
-  productName: "Demo Spark",
+  productName: PUBLIC_COPY.campaign.defaultProductName,
   productDescription: "Affordable on-the-go refreshment launch",
   targetAudience: "Students, young workers, and convenience shoppers",
   sector: "fmcg",
@@ -66,9 +67,9 @@ const campaignPresets: Array<{
 }> = [
   {
     id: "fmcg-broad-reach",
-    label: "FMCG · Broad reach",
+    label: "Consumer goods · Broad reach",
     profile: {
-      productName: "Demo Spark",
+      productName: PUBLIC_COPY.campaign.defaultProductName,
       productDescription: "Affordable on-the-go refreshment launch",
       targetAudience: "Students, young workers, and convenience shoppers",
       sector: "fmcg",
@@ -77,7 +78,7 @@ const campaignPresets: Array<{
   },
   {
     id: "real-estate-influential-core",
-    label: "Real Estate · Influential core",
+    label: "Real Estate · Priority audience",
     profile: {
       productName: "Harbour Residences",
       productDescription: "Premium Lagos residential development for buyers and investors",
@@ -88,7 +89,7 @@ const campaignPresets: Array<{
   },
   {
     id: "bank-fintech-near-conversion",
-    label: "Bank / Fintech · Near conversion",
+    label: "Bank / Fintech · Likely customers",
     profile: {
       productName: "SwiftPay Business",
       productDescription: "Digital banking and payments for everyday business transactions",
@@ -101,24 +102,24 @@ const campaignPresets: Array<{
 
 const daypartChoices: Array<{ value: Brief["daypart"]; label: string }> = [
   { value: "all_day", label: "All day" },
-  { value: "am", label: "AM" },
+  { value: "am", label: "Morning" },
   { value: "midday", label: "Midday" },
-  { value: "pm", label: "PM" },
+  { value: "pm", label: "Afternoon" },
   { value: "evening", label: "Evening" },
 ];
 
 const budgetChoices = [15_000_000, 18_000_000, 20_000_000, 25_000_000];
 
 const sectorLabels: Record<Brief["sector"], string> = {
-  fmcg: "FMCG",
+  fmcg: "Consumer goods",
   real_estate: "Real Estate",
   bank_fintech: "Bank / Fintech",
 };
 
 const objectiveLabels: Record<Brief["objective"], string> = {
   broad_reach: "Broad reach",
-  influential_core: "Influential core",
-  near_conversion: "Near conversion",
+  influential_core: "Priority audience",
+  near_conversion: "Likely customers",
 };
 
 function profileMatches(brief: Brief, profile: CampaignProfile): boolean {
@@ -227,7 +228,7 @@ export function PlannerPage() {
     }
   }
 
-  function draftSites(siteIds: string[], reason = "Selected-face change") {
+  function draftSites(siteIds: string[], reason = "Media-location change") {
     if (!visible) return;
     dispatch({
       type: "drafted",
@@ -240,7 +241,7 @@ export function PlannerPage() {
     if (!visible || visible.recommended.siteIds.includes(siteId)) return;
     draftSites(
       [...visible.recommended.siteIds, siteId],
-      "Add face · " + siteId,
+      "Add media location · " + siteId,
     );
   }
 
@@ -248,7 +249,7 @@ export function PlannerPage() {
     if (!visible || siteId === replacementSiteId) return;
     draftSites(
       visible.recommended.siteIds.map((id) => id === siteId ? replacementSiteId : id),
-      "Swap face · " + siteId + " → " + replacementSiteId,
+      "Swap media location · " + siteId + " → " + replacementSiteId,
     );
   }
 
@@ -258,7 +259,7 @@ export function PlannerPage() {
     dispatch({
       type: "drafted",
       plan: next,
-      reason: "Replace zone · " + zoneId + " → " + replacementZoneId,
+      reason: "Replace area · " + zoneId + " → " + replacementZoneId,
     });
     setSelectedZoneId(next.selectedZoneIds[0] ?? null);
   }
@@ -344,9 +345,7 @@ export function PlannerPage() {
   }
 
   const stepTwoValid = brief.budgetNgn > 0 && brief.flightStart <= brief.flightEnd;
-  const evidenceLabel = !visible?.measurement || visible.measurement.claim.evidence === "unavailable"
-    ? "Evidence unavailable"
-    : `Evidence ${visible.measurement.claim.evidence}`;
+  const evidenceLabel = confidenceLabel(visible?.measurement?.claim.evidence);
 
   return (
     <main className="explorer-shell">
@@ -417,7 +416,7 @@ export function PlannerPage() {
                   <label>
                     Sector
                     <select disabled={planning} value={brief.sector} onChange={(event) => changeBrief({ sector: event.target.value as Brief["sector"] })}>
-                      <option value="fmcg">FMCG</option>
+                      <option value="fmcg">Consumer goods</option>
                       <option value="real_estate">Real Estate</option>
                       <option value="bank_fintech">Bank / Fintech</option>
                     </select>
@@ -426,8 +425,8 @@ export function PlannerPage() {
                     Objective
                     <select disabled={planning} value={brief.objective} onChange={(event) => changeBrief({ objective: event.target.value as Brief["objective"] })}>
                       <option value="broad_reach">Broad reach</option>
-                      <option value="influential_core">Influential core</option>
-                      <option value="near_conversion">Near conversion</option>
+                      <option value="influential_core">Priority audience</option>
+                      <option value="near_conversion">Likely customers</option>
                     </select>
                   </label>
                 </div>
@@ -435,8 +434,8 @@ export function PlannerPage() {
             </details>
             {planning && (
               <OperationStatus
-                title="Building recommendation…"
-                detail="Checking timing, budget, eligible faces, and available evidence."
+                title={PUBLIC_COPY.campaign.building}
+                detail={PUBLIC_COPY.campaign.buildingDetail}
               />
             )}
             <button
@@ -445,7 +444,7 @@ export function PlannerPage() {
               disabled={planning}
               onClick={() => void showRecommendations()}
             >
-              {planning ? "Building recommendation…" : "Use default timing & budget"}
+              {planning ? PUBLIC_COPY.campaign.building : "Use default timing & budget"}
             </button>
           </StepCard>
         )}
@@ -458,7 +457,7 @@ export function PlannerPage() {
             onBack={() => setStep(1)}
             busy={planning}
             primaryAction={{
-              label: planning ? "Building recommendation…" : "Show recommended zones",
+              label: planning ? PUBLIC_COPY.campaign.building : "Show recommended areas",
               onClick: () => void showRecommendations(),
               disabled: !stepTwoValid,
             }}
@@ -517,8 +516,8 @@ export function PlannerPage() {
             </div>
             {planning && (
               <OperationStatus
-                title="Building recommendation…"
-                detail="Checking timing, budget, eligible faces, and available evidence."
+                title={PUBLIC_COPY.campaign.building}
+                detail={PUBLIC_COPY.campaign.buildingDetail}
               />
             )}
             {!stepTwoValid && <p role="alert">Budget must be positive and flight end must not precede flight start.</p>}
@@ -537,7 +536,7 @@ export function PlannerPage() {
               disabled: !visible.recommended.valid,
             }}
             secondaryAction={{
-              label: "Fine-tune selected package",
+              label: "Adjust selected package",
               onClick: () => enterFineTune(3),
             }}
           >
@@ -567,11 +566,11 @@ export function PlannerPage() {
               <PackageConstraintNotice reasonCodes={visible.recommended.invalidReasonCodes} />
             )}
             {visible.contextRevision && (
-              <aside className="explorer-context-status" aria-label="Uploaded planning status">
-                <strong>Customer inventory · context only</strong>
-                <span>{visible.contextRevision.selectedRows.length} reviewed rows</span>
-                <span>{visible.contextRevision.claimResolution.reasonCode}</span>
-                <span>{dirty ? "Unapplied context change" : "Applied plan context"}</span>
+              <aside className="explorer-context-status" aria-label="Uploaded inventory status">
+                <strong>Uploaded inventory · comparison only</strong>
+                <span>{visible.contextRevision.selectedRows.length} media locations ready</span>
+                <span>{visible.contextRevision.claimResolution.recoveryAction ?? "Audience estimates remain unchanged."}</span>
+                <span>{dirty ? "Inventory change not yet applied" : "Inventory added to this plan"}</span>
               </aside>
             )}
             {visible.contextRevision && (
@@ -603,7 +602,7 @@ export function PlannerPage() {
             title="Make this package yours"
             onBack={() => setStep(fineTuneReturnStep)}
             primaryAction={{
-              label: dirty ? "Apply & review RFQ" : "Review RFQ",
+              label: dirty ? "Apply & review supplier request" : PUBLIC_COPY.rfq.action,
               onClick: reviewRfq,
               disabled: !visible.recommended.valid,
             }}
@@ -625,7 +624,7 @@ export function PlannerPage() {
                 onAdd={addSite}
                 onRemove={(siteId) => draftSites(
                   visible.recommended.siteIds.filter((id) => id !== siteId),
-                  "Remove face · " + siteId,
+                  "Remove media location · " + siteId,
                 )}
                 onSwap={swapSite}
                 onReplaceZone={replaceZone}
@@ -676,7 +675,7 @@ export function PlannerPage() {
             dispatch({
               type: "drafted",
               plan: next,
-              reason: "Apply uploaded context · " + contextRevision.dataRevision,
+              reason: "Add uploaded inventory · " + contextRevision.dataRevision,
             });
             setSelectedZoneId(null);
             setLens("plan");

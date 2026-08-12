@@ -15,7 +15,7 @@ import {
 } from "@/application/plannerSelectors";
 
 const brief = {
-  productName: "Demo Spark",
+  productName: "Spark Refresh",
   productDescription: "Affordable on-the-go refreshment launch",
   targetAudience: "Students, young workers, and convenience shoppers",
   sector: "fmcg" as const,
@@ -244,9 +244,9 @@ describe("plannerReducer", () => {
   });
 
   it.each([
-    ["broad_reach", "Target reach"],
-    ["influential_core", "Influence-weighted reached mass"],
-    ["near_conversion", "Serviceable target reach"],
+    ["broad_reach", "Estimated audience reach"],
+    ["influential_core", "Priority-audience reach"],
+    ["near_conversion", "Likely-customer reach"],
   ] as const)("reports objective-specific comparable deltas for %s", (objective, label) => {
     const original = buildPlan(frozenLagosBundle, { ...brief, objective });
     const draft = recalculatePlan(frozenLagosBundle, original, { budgetNgn: 20_000_000 });

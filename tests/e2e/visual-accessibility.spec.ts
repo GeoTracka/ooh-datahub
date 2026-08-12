@@ -15,14 +15,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function makeExplicitSwap(page: import("@playwright/test").Page) {
-  const currentFace = page.getByLabel("Current face to swap");
-  const replacementFace = page.getByLabel("Replacement face");
+  const currentFace = page.getByLabel("Current media location to swap");
+  const replacementFace = page.getByLabel("Replacement media location");
   const candidateCount = await currentFace.locator("option").count();
   for (let index = 1; index < candidateCount; index += 1) {
     await currentFace.selectOption({ index });
     if (await replacementFace.locator("option").count() > 1) {
       await replacementFace.selectOption({ index: 1 });
-      await page.getByRole("button", { name: "Swap selected face" }).click();
+      await page.getByRole("button", { name: "Swap selected location" }).click();
       return;
     }
   }
@@ -42,14 +42,14 @@ test("locks the split-canvas explorer hierarchy and interaction states", async (
 
   const zones = page.getByTestId("zone-card");
   await zones.nth(1).getByRole("button").first().click();
-  await expect(page.getByRole("button", { name: "View delivery story" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "See how this was estimated" })).toBeVisible();
   await expect(page).toHaveScreenshot("explorer-step3-focused.png", { animations: "disabled" });
   await assertAccessible(page);
 
   await page.getByRole("button", { name: "Continue with selected package" }).click();
-  await page.getByRole("button", { name: /Fine-tune package/ }).click();
+  await page.getByRole("button", { name: /^Adjust package/ }).click();
   await makeExplicitSwap(page);
-  await expect(page.getByText("Unapplied changes")).toBeVisible();
+  await expect(page.getByText("Changes not yet applied")).toBeVisible();
   await expect(page).toHaveScreenshot("explorer-step5-dirty.png", { animations: "disabled" });
   await assertAccessible(page);
 });

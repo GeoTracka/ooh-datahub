@@ -81,13 +81,13 @@ test("local upload stays context-only and requires preflight before provider enr
   await page.getByRole("button", { name: "Use uploaded facts as context" }).click();
   expect(apiCalls).toEqual([]);
 
-  const firstStatus = page.getByRole("complementary", { name: "Uploaded planning status" });
-  await expect(firstStatus).toContainText("Customer inventory · context only");
-  await expect(firstStatus).toContainText("CALIBRATION_BUNDLE_MISMATCH");
+  const firstStatus = page.getByRole("complementary", { name: "Uploaded inventory status" });
+  await expect(firstStatus).toContainText("Uploaded inventory · comparison only");
+  await expect(firstStatus).toContainText("Add audience-checking data");
   await expect(firstStatus).toContainText("Unapplied context change");
 
   await page.getByRole("button", { name: "Continue with selected package" }).click();
-  await page.getByRole("button", { name: /Fine-tune package/ }).click();
+  await page.getByRole("button", { name: /^Adjust package/ }).click();
   await page.getByRole("button", { name: "Back" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
 
@@ -104,15 +104,15 @@ test("local upload stays context-only and requires preflight before provider enr
   await expect(page.getByText(/Yaba, Lagos, Nigeria/)).toBeVisible();
   await page.getByRole("button", { name: "Use reviewed facts as context" }).click();
 
-  const reviewedStatus = page.getByRole("complementary", { name: "Uploaded planning status" });
-  await expect(reviewedStatus).toContainText("Customer inventory · context only");
-  await expect(reviewedStatus).toContainText("CALIBRATION_BUNDLE_MISMATCH");
+  const reviewedStatus = page.getByRole("complementary", { name: "Uploaded inventory status" });
+  await expect(reviewedStatus).toContainText("Uploaded inventory · comparison only");
+  await expect(reviewedStatus).toContainText("Add audience-checking data");
   await expect(reviewedStatus).toContainText("Unapplied context change");
 
   await page.getByRole("button", { name: "Continue with selected package" }).click();
-  await page.getByRole("button", { name: /Fine-tune package/ }).click();
-  await page.getByRole("button", { name: "Review RFQ" }).click();
-  const rfq = page.getByRole("dialog", { name: "Supplier verification RFQ" });
+  await page.getByRole("button", { name: /^Adjust package/ }).click();
+  await page.getByRole("button", { name: "Review supplier request" }).click();
+  const rfq = page.getByRole("dialog", { name: "Supplier request" });
   await expect(rfq).toBeVisible();
   await rfq.getByRole("button", { name: "Close" }).click();
   await page.getByRole("button", { name: "Back" }).click();

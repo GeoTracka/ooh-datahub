@@ -8,6 +8,7 @@ import {
   serviceabilityInputsCompatible,
   targetProfileSourceIds,
 } from "@/planning/sourceEligibility";
+import { PUBLIC_COPY } from "@/content/plainLanguage";
 
 type ObjectiveDeliveryBase = {
   objective: Brief["objective"];
@@ -41,10 +42,10 @@ export function resolveObjectiveDelivery(
   measurement: EstimatePackageResult,
 ): ObjectiveDelivery {
   const label = brief.objective === "influential_core"
-    ? "Influence-weighted reached mass"
+    ? PUBLIC_COPY.metrics.priorityAudienceReach
     : brief.objective === "near_conversion"
-      ? "Serviceable target reach"
-      : "Target reach";
+      ? PUBLIC_COPY.metrics.likelyCustomerReach
+      : PUBLIC_COPY.metrics.estimatedReach;
   const unit = brief.objective === "influential_core"
     ? "influence_weighted_people" as const
     : "people" as const;
@@ -73,7 +74,7 @@ export function resolveObjectiveDelivery(
   if (!reachInputsCompatible(bundle, brief)) {
     return unavailable(
       "TARGET_BASIS_INCOMPATIBLE",
-      "Provide current compatible target-universe and allocation sources",
+      "Add current audience size and audience-mix data that works with this package.",
     );
   }
   if (
@@ -85,7 +86,7 @@ export function resolveObjectiveDelivery(
     return unavailable(
       "UNIQUE_REACH_UNAVAILABLE",
       measurement.stages.find((stage) => stage.id === "unique")?.recoveryAction ??
-        "Restore an eligible unique-reach basis",
+        "Add the audience data needed to estimate unique reach.",
     );
   }
   const profileSourceIds = brief.objective === "influential_core"
@@ -119,7 +120,7 @@ export function resolveObjectiveDelivery(
     return unavailable(
       measurement.availability.influence.reasonCode ?? "INFLUENCE_PROFILE_INCOMPATIBLE",
       measurement.availability.influence.recoveryAction ??
-        "Provide a current governed influence profile",
+        "Add current priority-audience data.",
     );
   } else if (
     brief.objective === "near_conversion" &&
@@ -130,13 +131,13 @@ export function resolveObjectiveDelivery(
       measurement.availability.serviceability.reasonCode ??
         "SERVICEABILITY_PROFILE_INCOMPATIBLE",
       measurement.availability.serviceability.recoveryAction ??
-        "Provide a current governed serviceability profile",
+        "Add current likely-customer data.",
     );
   }
   if (values.some((value) => value === null)) {
     return unavailable(
       "OBJECTIVE_DELIVERY_UNAVAILABLE",
-      "Repair the failed causal stage and recompute the plan",
+      "Complete the missing audience-estimate step and update the plan.",
     );
   }
   const range = { low: values[0]!, base: values[1]!, high: values[2]! };
@@ -148,7 +149,7 @@ export function resolveObjectiveDelivery(
   if (!(range.low <= range.base && range.base <= range.high)) {
     return unavailable(
       "INCOHERENT_OBJECTIVE_RANGE",
-      "Correct the scenario definition before presenting or comparing delivery",
+      "Correct the estimate range before comparing package delivery.",
     );
   }
   return {

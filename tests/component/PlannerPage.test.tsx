@@ -35,12 +35,12 @@ describe("PlannerPage explorer", () => {
     const skip = screen.getByRole("button", { name: "Use default timing & budget" });
     await userEvent.click(skip);
 
-    expect(screen.getByRole("status", { name: "Building recommendation…" }))
+    expect(screen.getByRole("status", { name: "Building your recommendation…" }))
       .toBeInTheDocument();
     expect(screen.getByRole("region", { name: /Step 1 of 5:/ })).toHaveAttribute("aria-busy", "true");
-    expect(screen.getByRole("button", { name: "Building recommendation…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Building your recommendation…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Continue to timing" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "FMCG · Broad reach" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Consumer goods · Broad reach" })).toBeDisabled();
     expect(screen.getByLabelText("Product name")).toBeDisabled();
     expect(pendingFrame).not.toBeNull();
 
@@ -61,8 +61,9 @@ describe("PlannerPage explorer", () => {
     expect(screen.getByRole("radio", { name: /Best overall/ })).toBeChecked();
     expect(screen.getAllByTestId("zone-card")).toHaveLength(3);
     expect(screen.getAllByTestId("package-strip")).toHaveLength(1);
-    expect(screen.getByText(/Scenario target reach/)).toBeInTheDocument();
-    for (const name of ["Plan", "Activity", "Reach", "Influence"]) {
+    expect(screen.getAllByText(/Estimated audience reach/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Early estimate").length).toBeGreaterThan(0);
+    for (const name of ["Plan", "Area activity", "Reach", "Priority audience"]) {
       expect(screen.getByRole("tab", { name })).toBeInTheDocument();
     }
   }, 30000);
@@ -72,11 +73,11 @@ describe("PlannerPage explorer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
     const zoneCards = await screen.findAllByTestId("zone-card");
     await userEvent.click(zoneCards[1].querySelector("button")!);
-    expect(screen.getByRole("button", { name: "View delivery story" })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "How delivery was estimated" }))
+    expect(screen.getByRole("button", { name: "See how this was estimated" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "How the estimate was built" }))
       .not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "View delivery story" }));
-    expect(screen.getByRole("dialog", { name: "How delivery was estimated" }))
+    await userEvent.click(screen.getByRole("button", { name: "See how this was estimated" }));
+    expect(screen.getByRole("dialog", { name: "How the estimate was built" }))
       .toBeInTheDocument();
   }, 30000);
 
@@ -87,12 +88,12 @@ describe("PlannerPage explorer", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Budget smart/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue with selected package" }));
     expect(screen.getByRole("region", { name: /Step 4 of 5:/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Fine-tune package/ })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /Fine-tune package/ }));
+    expect(screen.getByRole("button", { name: /Adjust package/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Adjust package/ }));
     expect(screen.getByRole("region", { name: /Step 5 of 5: Make this package yours/ }))
       .toBeInTheDocument();
-    expect(screen.getByLabelText("Plan adjustments")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
+    expect(screen.getByLabelText("Package adjustments")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review supplier request" })).toBeEnabled();
   }, 30000);
 
   it("opens Step 3 on the complete package and restores overview when the package changes", async () => {
@@ -118,10 +119,10 @@ describe("PlannerPage explorer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
     await screen.findByRole("region", { name: /Step 3 of 5:/ });
     await userEvent.click(screen.getByRole("radio", { name: /Maximum delivery/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Fine-tune selected package" }));
+    await userEvent.click(screen.getByRole("button", { name: "Adjust selected package" }));
     expect(screen.getByRole("region", { name: /Step 5 of 5: Make this package yours/ }))
       .toBeInTheDocument();
-    expect(screen.getByText("Unapplied changes")).toBeInTheDocument();
+    expect(screen.getByText("Changes not yet applied")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("region", { name: /Step 3 of 5:/ })).toBeInTheDocument();
   }, 30000);
@@ -132,9 +133,9 @@ describe("PlannerPage explorer", () => {
     await screen.findByRole("region", { name: /Step 3 of 5:/ });
     await userEvent.click(screen.getByRole("radio", { name: /Maximum delivery/ }));
     await userEvent.click(screen.getByRole("radio", { name: /Best overall/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Fine-tune selected package" }));
+    await userEvent.click(screen.getByRole("button", { name: "Adjust selected package" }));
 
-    expect(screen.queryByText("Unapplied changes")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
+    expect(screen.queryByText("Changes not yet applied")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review supplier request" })).toBeEnabled();
   }, 30000);
 });

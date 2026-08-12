@@ -66,10 +66,10 @@ const scene: MapLibreScene = {
       sourceProduct: "synthetic",
       visual: {
         label: "Ikeja",
-        metricLabel: "Marginal target reach",
+        metricLabel: "Additional people reached",
         value: 24_000,
         unit: "people",
-        evidenceLabel: "Evidence D",
+        evidenceLabel: "Early estimate",
       },
     },
     {
@@ -78,10 +78,10 @@ const scene: MapLibreScene = {
       sourceProduct: "synthetic",
       visual: {
         label: "Victoria Island",
-        metricLabel: "Marginal target reach",
+        metricLabel: "Additional people reached",
         value: 31_000,
         unit: "people",
-        evidenceLabel: "Evidence D",
+        evidenceLabel: "Early estimate",
       },
     },
     { id: "oshodi", coordinate: [3.32, 6.55], sourceProduct: "synthetic" },
@@ -185,15 +185,15 @@ describe("MapLibreRenderer camera", () => {
     vi.useFakeTimers();
     try {
       render(<MapLibreRenderer scene={scene} selectedFeatureId={null} />);
-      expect(screen.queryByText("Loading Lagos planning context…")).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading the Lagos planning map…")).not.toBeInTheDocument();
 
       act(() => vi.advanceTimersByTime(300));
-      expect(screen.queryByText("Loading Lagos planning context…")).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading the Lagos planning map…")).not.toBeInTheDocument();
       act(() => vi.advanceTimersByTime(1));
-      expect(screen.getByRole("status")).toHaveTextContent("Loading Lagos planning context…");
+      expect(screen.getByRole("status")).toHaveTextContent("Loading the Lagos planning map…");
 
       fireEvent.click(screen.getByRole("button", { name: "load context" }));
-      expect(screen.queryByText("Loading Lagos planning context…")).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading the Lagos planning map…")).not.toBeInTheDocument();
       expect(screen.getByTestId("maplibre-renderer")).toHaveAttribute("data-context-state", "loaded");
       expect(screen.getByTestId("maplibre-renderer")).toHaveAttribute("aria-busy", "false");
     } finally {
@@ -206,9 +206,9 @@ describe("MapLibreRenderer camera", () => {
     fireEvent.click(screen.getByRole("button", { name: "fail context" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Lagos planning context is unavailable. Package locations remain available.",
+      "The Lagos planning map is unavailable. Package locations are still shown.",
     );
-    expect(screen.getByRole("button", { name: "Retry map context" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry map" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Ikeja|Victoria Island|oshodi/ })).toHaveLength(3);
     expect(screen.getByTestId("maplibre-renderer")).toHaveAttribute("data-context-state", "error");
     expect(screen.getByTestId("maplibre-renderer")).toHaveAttribute("aria-busy", "false");
@@ -255,7 +255,7 @@ describe("MapLibreRenderer camera", () => {
     fireEvent.click(screen.getByRole("button", { name: "fail context" }));
     const mountsBeforeRetry = mapViewMounts.mock.calls.length;
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry map context" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry map" }));
 
     expect(mapViewMounts.mock.calls.length).toBeGreaterThan(mountsBeforeRetry);
     expect(screen.getByTestId("maplibre-renderer")).toHaveAttribute("data-context-state", "loading");

@@ -48,7 +48,7 @@ test("reviews invalid package recovery without leading with machine codes", asyn
   await page.getByRole("button", { name: "Continue to timing" }).click();
   const budget = page.getByLabel("Budget (NGN)");
   await budget.fill("1");
-  await page.getByRole("button", { name: "Show recommended zones" }).click();
+  await page.getByRole("button", { name: "Show recommended areas" }).click();
 
   const alert = page.getByRole("alert", { name: "Package constraints" });
   await expect(alert).toContainText("over the campaign budget");
@@ -137,15 +137,15 @@ test("clears stale upload state when a replacement spreadsheet cannot be read", 
 
 test("makes RFQ schedule revision a clear recoverable state", async ({ page }, testInfo) => {
   await reachActionStep(page);
-  await page.getByRole("button", { name: /Review RFQ/ }).click();
-  const rfq = page.getByRole("dialog", { name: "Supplier verification RFQ" });
+  await page.getByRole("button", { name: /Review supplier request/ }).click();
+  const rfq = page.getByRole("dialog", { name: "Supplier request" });
   await expect(rfq).toBeVisible();
   await rfq.getByLabel("Flight start").fill("2026-09-08");
 
   const revision = rfq.getByRole("region", { name: "Schedule revision required" });
   await expect(revision).toContainText("Recompute a dirty plan revision before generating the RFQ");
   await expect(revision.getByRole("button", { name: "Recompute plan with these dates" })).toBeEnabled();
-  await expect(rfq.getByRole("button", { name: "Generate RFQ" })).toBeDisabled();
+  await expect(rfq.getByRole("button", { name: "Create supplier request" })).toBeDisabled();
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-06-rfq-schedule-revision", { fullPage: false });
   await assertReviewClean(page, diagnostics, "RFQ schedule revision");

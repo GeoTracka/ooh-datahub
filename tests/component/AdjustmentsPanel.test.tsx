@@ -47,30 +47,30 @@ describe("AdjustmentsPanel", () => {
       />,
     );
 
-    const add = screen.getByRole("button", { name: "Add selected face" });
-    const swap = screen.getByRole("button", { name: "Swap selected face" });
-    const replace = screen.getByRole("button", { name: "Replace selected zone" });
-    const remove = screen.getByRole("button", { name: "Remove selected face" });
+    const add = screen.getByRole("button", { name: "Add selected location" });
+    const swap = screen.getByRole("button", { name: "Swap selected location" });
+    const replace = screen.getByRole("button", { name: "Replace selected area" });
+    const remove = screen.getByRole("button", { name: "Remove selected location" });
     expect(add).toBeDisabled();
     expect(swap).toBeDisabled();
     expect(replace).toBeDisabled();
     expect(remove).toBeDisabled();
 
-    await user.selectOptions(screen.getByLabelText("Face to add"), "site-a2");
+    await user.selectOptions(screen.getByLabelText("Media location to add"), "site-a2");
     await user.click(add);
     expect(onAdd).toHaveBeenCalledWith("site-a2");
 
-    await user.selectOptions(screen.getByLabelText("Current face to swap"), "site-a");
-    await user.selectOptions(screen.getByLabelText("Replacement face"), "site-a3");
+    await user.selectOptions(screen.getByLabelText("Current media location to swap"), "site-a");
+    await user.selectOptions(screen.getByLabelText("Replacement media location"), "site-a3");
     await user.click(swap);
     expect(onSwap).toHaveBeenCalledWith("site-a", "site-a3");
 
-    await user.selectOptions(screen.getByLabelText("Current zone to replace"), "zone-a");
-    await user.selectOptions(screen.getByLabelText("Replacement zone"), "zone-c");
+    await user.selectOptions(screen.getByLabelText("Current area to replace"), "zone-a");
+    await user.selectOptions(screen.getByLabelText("Replacement area"), "zone-c");
     await user.click(replace);
     expect(onReplaceZone).toHaveBeenCalledWith("zone-a", "zone-c");
 
-    await user.selectOptions(screen.getByLabelText("Face to remove"), "site-b");
+    await user.selectOptions(screen.getByLabelText("Media location to remove"), "site-b");
     await user.click(remove);
     expect(onRemove).toHaveBeenCalledWith("site-b");
   });

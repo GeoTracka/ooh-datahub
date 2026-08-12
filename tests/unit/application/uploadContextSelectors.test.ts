@@ -4,7 +4,7 @@ import { selectUploadedContextComparisons } from "@/application/uploadContextSel
 import { frozenLagosBundle as bundle } from "@/bundle/loadFrozenBundle";
 
 const brief = {
-  productName: "Demo Spark",
+  productName: "Spark Refresh",
   productDescription: "Affordable on-the-go refreshment launch",
   targetAudience: "Students, young workers, and convenience shoppers",
   sector: "fmcg" as const,
