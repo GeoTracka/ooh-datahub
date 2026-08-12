@@ -18,15 +18,24 @@ export function MapStage({
         selectedFeatureId={selectedFeatureId}
         onFeatureSelect={onFeatureSelect}
       />
-      {legend && (
-        <aside className="explorer-map-legend" aria-label="Map lens legend">
-          <strong>{legend.metricLabel}</strong>
-          <span>{legend.evidenceLabel}</span>
-          <small>Marker number/size shows the active lens value. Labels identify zones or context sites.</small>
-        </aside>
-      )}
-      <div className="explorer-map-note">
-        Planning context · not navigation
+      <div className="explorer-map-overlays">
+        {legend && (
+          <aside className="explorer-map-legend" aria-label="Map lens legend">
+            <strong>{legend.metricLabel}</strong>
+            <span>{legend.evidenceLabel}</span>
+            <small>Marker number/size shows the active lens value. Labels identify zones or context sites.</small>
+          </aside>
+        )}
+        <div className="explorer-map-note">
+          <span>Planning context · not navigation</span>
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Map data © OpenStreetMap contributors
+          </a>
+        </div>
       </div>
     </section>
   );

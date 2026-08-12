@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import MapView, { Marker, type MapRef } from "@vis.gl/react-maplibre";
+import { setWorkerUrl, type MapSourceDataEvent } from "maplibre-gl";
 import type { MapLibreScene } from "@/contracts/renderer";
 import { mapLibreStyle } from "@/maps/mapLibreStyle";
+
+setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
 const overview = {
   longitude: 3.39,
@@ -45,6 +48,7 @@ export function MapLibreRenderer({
 }) {
   const mapRef = useRef<MapRef | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [contextReady, setContextReady] = useState(false);
   const [appliedTargetId, setAppliedTargetId] = useState<string | null>(null);
   const selected = scene.features.find((feature) => feature.id === selectedFeatureId);
   const targetLongitude = selected?.coordinate[0] ?? overview.longitude;
@@ -58,7 +62,14 @@ export function MapLibreRenderer({
   const assignMapRef = useCallback((map: MapRef | null) => {
     mapRef.current = map;
     setMapReady(Boolean(map));
-    if (!map) setAppliedTargetId(null);
+    if (!map) {
+      setAppliedTargetId(null);
+      setContextReady(false);
+    }
+  }, []);
+
+  const handleSourceData = useCallback((event: MapSourceDataEvent) => {
+    if (event.sourceId === "context" && event.isSourceLoaded) setContextReady(true);
   }, []);
 
   const focusCurrentTarget = useCallback(() => {
@@ -87,6 +98,8 @@ export function MapLibreRenderer({
     <div
       data-testid="maplibre-renderer"
       data-camera-focus-state={cameraFocusState}
+      data-context-state={contextReady ? "loaded" : "loading"}
+      aria-busy={!contextReady}
       className="map-surface"
     >
       <MapView
@@ -95,6 +108,7 @@ export function MapLibreRenderer({
         mapStyle={mapLibreStyle}
         reuseMaps={false}
         onLoad={focusCurrentTarget}
+        onSourceData={handleSourceData}
       >
         {scene.features.map((feature) => (
           <Marker

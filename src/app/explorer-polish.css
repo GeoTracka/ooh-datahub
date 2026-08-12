@@ -151,6 +151,60 @@
   line-height: 1.35;
 }
 
+.explorer-map-overlays {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 5;
+  display: grid;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  justify-items: end;
+  gap: 8px;
+}
+
+.explorer-map-overlays .explorer-map-legend,
+.explorer-map-overlays .explorer-map-note {
+  position: static;
+}
+
+.explorer-map-note {
+  display: flex;
+  max-width: calc(100% - 24px);
+  align-items: center;
+  gap: 7px;
+  background: rgb(255 255 255 / 94%);
+  color: #343a46;
+  line-height: 1.35;
+  backdrop-filter: blur(10px);
+}
+
+.explorer-map-overlays .explorer-map-note {
+  max-width: 100%;
+}
+
+.explorer-map-note a {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding-left: 7px;
+  border-left: 1px solid rgb(52 58 70 / 20%);
+  border-radius: 3px;
+  color: #0f5b4e;
+  font-weight: 650;
+  text-underline-offset: 2px;
+}
+
+.explorer-map-note a:hover {
+  background: rgb(15 91 78 / 9%);
+  color: #09483d;
+}
+
+.explorer-map-note a:focus-visible {
+  outline: 3px solid rgb(15 91 78 / 35%);
+  outline-offset: 2px;
+}
+
 /* Workflow-critical text actions keep a lightweight visual treatment while
    exposing a comfortable pointer/touch/focus target. */
 .explorer-step-card .explorer-link-button {
@@ -221,6 +275,12 @@
   }
 }
 
+@media (min-width: 768px) and (max-width: 1023px) {
+  .explorer-map-overlays {
+    bottom: calc(55vh + 25px);
+  }
+}
+
 @media (max-width: 767px) {
   .explorer-map-legend {
     right: 8px;
@@ -236,5 +296,22 @@
   .map-marker-caption {
     max-width: 90px;
     font-size: 9px;
+  }
+
+  .explorer-map-overlays {
+    right: 8px;
+    bottom: calc(4vh + 3px);
+    max-width: calc(100% - 16px);
+  }
+
+  .explorer-map-note {
+    right: 8px;
+    bottom: 6px;
+    max-width: calc(100% - 16px);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 2px 7px;
+    padding: 4px 7px;
+    font-size: 10px;
   }
 }

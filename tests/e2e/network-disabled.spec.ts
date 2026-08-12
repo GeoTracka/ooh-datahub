@@ -14,5 +14,7 @@ test("seeded explorer makes no external request", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByTestId("package-strip")).toBeVisible();
+  await expect(page.getByTestId("maplibre-renderer"))
+    .toHaveAttribute("data-context-state", "loaded");
   expect(external).toEqual([]);
 });

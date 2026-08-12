@@ -63,6 +63,36 @@ async function expectFullyInViewport(
   expect(box!.y + box!.height, `${label} bottom edge`).toBeLessThanOrEqual(viewport!.height + 1);
 }
 
+async function expectMapAttributionClearAndClickable(page: Page, label: string): Promise<void> {
+  const attribution = page.getByRole("link", {
+    name: /Map data © OpenStreetMap contributors/i,
+  });
+  const attributionBox = await attribution.boundingBox();
+  const mapBox = await page.locator(".explorer-map-stage").boundingBox();
+  const railBox = await page.locator(".explorer-card-rail").boundingBox();
+
+  expect(attributionBox, `${label} attribution geometry`).not.toBeNull();
+  expect(mapBox, `${label} map geometry`).not.toBeNull();
+  expect(railBox, `${label} rail geometry`).not.toBeNull();
+  expect(attributionBox!.width, `${label} attribution width`).toBeGreaterThanOrEqual(24);
+  expect(attributionBox!.height, `${label} attribution height`).toBeGreaterThanOrEqual(24);
+  expect(attributionBox!.x, `${label} attribution left edge`).toBeGreaterThanOrEqual(mapBox!.x);
+  expect(attributionBox!.x + attributionBox!.width, `${label} attribution right edge`)
+    .toBeLessThanOrEqual(mapBox!.x + mapBox!.width);
+  expect(attributionBox!.y, `${label} attribution top edge`).toBeGreaterThanOrEqual(mapBox!.y);
+  expect(attributionBox!.y + attributionBox!.height, `${label} attribution above rail`)
+    .toBeLessThanOrEqual(railBox!.y - 6);
+
+  await attribution.evaluate((element) => {
+    element.addEventListener("click", (event) => {
+      event.preventDefault();
+      document.documentElement.dataset.mapAttributionClicked = "true";
+    }, { once: true });
+  });
+  await attribution.click();
+  await expect(page.locator("html")).toHaveAttribute("data-map-attribution-clicked", "true");
+}
+
 async function expectComparisonFitsWithoutHorizontalScroll(page: Page): Promise<void> {
   const geometry = await page.locator(".package-option-grid").evaluate((element) => ({
     clientWidth: element.clientWidth,
@@ -219,6 +249,17 @@ test("keeps all three approaches and both decision paths visible at 1024px", asy
   await expectFullyInViewport(page, primaryAction, "Continue with selected package");
   await expectFullyInViewport(page, fineTuneAction, "Fine-tune selected package");
 });
+
+for (const viewport of [
+  { width: 390, height: 844, label: "390px mobile" },
+  { width: 900, height: 900, label: "900px tablet" },
+]) {
+  test(`keeps responsive map attribution above the Step 3 card rail and clickable at ${viewport.label}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await reachRecommendedPackage(page);
+    await expectMapAttributionClearAndClickable(page, viewport.label);
+  });
+}
 
 test("keeps a focused recommendation comparable and actionable at 1024px", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });

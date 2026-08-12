@@ -39,4 +39,23 @@ describe("MapStage", () => {
     expect(legend).toHaveTextContent("Evidence D");
     expect(legend).toHaveTextContent(/Marker number\/size shows the active lens value/);
   });
+
+  it("credits OpenStreetMap contributors", () => {
+    render(
+      <MapStage
+        scene={scene}
+        selectedFeatureId="yaba"
+        onFeatureSelect={() => undefined}
+      />,
+    );
+
+    const attribution = screen.getByRole("link", {
+      name: /Map data © OpenStreetMap contributors/i,
+    });
+    expect(attribution).toBeVisible();
+    expect(attribution).toHaveAttribute(
+      "href",
+      "https://www.openstreetmap.org/copyright",
+    );
+  });
 });
