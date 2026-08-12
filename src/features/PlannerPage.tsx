@@ -218,7 +218,7 @@ export function PlannerPage() {
         });
       }
       if (!plan) return;
-      setSelectedZoneId(plan.selectedZoneIds[0] ?? null);
+      setSelectedZoneId(null);
       setLens("plan");
       setStep(3);
     } finally {
@@ -285,7 +285,7 @@ export function PlannerPage() {
   function selectPackage(candidate: PackageCandidate) {
     if (!visible) return;
     if (candidate.id === visible.recommended.id) return;
-    setSelectedZoneId(candidate.zoneIds[0] ?? null);
+    setSelectedZoneId(null);
     if (
       candidate.id === state.appliedPlan?.recommended.id &&
       state.packagePreviewActive &&
@@ -678,7 +678,7 @@ export function PlannerPage() {
               plan: next,
               reason: "Apply uploaded context · " + contextRevision.dataRevision,
             });
-            setSelectedZoneId(next.selectedZoneIds[0] ?? null);
+            setSelectedZoneId(null);
             setLens("plan");
             setStep(3);
             setUploadOpen(false);

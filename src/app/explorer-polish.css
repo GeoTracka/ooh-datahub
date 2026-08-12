@@ -123,6 +123,124 @@
   white-space: nowrap;
 }
 
+.map-marker-caption.selected {
+  border-color: rgb(15 91 78 / 20%);
+  background: rgb(237 245 242 / 96%);
+  color: #0f5b4e;
+  box-shadow: 0 3px 10px rgb(15 91 78 / 13%);
+  font-weight: 750;
+}
+
+.map-orientation-label {
+  display: block;
+  max-width: 150px;
+  overflow: hidden;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgb(250 248 245 / 72%);
+  color: #69716f;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 90%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.map-orientation-label[data-kind="water"] {
+  background: rgb(239 244 244 / 68%);
+  color: #56747a;
+  font-style: italic;
+}
+
+.map-context-status {
+  position: absolute;
+  z-index: 7;
+  top: 78px;
+  left: calc(min(440px, 38vw) + 24px);
+  display: flex;
+  max-width: min(360px, calc(100% - 36px));
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid rgb(28 32 38 / 7%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 92%);
+  color: #5c6272;
+  box-shadow: 0 3px 14px rgb(28 32 38 / 7%);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+  backdrop-filter: blur(10px);
+}
+
+.map-context-status-error {
+  border-color: rgb(155 58 49 / 16%);
+  background: rgb(255 249 247 / 95%);
+  color: #71332d;
+}
+
+.map-context-status button {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border: 1px solid rgb(15 91 78 / 20%);
+  border-radius: 8px;
+  background: #edf5f2;
+  color: #0f5b4e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.map-context-status button:focus-visible {
+  outline: 3px solid rgb(15 91 78 / 28%);
+  outline-offset: 2px;
+}
+
+.explorer-map-camera-toolbar {
+  position: absolute;
+  z-index: 6;
+  top: 18px;
+  left: calc(min(440px, 38vw) + 24px);
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgb(28 32 38 / 7%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 4px 18px rgb(28 32 38 / 8%);
+  backdrop-filter: blur(12px);
+}
+
+.explorer-map-camera-toolbar button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #5c6272;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.explorer-map-camera-toolbar button[aria-pressed="true"] {
+  background: #e7f1ee;
+  color: #0f5b4e;
+}
+
+.explorer-map-camera-toolbar button:disabled {
+  color: #9298a4;
+  cursor: not-allowed;
+}
+
+.explorer-map-camera-toolbar button:focus-visible {
+  outline: 3px solid rgb(15 91 78 / 28%);
+  outline-offset: 2px;
+}
+
 .explorer-map-legend {
   position: absolute;
   right: 18px;
@@ -185,7 +303,8 @@
 
 .explorer-map-note a {
   display: inline-flex;
-  min-height: 24px;
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
   padding-left: 7px;
   border-left: 1px solid rgb(52 58 70 / 20%);
@@ -229,6 +348,14 @@
 }
 
 @media (min-width: 1024px) {
+  .explorer-shell:has(.explorer-step-card[aria-label^="Step 3 of 5:"]) .explorer-map-camera-toolbar {
+    left: 18px;
+  }
+
+  .explorer-shell:has(.explorer-step-card[aria-label^="Step 3 of 5:"]) .map-context-status {
+    left: 18px;
+  }
+
   /* Before recommendation geometry exists, make the blank map read as a
      deliberate spatial workspace rather than an unfinished region. */
   .explorer-shell:has(.explorer-step-card[aria-label^="Step 1 of 5:"]) .explorer-map-stage::before,
@@ -276,12 +403,47 @@
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
+  .explorer-map-camera-toolbar {
+    top: 12px;
+    left: 12px;
+  }
+
+  .map-context-status {
+    top: 68px;
+    left: 12px;
+  }
+
   .explorer-map-overlays {
     bottom: calc(55vh + 25px);
   }
 }
 
 @media (max-width: 767px) {
+  .explorer-map-camera-toolbar {
+    top: 48px;
+    left: 8px;
+    max-width: calc(100% - 16px);
+  }
+
+  .explorer-map-camera-toolbar button {
+    padding-inline: 9px;
+    font-size: 11px;
+  }
+
+  .map-context-status {
+    top: 104px;
+    left: 8px;
+    max-width: calc(100% - 16px);
+  }
+
+  .map-context-status-error {
+    padding-block: 4px;
+  }
+
+  .explorer-shell:has(.map-context-status-error) .explorer-card-rail {
+    top: 31vh;
+  }
+
   .explorer-map-legend {
     right: 8px;
     bottom: 34px;

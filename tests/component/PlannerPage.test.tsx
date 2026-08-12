@@ -4,7 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PlannerPage } from "@/features/PlannerPage";
 
 vi.mock("@/maps/MapCanvas", () => ({
-  MapCanvas: () => <div data-testid="map-canvas" />,
+  MapCanvas: ({ selectedFeatureId }: { selectedFeatureId?: string | null }) => (
+    <div
+      data-testid="map-canvas"
+      data-camera-selection={selectedFeatureId ?? "package-overview"}
+    />
+  ),
 }));
 
 afterEach(() => vi.unstubAllGlobals());
@@ -88,6 +93,24 @@ describe("PlannerPage explorer", () => {
       .toBeInTheDocument();
     expect(screen.getByLabelText("Plan adjustments")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review RFQ" })).toBeEnabled();
+  }, 30000);
+
+  it("opens Step 3 on the complete package and restores overview when the package changes", async () => {
+    render(<PlannerPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Use default timing & budget" }));
+    await screen.findByRole("region", { name: /Step 3 of 5:/ });
+
+    expect(screen.getByTestId("map-canvas"))
+      .toHaveAttribute("data-camera-selection", "package-overview");
+
+    const zoneCards = screen.getAllByTestId("zone-card");
+    await userEvent.click(zoneCards[1].querySelector("button")!);
+    expect(screen.getByTestId("map-canvas"))
+      .not.toHaveAttribute("data-camera-selection", "package-overview");
+
+    await userEvent.click(screen.getByRole("radio", { name: /Budget smart/ }));
+    expect(screen.getByTestId("map-canvas"))
+      .toHaveAttribute("data-camera-selection", "package-overview");
   }, 30000);
 
   it("fine-tunes a selected recommendation directly from Step 3", async () => {

@@ -1,11 +1,12 @@
 import type { StyleSpecification } from "maplibre-gl";
+import { MAP_CONTEXT_URL } from "@/maps/mapAssets";
 
 export const mapLibreStyle: StyleSpecification = {
   version: 8,
   sources: {
     context: {
       type: "geojson",
-      data: "/map/lagos-open-context.geojson",
+      data: MAP_CONTEXT_URL,
     },
   },
   layers: [

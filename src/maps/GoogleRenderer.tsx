@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AdvancedMarker, APIProvider, Map as GoogleMap } from "@vis.gl/react-google-maps";
+import { AdvancedMarker, APIProvider, Map as GoogleMap, useMap } from "@vis.gl/react-google-maps";
 import type { GoogleScene } from "@/contracts/renderer";
+import {
+  fitWebMercatorBoundsCamera,
+  resolvePackageCameraTarget,
+  type MapCameraRequest,
+} from "@/maps/mapCamera";
 
 type GoogleConfig =
   | { enabled: false }
@@ -20,20 +25,75 @@ function markerScale(scene: GoogleScene, value: number | null | undefined): numb
   return maximum === minimum ? 0.72 : (value - minimum) / (maximum - minimum);
 }
 
+function GoogleCameraController({
+  scene,
+  selectedFeatureId,
+  cameraRequest,
+}: {
+  scene: GoogleScene;
+  selectedFeatureId?: string | null;
+  cameraRequest?: MapCameraRequest;
+}) {
+  const map = useMap();
+  const selected = scene.features.find((feature) => feature.id === selectedFeatureId);
+  const requestedMode = cameraRequest?.mode ?? (selected ? "selected" : "overview");
+
+  useEffect(() => {
+    if (!map) return;
+    if (requestedMode === "selected" && selected) {
+      map.moveCamera({
+        center: { lng: selected.coordinate[0], lat: selected.coordinate[1] },
+        zoom: 12.5,
+      });
+      return;
+    }
+
+    const target = resolvePackageCameraTarget(
+      scene.features.map((feature) => feature.coordinate),
+    );
+    if (target.kind === "bounds") {
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      if (reducedMotion) {
+        const mapElement = map.getDiv();
+        const camera = fitWebMercatorBoundsCamera(target.bounds, {
+          width: mapElement.clientWidth,
+          height: mapElement.clientHeight,
+        }, 64);
+        map.moveCamera({
+          center: { lng: camera.center[0], lat: camera.center[1] },
+          zoom: camera.zoom,
+        });
+      } else {
+        map.fitBounds({
+          west: target.bounds[0][0],
+          south: target.bounds[0][1],
+          east: target.bounds[1][0],
+          north: target.bounds[1][1],
+        }, 64);
+      }
+      return;
+    }
+    map.moveCamera({
+      center: { lng: target.center[0], lat: target.center[1] },
+      zoom: target.zoom,
+    });
+  }, [cameraRequest?.revision, map, requestedMode, scene.features, selected]);
+
+  return null;
+}
+
 export function GoogleRenderer({
   scene,
   selectedFeatureId,
   onFeatureSelect,
+  cameraRequest,
 }: {
   scene: GoogleScene;
   selectedFeatureId?: string | null;
   onFeatureSelect?(featureId: string): void;
+  cameraRequest?: MapCameraRequest;
 }) {
   const [config, setConfig] = useState<GoogleConfig | null>(null);
-  const selected = scene.features.find((feature) => feature.id === selectedFeatureId);
-  const center = selected
-    ? { lng: selected.coordinate[0], lat: selected.coordinate[1] }
-    : { lng: 3.39, lat: 6.53 };
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/maps/google-config", { signal: controller.signal, cache: "no-store" })
@@ -65,11 +125,16 @@ export function GoogleRenderer({
     <div data-testid="google-renderer" className="map-surface">
       <APIProvider apiKey={config.browserKey}>
         <GoogleMap
-          center={center}
-          zoom={selected ? 12.5 : 10.5}
+          defaultCenter={{ lng: 3.39, lat: 6.53 }}
+          defaultZoom={10.5}
           mapId="DEMO_MAP_ID"
           disableDefaultUI
         >
+          <GoogleCameraController
+            scene={scene}
+            selectedFeatureId={selectedFeatureId}
+            cameraRequest={cameraRequest}
+          />
           {scene.features.map((feature) => (
             <AdvancedMarker
               key={feature.id}

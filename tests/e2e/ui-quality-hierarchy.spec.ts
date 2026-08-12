@@ -63,6 +63,60 @@ async function expectFullyInViewport(
   expect(box!.y + box!.height, `${label} bottom edge`).toBeLessThanOrEqual(viewport!.height + 1);
 }
 
+type Rect = { x: number; y: number; width: number; height: number };
+
+function expectNoOverlap(first: Rect, second: Rect, label: string): void {
+  const overlaps = first.x < second.x + second.width &&
+    first.x + first.width > second.x &&
+    first.y < second.y + second.height &&
+    first.y + first.height > second.y;
+  expect(
+    overlaps,
+    `${label} should not overlap; first=${JSON.stringify(first)} second=${JSON.stringify(second)}`,
+  ).toBe(false);
+}
+
+async function expectCameraHierarchy(page: Page, label: string): Promise<void> {
+  const toolbarLocator = page.getByRole("group", { name: "Map camera" });
+  const toolbar = await toolbarLocator.boundingBox();
+  const lenses = await page.locator(".explorer-lenses").boundingBox();
+  const rail = await page.locator(".explorer-card-rail").boundingBox();
+  const overlays = await page.locator(".explorer-map-overlays").boundingBox();
+  const map = await page.locator(".explorer-map-stage").boundingBox();
+
+  expect(toolbar, `${label} camera toolbar geometry`).not.toBeNull();
+  expect(lenses, `${label} lenses geometry`).not.toBeNull();
+  expect(rail, `${label} rail geometry`).not.toBeNull();
+  expect(overlays, `${label} map overlays geometry`).not.toBeNull();
+  expect(map, `${label} map geometry`).not.toBeNull();
+  expect(toolbar!.x).toBeGreaterThanOrEqual(map!.x);
+  expect(toolbar!.x + toolbar!.width).toBeLessThanOrEqual(map!.x + map!.width + 1);
+  expect(toolbar!.y).toBeGreaterThanOrEqual(map!.y);
+  expect(toolbar!.y + toolbar!.height).toBeLessThanOrEqual(map!.y + map!.height + 1);
+
+  expectNoOverlap(toolbar!, lenses!, `${label} camera toolbar and lenses`);
+  expectNoOverlap(toolbar!, rail!, `${label} camera toolbar and rail`);
+  expectNoOverlap(toolbar!, overlays!, `${label} camera toolbar and map overlays`);
+
+  const buttons = toolbarLocator.getByRole("button");
+  await expect(buttons).toHaveCount(2);
+  for (let index = 0; index < 2; index += 1) {
+    await expectComfortableTarget(buttons.nth(index), `${label} camera action ${index + 1}`, 44);
+  }
+
+  const markers = page.locator(".map-marker");
+  await expect(markers).toHaveCount(3);
+  for (let index = 0; index < 3; index += 1) {
+    const marker = await markers.nth(index).boundingBox();
+    expect(marker, `${label} package marker ${index + 1}`).not.toBeNull();
+    expect(marker!.width, `${label} package marker ${index + 1} target width`)
+      .toBeGreaterThanOrEqual(44);
+    expect(marker!.height, `${label} package marker ${index + 1} target height`)
+      .toBeGreaterThanOrEqual(44);
+    expectNoOverlap(toolbar!, marker!, `${label} camera toolbar and package marker ${index + 1}`);
+  }
+}
+
 async function expectMapAttributionClearAndClickable(page: Page, label: string): Promise<void> {
   const attribution = page.getByRole("link", {
     name: /Map data © OpenStreetMap contributors/i,
@@ -74,14 +128,19 @@ async function expectMapAttributionClearAndClickable(page: Page, label: string):
   expect(attributionBox, `${label} attribution geometry`).not.toBeNull();
   expect(mapBox, `${label} map geometry`).not.toBeNull();
   expect(railBox, `${label} rail geometry`).not.toBeNull();
-  expect(attributionBox!.width, `${label} attribution width`).toBeGreaterThanOrEqual(24);
-  expect(attributionBox!.height, `${label} attribution height`).toBeGreaterThanOrEqual(24);
+  expect(attributionBox!.width, `${label} attribution target width`).toBeGreaterThanOrEqual(44);
+  expect(attributionBox!.height, `${label} attribution target height`).toBeGreaterThanOrEqual(44);
   expect(attributionBox!.x, `${label} attribution left edge`).toBeGreaterThanOrEqual(mapBox!.x);
   expect(attributionBox!.x + attributionBox!.width, `${label} attribution right edge`)
     .toBeLessThanOrEqual(mapBox!.x + mapBox!.width);
   expect(attributionBox!.y, `${label} attribution top edge`).toBeGreaterThanOrEqual(mapBox!.y);
-  expect(attributionBox!.y + attributionBox!.height, `${label} attribution above rail`)
-    .toBeLessThanOrEqual(railBox!.y - 6);
+  if (railBox!.y > mapBox!.y) {
+    expect(attributionBox!.y + attributionBox!.height, `${label} attribution above rail`)
+      .toBeLessThanOrEqual(railBox!.y - 6);
+  } else {
+    expect(attributionBox!.x, `${label} attribution to the right of rail`)
+      .toBeGreaterThanOrEqual(railBox!.x + railBox!.width);
+  }
 
   await attribution.evaluate((element) => {
     element.addEventListener("click", (event) => {
@@ -151,11 +210,11 @@ test.describe("desktop package comparison hierarchy", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await reachRecommendedPackage(page);
     await expect(page.getByTestId("maplibre-renderer"))
-      .toHaveAttribute("data-camera-focus-state", "selected");
+      .toHaveAttribute("data-camera-focus-state", "overview");
 
     const rail = await page.locator(".explorer-card-rail").boundingBox();
     const map = await page.locator(".explorer-map-stage").boundingBox();
-    const selectedMarker = await page.locator(".map-marker.selected").boundingBox();
+    const packageMarkers = page.locator(".map-marker");
     const lensTabs = await page.getByRole("tablist", { name: "Map lens" }).boundingBox();
     const legend = await page
       .getByRole("complementary", { name: "Map lens legend" })
@@ -164,7 +223,7 @@ test.describe("desktop package comparison hierarchy", () => {
 
     expect(rail).not.toBeNull();
     expect(map).not.toBeNull();
-    expect(selectedMarker).not.toBeNull();
+    await expect(packageMarkers).toHaveCount(3);
     expect(lensTabs).not.toBeNull();
     expect(legend).not.toBeNull();
     expect(planningNote).not.toBeNull();
@@ -172,13 +231,14 @@ test.describe("desktop package comparison hierarchy", () => {
     expect(rail!.width).toBeLessThanOrEqual(800);
     expect(map!.x).toBeGreaterThanOrEqual(rail!.x + rail!.width - 1);
     expect(map!.width).toBeGreaterThanOrEqual(600);
-    expect(selectedMarker!.x).toBeGreaterThanOrEqual(map!.x);
-    expect(selectedMarker!.x + selectedMarker!.width)
-      .toBeLessThanOrEqual(map!.x + map!.width);
-    const markerCenter = selectedMarker!.x + selectedMarker!.width / 2;
-    const mapCenter = map!.x + map!.width / 2;
-    expect(Math.abs(markerCenter - mapCenter), "selected marker should be centered in map pane")
-      .toBeLessThanOrEqual(40);
+    for (let index = 0; index < 3; index += 1) {
+      const marker = await packageMarkers.nth(index).boundingBox();
+      expect(marker, `package marker ${index + 1} geometry`).not.toBeNull();
+      expect(marker!.x).toBeGreaterThanOrEqual(map!.x);
+      expect(marker!.x + marker!.width).toBeLessThanOrEqual(map!.x + map!.width);
+      expect(marker!.y).toBeGreaterThanOrEqual(map!.y);
+      expect(marker!.y + marker!.height).toBeLessThanOrEqual(map!.y + map!.height);
+    }
     for (const [label, control] of [
       ["lens tabs", lensTabs],
       ["legend", legend],
@@ -210,6 +270,7 @@ test.describe("desktop package comparison hierarchy", () => {
 
   test("gives workflow-critical secondary actions comfortable targets", async ({ page }) => {
     await reachRecommendedPackage(page);
+    await page.getByTestId("zone-card").nth(1).getByRole("button").first().click();
 
     const deliveryStory = page.getByRole("button", { name: "View delivery story" });
     const fineTune = page.getByRole("button", { name: "Fine-tune selected package" });
@@ -239,6 +300,20 @@ test.describe("desktop package comparison hierarchy", () => {
   });
 });
 
+for (const viewport of [
+  { width: 1440, height: 900, label: "1440x900 desktop" },
+  { width: 900, height: 900, label: "900x900 tablet" },
+  { width: 390, height: 844, label: "390x844 mobile" },
+]) {
+  test(`keeps the compact camera hierarchy collision-free at ${viewport.label}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await reachRecommendedPackage(page);
+    await expect(page.getByTestId("maplibre-renderer"))
+      .toHaveAttribute("data-camera-focus-state", "overview");
+    await expectCameraHierarchy(page, viewport.label);
+  });
+}
+
 test("keeps all three approaches and both decision paths visible at 1024px", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await reachRecommendedPackage(page);
@@ -251,6 +326,7 @@ test("keeps all three approaches and both decision paths visible at 1024px", asy
 });
 
 for (const viewport of [
+  { width: 1440, height: 900, label: "1440px desktop" },
   { width: 390, height: 844, label: "390px mobile" },
   { width: 900, height: 900, label: "900px tablet" },
 ]) {
