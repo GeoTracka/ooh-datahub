@@ -8,7 +8,7 @@ import {
 import type { Brief } from "@/contracts/domain";
 
 const brief: Brief = {
-  productName: "Demo Spark",
+  productName: "Spark Refresh",
   productDescription: "Affordable on-the-go refreshment launch",
   targetAudience: "Students, young workers, and convenience shoppers",
   sector: "fmcg",

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { selectPlanDeltas } from "@/application/plannerSelectors";
 import type { AdjustmentOptions, AdjustmentSiteOption } from "@/application/plannerService";
 import { PackageConstraintNotice } from "@/features/PackageConstraintNotice";
+import { PUBLIC_COPY, confidenceLabel } from "@/content/plainLanguage";
 
 type PlanDeltas = NonNullable<ReturnType<typeof selectPlanDeltas>>;
 type PlanDelta = PlanDeltas["currentToDraft"];
@@ -39,30 +40,30 @@ function DecisionSummary({ delta }: { delta: PlanDelta }) {
         <p>{delta.tradeOff}</p>
       </header>
       {!delta.comparable && (
-        <p role="status">Delivery is not subtracted because the comparison basis changed.</p>
+        <p role="status">Audience delivery is shown side by side because the campaign settings changed.</p>
       )}
       <dl className="adjustment-impact-grid">
         <div><dt>Spend</dt><dd>{signedCurrency(delta.costNgn)}</dd></div>
-        <div><dt>Planning Fit</dt><dd>{signed(delta.planningFit)}</dd></div>
-        <div><dt>Evidence</dt><dd>{signed(delta.evidenceScore)}</dd></div>
+        <div><dt>{PUBLIC_COPY.metrics.planScore}</dt><dd>{signed(delta.planningFit)}</dd></div>
+        <div><dt>Data confidence</dt><dd>{signed(delta.evidenceScore)}</dd></div>
         <div>
-          <dt>{delta.comparable ? delta.deliveryLabel : "Objective delivery"}</dt>
+          <dt>{delta.comparable ? delta.deliveryLabel : "Audience delivery"}</dt>
           <dd>{delta.eligibleDelivery === null
             ? "Not comparable"
             : `${signed(delta.eligibleDelivery)} ${delta.deliveryUnit}`}</dd>
         </div>
       </dl>
       <details>
-        <summary>Audit / calculation details</summary>
+        <summary>Technical calculation details</summary>
         <div className="comparison-pair">
-          <AuditPlan label="Applied" summary={delta.from} />
-          <AuditPlan label="Proposed" summary={delta.to} />
+          <AuditPlan label={PUBLIC_COPY.fineTune.current} summary={delta.from} />
+          <AuditPlan label={PUBLIC_COPY.fineTune.proposed} summary={delta.to} />
         </div>
         <dl>
-          <div><dt>Reason code</dt><dd>{delta.reasonCode ?? "Comparable"}</dd></div>
-          <div><dt>Changed zones</dt><dd>{delta.changedZoneIds.join(", ") || "None"}</dd></div>
-          <div><dt>Changed sites</dt><dd>{delta.changedSiteIds.join(", ") || "None"}</dd></div>
-          <div><dt>Affected pillars</dt><dd>{delta.affectedPillars.join(", ") || "None"}</dd></div>
+            <div><dt>Why the comparison changed</dt><dd>{delta.reasonCode ?? "The packages can be compared directly"}</dd></div>
+          <div><dt>{PUBLIC_COPY.fineTune.changedAreas}</dt><dd>{delta.changedZoneIds.join(", ") || "None"}</dd></div>
+          <div><dt>{PUBLIC_COPY.fineTune.changedLocations}</dt><dd>{delta.changedSiteIds.join(", ") || "None"}</dd></div>
+          <div><dt>{PUBLIC_COPY.fineTune.scoreAreas}</dt><dd>{delta.affectedPillars.join(", ") || "None"}</dd></div>
         </dl>
       </details>
     </section>
@@ -77,15 +78,15 @@ function AuditPlan({
   summary: PlanDelta["from"];
 }) {
   return (
-    <section aria-label={`${label} audit basis`}>
+    <section aria-label={`${label} comparison details`}>
       <h2>{label}</h2>
       <dl>
         <div><dt>Cost</dt><dd>NGN {number(summary.costNgn)}</dd></div>
-        <div><dt>Planning Fit</dt><dd>{number(summary.planningFit)}</dd></div>
-        <div><dt>Evidence</dt><dd>{number(summary.evidenceScore)} · {summary.evidenceGrade}</dd></div>
-        <div><dt>{summary.deliveryLabel} · Low / Base / High</dt><dd>{rangeText(summary.deliveryRange)} {summary.deliveryUnit}</dd></div>
-        <div><dt>Selected zones</dt><dd>{summary.zoneIds.join(", ") || "None"}</dd></div>
-        <div><dt>Selected sites</dt><dd>{summary.siteIds.join(", ") || "None"}</dd></div>
+        <div><dt>{PUBLIC_COPY.metrics.planScore}</dt><dd>{number(summary.planningFit)}</dd></div>
+        <div><dt>Data confidence</dt><dd>{number(summary.evidenceScore)} · {confidenceLabel(summary.evidenceGrade)}</dd></div>
+        <div><dt>{summary.deliveryLabel} · Lower / Expected / Upper</dt><dd>{rangeText(summary.deliveryRange)} {summary.deliveryUnit}</dd></div>
+        <div><dt>Selected areas</dt><dd>{summary.zoneIds.join(", ") || "None"}</dd></div>
+        <div><dt>Selected media locations</dt><dd>{summary.siteIds.join(", ") || "None"}</dd></div>
         <div><dt>Data revision</dt><dd>{summary.dataRevision}</dd></div>
         <div><dt>Fingerprint</dt><dd><code>{summary.fingerprint}</code></dd></div>
         <div><dt>Comparability</dt><dd><code>{summary.comparabilityKey}</code></dd></div>
@@ -128,10 +129,10 @@ export function AdjustmentsPanel({
     : [];
 
   return (
-    <aside aria-label="Plan adjustments">
+    <aside aria-label="Package adjustments">
       <header className="adjustment-header">
         <div>
-          <span>{isDirty ? "Unapplied changes" : "Fine-tune package"}</span>
+          <span>{isDirty ? "Changes not yet applied" : PUBLIC_COPY.fineTune.title}</span>
           <strong>Choose exactly what you want to change</strong>
         </div>
         <div className="adjustment-history-actions">
@@ -148,29 +149,29 @@ export function AdjustmentsPanel({
 
       <div className="adjustment-actions-grid">
         <section>
-          <h2>Add a compatible face</h2>
-          <p>Add one eligible face inside a zone already in the package.</p>
-          <select aria-label="Face to add" value={addSiteId} onChange={(event) => setAddSiteId(event.target.value)}>
-            <option value="">Choose a face</option>
+          <h2>Add a media location</h2>
+          <p>Add an available media location within an area already in the package.</p>
+          <select aria-label="Media location to add" value={addSiteId} onChange={(event) => setAddSiteId(event.target.value)}>
+            <option value="">Choose a media location</option>
             {options.addableSites.map((site) => <option key={site.id} value={site.id}>{siteText(site)}</option>)}
           </select>
           <button type="button" disabled={!addSiteId} onClick={() => {
             onAdd(addSiteId);
             setAddSiteId("");
-          }}>Add selected face</button>
+          }}>Add selected location</button>
         </section>
 
         <section>
-          <h2>Swap a face</h2>
-          <p>Choose the current face, then a compatible replacement in the same zone.</p>
-          <select aria-label="Current face to swap" value={swapSiteId} onChange={(event) => {
+          <h2>Swap a media location</h2>
+          <p>Choose the current location, then an available replacement in the same area.</p>
+          <select aria-label="Current media location to swap" value={swapSiteId} onChange={(event) => {
             setSwapSiteId(event.target.value);
             setSwapReplacementId("");
           }}>
-            <option value="">Choose current face</option>
+            <option value="">Choose current location</option>
             {options.selectedSites.map((site) => <option key={site.id} value={site.id}>{siteText(site)}</option>)}
           </select>
-          <select aria-label="Replacement face" value={swapReplacementId} disabled={!swapSiteId} onChange={(event) => setSwapReplacementId(event.target.value)}>
+          <select aria-label="Replacement media location" value={swapReplacementId} disabled={!swapSiteId} onChange={(event) => setSwapReplacementId(event.target.value)}>
             <option value="">Choose replacement</option>
             {swapOptions.map((site) => <option key={site.id} value={site.id}>{siteText(site)}</option>)}
           </select>
@@ -178,38 +179,38 @@ export function AdjustmentsPanel({
             onSwap(swapSiteId, swapReplacementId);
             setSwapSiteId("");
             setSwapReplacementId("");
-          }}>Swap selected face</button>
+          }}>Swap selected location</button>
         </section>
 
         <section>
-          <h2>Replace a zone</h2>
-          <p>Choose the zone to remove and the eligible outside zone you want to test.</p>
-          <select aria-label="Current zone to replace" value={replaceZoneId} onChange={(event) => setReplaceZoneId(event.target.value)}>
-            <option value="">Choose current zone</option>
+          <h2>Replace an area</h2>
+          <p>Choose the area to remove and an available area you want to test.</p>
+          <select aria-label="Current area to replace" value={replaceZoneId} onChange={(event) => setReplaceZoneId(event.target.value)}>
+            <option value="">Choose current area</option>
             {options.selectedZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
           </select>
-          <select aria-label="Replacement zone" value={replacementZoneId} onChange={(event) => setReplacementZoneId(event.target.value)}>
-            <option value="">Choose replacement zone</option>
+          <select aria-label="Replacement area" value={replacementZoneId} onChange={(event) => setReplacementZoneId(event.target.value)}>
+            <option value="">Choose replacement area</option>
             {options.alternativeZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.label}</option>)}
           </select>
           <button type="button" disabled={!replaceZoneId || !replacementZoneId} onClick={() => {
             onReplaceZone(replaceZoneId, replacementZoneId);
             setReplaceZoneId("");
             setReplacementZoneId("");
-          }}>Replace selected zone</button>
+          }}>Replace selected area</button>
         </section>
 
         <section>
-          <h2>Remove a face</h2>
-          <p>Remove a specific selected face and inspect the resulting delivery trade-off.</p>
-          <select aria-label="Face to remove" value={removeSiteId} onChange={(event) => setRemoveSiteId(event.target.value)}>
-            <option value="">Choose a face</option>
+          <h2>Remove a media location</h2>
+          <p>Remove one location and review how the audience estimate and cost change.</p>
+          <select aria-label="Media location to remove" value={removeSiteId} onChange={(event) => setRemoveSiteId(event.target.value)}>
+            <option value="">Choose a media location</option>
             {options.selectedSites.map((site) => <option key={site.id} value={site.id}>{siteText(site)}</option>)}
           </select>
           <button type="button" disabled={!removeSiteId} onClick={() => {
             onRemove(removeSiteId);
             setRemoveSiteId("");
-          }}>Remove selected face</button>
+          }}>Remove selected location</button>
         </section>
       </div>
 

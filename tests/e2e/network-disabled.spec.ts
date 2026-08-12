@@ -52,7 +52,7 @@ for (const viewport of [
     await expect(renderer).toHaveAttribute("aria-busy", "false");
     const degraded = page.locator(".map-context-status-error");
     await expect(degraded).toContainText(
-      "Lagos planning context is unavailable. Package locations remain available.",
+      "The Lagos planning map is unavailable. Package locations are still shown.",
     );
     const markers = page.locator(".map-marker");
     await expect(markers).toHaveCount(3);

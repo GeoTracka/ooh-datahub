@@ -8,7 +8,7 @@ import type { DrawerTarget } from "@/contracts/renderer";
 import { CausalDrawer } from "@/features/CausalDrawer";
 
 const plan = buildPlan(bundle, {
-  productName: "Demo Spark",
+  productName: "Spark Refresh",
   productDescription: "Affordable on-the-go refreshment launch",
   targetAudience: "Students, young workers, and convenience shoppers",
   sector: "fmcg",
@@ -40,7 +40,7 @@ describe("CausalDrawer", () => {
       .toEqual(["package", "pillar", "zone", "site", "evidence"]);
   });
 
-  it("does not misrepresent non-delivery Planning Fit pillars as causal reach stages", () => {
+  it("explains score areas without presenting them as audience-delivery steps", () => {
     const target: DrawerTarget = { kind: "pillar", id: "E", metric: "reach" };
     const view = selectCausalDrawerViewModel(bundle, plan, target);
     render(<CausalDrawer
@@ -58,10 +58,10 @@ describe("CausalDrawer", () => {
       onBack={() => undefined}
       onClose={() => undefined}
     />);
-    expect(screen.getByRole("heading", { name: "Planning Fit · E pillar" }))
+    expect(screen.getByRole("heading", { name: "Plan score · E area" }))
       .toBeInTheDocument();
-    expect(screen.getByText(/only D · Delivery enters/)).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: "Causal stages" }))
+    expect(screen.getByText(/only the D · Delivery area feeds into/)).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "How the estimate was built" }))
       .not.toBeInTheDocument();
   });
 
@@ -82,7 +82,7 @@ describe("CausalDrawer", () => {
     expect(first.measurement.fingerprint).not.toBe(second.measurement.fingerprint);
   });
 
-  it("renders entity identity, a back action, sources, and distinct metric focus", async () => {
+  it("renders entity identity, a back action, understandable sources, and distinct metric focus", async () => {
     const siteId = plan.recommended.siteIds[0];
     const target: DrawerTarget = { kind: "site", id: siteId, metric: "reach" };
     const view = selectCausalDrawerViewModel(bundle, plan, target);
@@ -110,12 +110,13 @@ describe("CausalDrawer", () => {
       onBack={onBack}
       onClose={onClose}
     />);
-    expect(screen.getByRole("heading", { name: /Reach ·/ })).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(siteId))).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Estimated reach ·/ })).toBeInTheDocument();
+    expect(screen.getAllByText(view.label).length).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(onBack).toHaveBeenCalledOnce();
-    await userEvent.click(screen.getByText("Source IDs"));
-    expect(screen.getAllByText("lagos-demo-synthetic-v1").length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByText("Sources used"));
+    expect(screen.getAllByText("Audience information").length).toBeGreaterThan(0);
+    expect(screen.getByRole("dialog")).not.toHaveTextContent(/demo|synthetic/i);
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
     rendered.unmount();

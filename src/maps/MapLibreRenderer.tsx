@@ -13,6 +13,7 @@ import {
 } from "@/maps/mapCamera";
 import { mapLibreStyle } from "@/maps/mapLibreStyle";
 import { mapOrientationLabels } from "@/maps/orientationLabels";
+import { PUBLIC_COPY } from "@/content/plainLanguage";
 
 setWorkerUrl(MAPLIBRE_WORKER_URL);
 
@@ -242,13 +243,13 @@ export function MapLibreRenderer({
       </MapView>
       {showLoadingStatus && (
         <div className="map-context-status" role="status" aria-live="polite">
-          Loading Lagos planning context…
+          {PUBLIC_COPY.map.loading}
         </div>
       )}
       {contextState === "error" && (
         <div className="map-context-status map-context-status-error" role="alert">
-          <span>Lagos planning context is unavailable. Package locations remain available.</span>
-          <button type="button" onClick={retryContext}>Retry map context</button>
+          <span>{PUBLIC_COPY.map.unavailable}</span>
+          <button type="button" onClick={retryContext}>Retry map</button>
         </div>
       )}
     </div>

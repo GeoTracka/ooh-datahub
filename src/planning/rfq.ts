@@ -9,6 +9,7 @@ import {
 } from "@/contracts/rfq";
 import { resolveBriefAudience } from "@/planning/briefNormalization";
 import { canonicalJson } from "@/shared/canonicalJson";
+import { PUBLIC_COPY } from "@/content/plainLanguage";
 
 const requested = {
   identityAndOrientation: "REQUESTED",
@@ -50,20 +51,29 @@ function reachShareRange(range: RfqRange, universe: number): RfqRange {
 }
 
 function renderSupplierLine(line: SupplierRfqLine): string {
+  const timeLabel = ({
+    all_day: "All day",
+    am: "Morning",
+    midday: "Midday",
+    pm: "Afternoon",
+    evening: "Evening",
+  } as const)[line.requestedSchedule.daypart];
   return [
-    "Asset/structure/face: " + line.assetId + " / " +
-      (line.structureId ?? "Confirmation requested") + " / " + line.faceId,
-    "Address/coordinate: " + line.address + " / " +
+    "Media location reference: " + line.assetId,
+    "Address and coordinates: " + line.address + " / " +
       line.coordinate.latitude + ", " + line.coordinate.longitude,
-    "Format/class/dimensions: " + line.format + " / " + line.mediaClass + " / " +
+    "Format and size: " + line.format + " / " +
+      (line.mediaClass === "DOOH" ? "Digital" : "Static") + " / " +
       (line.dimensions ?? "Confirmation requested"),
-    "Schedule: " + line.requestedSchedule.start + " to " +
-      line.requestedSchedule.end + " / " + line.requestedSchedule.daypart +
-      " / quantity " + line.requestedSchedule.quantity + " / share of time " +
-      (line.requestedSchedule.shareOfTimePercent ?? "Confirmation requested"),
-    "Indicative rate: NGN " + line.indicativeRate.amount +
-      " / " + line.indicativeRate.basis,
-    "Confirm: " + Object.keys(line.confirmationRequests).sort().join(", "),
+    "Campaign dates: " + line.requestedSchedule.start + " to " +
+      line.requestedSchedule.end + " / " + timeLabel +
+      " / " + line.requestedSchedule.quantity + " placement" +
+      (line.requestedSchedule.quantity === 1 ? "" : "s") + " / display time " +
+      (line.requestedSchedule.shareOfTimePercent === null
+        ? "Confirmation requested"
+        : line.requestedSchedule.shareOfTimePercent + "%"),
+    "Current planning rate: NGN " + line.indicativeRate.amount,
+    "Please confirm the location details, availability, final price, installation, approvals, and proof of display.",
   ].join("\n");
 }
 
@@ -116,7 +126,7 @@ export function generateRfq(
     indicativeRate: {
       amount: site.rateNgn,
       currency: "NGN",
-      basis: "illustrative_demo_line_rate",
+      basis: "indicative_planning_rate",
     },
     confirmationRequests: requested,
   }));
@@ -156,7 +166,7 @@ export function generateRfq(
       .filter((target) => target.sector === appliedPlan.brief.sector)
       .map((target) => target.cellId)
       .sort(),
-    exposureBasis: "target people with at least one modelled OOH opportunity to see",
+    exposureBasis: "people in the chosen audience who may see the campaign at least once",
     exposureThreshold: "1+",
     modelVersion: bundle.manifest.modelVersion,
     targetUniverseVersion: bundle.manifest.targetUniverseVersion,
@@ -175,8 +185,8 @@ export function generateRfq(
     },
     limitations: [
       ...appliedPlan.measurement.claim.caveats,
-      ...(changedSchedule ? ["Reviewed RFQ schedule differs; recompute audience estimates before reliance"] : []),
-      ...(contextOnly ? ["Audience delivery unavailable; context shortlist only"] : []),
+      ...(changedSchedule ? ["The reviewed campaign dates changed; update audience estimates before using them."] : []),
+      ...(contextOnly ? ["Audience estimates are unavailable; inventory is included for comparison only."] : []),
     ],
     replay: appliedPlan.replay,
   };
@@ -212,35 +222,36 @@ export function generateRfq(
     const supplierLines = lines.filter((line) => line.supplierId === supplierId);
     const note = review.supplierNotes[supplierId] ?? "";
     const body = [
-      "DEMO — DO NOT SEND",
-      campaign.product.name + " — supplier verification request",
-      "Sector/objective: " + campaign.sector + " / " + campaign.objective,
+      PUBLIC_COPY.rfq.watermark,
+      campaign.product.name + " — supplier request",
+      "Campaign type: " + ({ fmcg: "Consumer goods", real_estate: "Real Estate", bank_fintech: "Bank / Fintech" } as const)[campaign.sector],
+      "Campaign goal: " + ({ broad_reach: "Broad reach", influential_core: "Priority audience", near_conversion: "Likely customers" } as const)[campaign.objective],
       "Target audience: " + campaign.targetAudience,
       "Buyer: " + review.buyerContact.name + " <" + review.buyerContact.email + ">",
       "Response deadline: " + review.responseDeadline,
-      "Confirmed flight: " + review.flightStart + " to " + review.flightEnd + " · " + campaign.flight.daypart,
-      "Creative/compliance: supplier confirmation required before activation.",
+      "Campaign dates: " + review.flightStart + " to " + review.flightEnd + " · " + ({ all_day: "All day", am: "Morning", midday: "Midday", pm: "Afternoon", evening: "Evening" } as const)[campaign.flight.daypart],
+      "Artwork and approvals: supplier confirmation required before the campaign starts.",
       supplierLines.map(renderSupplierLine).join("\n\n"),
       note ? "Supplier note: " + note : "",
-      "Please confirm identity/orientation, dimensions, availability, gross/net rate, production, installation, taxes, lead time, permits, proof of posting/play, measurement deliverables, and face-level audience provider/target/universe/period/method/uncertainty files.",
-      "Status: draft, unbooked, unsent",
+      "Please confirm each media location, its viewing direction and size, availability, final price, production and installation costs, taxes, lead time, permits, proof of display, and any audience measurement files available for the location.",
+      "Status: " + PUBLIC_COPY.rfq.status,
     ].filter(Boolean).join("\n");
     return {
       supplierId,
       supplierNote: note,
-      subject: "Request for rate, availability and face verification",
+      subject: PUBLIC_COPY.rfq.subject,
       body,
       lines: supplierLines,
-      watermark: "DEMO — DO NOT SEND" as const,
+      watermark: PUBLIC_COPY.rfq.watermark,
       status: "draft_unbooked_unsent" as const,
     };
   });
   return {
-    watermark: "DEMO — DO NOT SEND",
+    watermark: PUBLIC_COPY.rfq.watermark,
     status: "draft_unbooked_unsent",
     supplierMessages,
     internalRequest: {
-      watermark: "DEMO — DO NOT SEND",
+      watermark: PUBLIC_COPY.rfq.watermark,
       status: "draft_unbooked_unsent",
       planFingerprint: appliedPlan.measurement.fingerprint,
       campaign,

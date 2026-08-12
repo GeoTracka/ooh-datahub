@@ -45,7 +45,7 @@ describe("generateRfq", () => {
   it("contains every campaign field, selected line, verification request and replay value", () => {
     const rfq = generateRfq(bundle, plan, deterministicReview);
     expect(rfq.internalRequest.campaign).toMatchObject({
-      product: { name: "Demo Spark" },
+      product: { name: "Spark Refresh" },
       sector: "fmcg",
       objective: "broad_reach",
       targetAudience: plan.brief.targetAudience,
@@ -79,7 +79,7 @@ describe("generateRfq", () => {
         coordinate: { longitude: expect.any(Number), latitude: expect.any(Number) },
         dimensions: null,
         requestedSchedule: { quantity: 1 },
-        indicativeRate: { currency: "NGN", basis: "illustrative_demo_line_rate" },
+        indicativeRate: { currency: "NGN", basis: "indicative_planning_rate" },
       });
     }
     expect(rfq.internalRequest.lines.every((line) =>
@@ -113,7 +113,8 @@ describe("generateRfq", () => {
         expect(message.body).toContain(line.assetId);
         expect(message.body).toContain(line.address);
         expect(message.body).toContain(String(line.coordinate.latitude));
-        expect(message.body).toContain(line.indicativeRate.basis);
+        expect(message.body).toContain(String(line.indicativeRate.amount));
+        expect(message.body).not.toContain(line.indicativeRate.basis);
       }
       expect(otherIds.every((id) => !message.body.includes(id))).toBe(true);
       expect(otherAddresses.every((address) => !message.body.includes(address))).toBe(true);
@@ -191,7 +192,9 @@ describe("generateRfq", () => {
     const second = generateRfq(bundle, plan, deterministicReview);
     expect(first).toEqual(second);
     const text = JSON.stringify(first);
-    expect(text).toContain("DEMO — DO NOT SEND");
-    expect(text).not.toMatch(/\b(booked|reserved|sent|guaranteed)\b/i);
+    expect(text).toContain("DRAFT — NOT YET SENT");
+    expect(first.supplierMessages[0]?.subject)
+      .toBe("Request for rates, availability, and media-location confirmation");
+    expect(text).not.toMatch(/\b(?:is|has been) (?:booked|reserved|sent|guaranteed)\b/i);
   });
 });

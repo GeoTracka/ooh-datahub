@@ -478,22 +478,22 @@ export function UploadDialog({
       </section>}
       {parsing ? (
         <OperationStatus
-          title="Reading spreadsheet locally…"
-          detail="Checking columns and row validity on this device. No provider request is running."
+          title="Reading spreadsheet…"
+          detail="Checking the columns and rows on this device. Nothing has been sent to a location provider."
         />
       ) : (
-        <p className="upload-status-line">{accepted.length + " accepted · " + quarantined.length + " quarantined · " + rejected.length + " rejected"}</p>
+        <p className="upload-status-line">{accepted.length + " ready · " + quarantined.length + " need review · " + rejected.length + " cannot be used"}</p>
       )}
       {enrichmentBusy === "preflight" && (
         <OperationStatus
-          title="Checking enrichment requirements…"
-          detail="Reviewing the selected rows and provider preflight. No location enrichment has started yet."
+          title="Checking location-service requirements…"
+          detail="Reviewing the selected rows before any location lookup begins."
         />
       )}
       {enrichmentBusy === "enriching" && (
         <OperationStatus
-          title="Reviewing provider location candidates…"
-          detail="The selected rows are locked until this enrichment attempt finishes or the drawer is closed."
+          title="Checking suggested locations…"
+          detail="The selected rows are locked until this location check finishes or the drawer is closed."
         />
       )}
       {parseRecovery && (
@@ -508,7 +508,7 @@ export function UploadDialog({
       )}
       {enrichmentRecovery && (
         <RecoveryNotice
-          ariaLabel="Enrichment failure"
+          ariaLabel="Location check failure"
           title={enrichmentRecovery.title}
           tone="warning"
           technicalCode={enrichmentError}
@@ -522,13 +522,13 @@ export function UploadDialog({
             title="Some rows were kept out of planning"
             technicalCode={validationCodes.join(", ")}
           >
-            <p>Only accepted rows can be selected for planning or enrichment. Quarantined and rejected rows remain excluded.</p>
+            <p>Only rows marked ready can be added to the plan or checked against a location service. Other rows remain excluded.</p>
             <ul>
               {quarantineSummary.map((item) => (
-                <li key={`q-${item.code}`}><strong>{item.count} quarantined</strong> · {item.label}</li>
+                <li key={`q-${item.code}`}><strong>{item.count} need review</strong> · {item.label}</li>
               ))}
               {rejectionSummary.map((item) => (
-                <li key={`r-${item.code}`}><strong>{item.count} rejected</strong> · {item.label}</li>
+                <li key={`r-${item.code}`}><strong>{item.count} cannot be used</strong> · {item.label}</li>
               ))}
             </ul>
           </RecoveryNotice>
@@ -560,31 +560,31 @@ export function UploadDialog({
           disabled={busy || pendingMappingReview || selected.size === 0}
           onClick={useUploadedFacts}
         >
-          Use uploaded facts as context
+          Add uploaded inventory to the plan
         </button>
         <button
           type="button"
           disabled={busy || pendingMappingReview || selected.size === 0}
           onClick={() => void reviewEnrichment()}
         >
-          {enrichmentBusy === "preflight" ? "Checking enrichment…" : "Review enrichment"}
+          {enrichmentBusy === "preflight" ? "Checking requirements…" : "Check location details"}
         </button>
       </div>
-      {preflight && <section className="planner-drawer-output" aria-label="Enrichment preflight">
-        <pre>{JSON.stringify(preflight, null, 2)}</pre>
+      {preflight && <section className="planner-drawer-output" aria-label="Location-service requirements">
+        <details><summary>Technical service check</summary><pre>{JSON.stringify(preflight, null, 2)}</pre></details>
         <button type="button" disabled={busy} onClick={() => void enrichLocations()}>
-          {enrichmentBusy === "enriching" ? "Reviewing locations…" : "Enrich locations"}
+          {enrichmentBusy === "enriching" ? "Checking locations…" : "Check suggested locations"}
         </button>
       </section>}
-      {snapshot && <section className="upload-location-review" aria-label="Geocode review">
+      {snapshot && <section className="upload-location-review" aria-label="Location review">
         <h2>Review locations</h2>
-        <p>Customer/open coordinates work offline. Provider candidates remain optional, context-only, and separately reviewable.</p>
+        <p>Saved and open-map positions work offline. Suggested locations are optional and must be reviewed separately.</p>
         {uploadScenes.local.features.length > 0 && <div className="upload-map">
-          <h3>Uploaded coordinates · offline MapLibre preview</h3>
+          <h3>Uploaded positions · offline map preview</h3>
           <MapCanvas scene={uploadScenes.local} ariaLabel="Uploaded inventory map" />
         </div>}
         {uploadScenes.provider.features.length > 0 && <div className="upload-map">
-          <h3>Provider candidates · Google review</h3>
+          <h3>Suggested locations · map review</h3>
           <MapCanvas
             scene={uploadScenes.provider}
             onFeatureSelect={busy ? undefined : (featureId) => setSnapshot((current) => {
@@ -605,7 +605,7 @@ export function UploadDialog({
                 .filter(Boolean).join(" · ")}
               {item.row.rateNgn === undefined ? "" : " · ₦" + item.row.rateNgn.toLocaleString("en")}
             </p>
-            {item.candidates.length === 0 && <p>No provider candidate returned.</p>}
+            {item.candidates.length === 0 && <p>No suggested location was found.</p>}
             {item.candidates.map((candidate) => (
               <button
                 key={candidate.candidateToken}
@@ -617,7 +617,7 @@ export function UploadDialog({
                   : current,
                 )}
               >
-                Confirm {candidate.formattedAddress.value} · {candidate.granularity.value}
+                Use {candidate.formattedAddress.value} · {candidate.granularity.value}
               </button>
             ))}
             <div className="planner-drawer-form-grid">
@@ -649,7 +649,7 @@ export function UploadDialog({
               </label>
             </div>
             <button type="button" disabled={busy} onClick={() => applyCorrection(item.row.rowId)}>
-              Use customer coordinate
+              Use uploaded position
             </button>
           </article>
         ))}
@@ -658,7 +658,7 @@ export function UploadDialog({
             applyUploadToDraft(snapshot, [...selected]),
             snapshot,
           )}>
-            Use reviewed facts as context
+            Add reviewed inventory to the plan
           </button>
         </div>
       </section>}

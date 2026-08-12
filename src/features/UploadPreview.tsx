@@ -13,7 +13,7 @@ export function UploadPreview({
 }) {
   return (
     <fieldset className="planner-choice-list" disabled={disabled}>
-      <legend>Select up to 50 accepted rows</legend>
+      <legend>Select up to 50 ready rows</legend>
       {rows.map((row) => (
         <label className="planner-choice-control" key={row.assetId}>
           <input
@@ -24,7 +24,7 @@ export function UploadPreview({
           />
           <span>
             {row.assetId} · {row.address ?? `${row.latitude}, ${row.longitude}`} ·
-            {row.modelEligible ? " model-eligible input" : " context-only"}
+            {row.modelEligible ? " can support audience estimates" : " map and comparison only"}
           </span>
         </label>
       ))}

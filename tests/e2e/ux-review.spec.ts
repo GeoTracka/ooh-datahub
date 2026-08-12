@@ -25,14 +25,14 @@ async function assertFocusCycle(page: Page, dialog: Locator, label: string): Pro
 }
 
 async function makeExplicitSwap(page: Page): Promise<void> {
-  const currentFace = page.getByLabel("Current face to swap");
-  const replacementFace = page.getByLabel("Replacement face");
+  const currentFace = page.getByLabel("Current media location to swap");
+  const replacementFace = page.getByLabel("Replacement media location");
   const candidateCount = await currentFace.locator("option").count();
   for (let index = 1; index < candidateCount; index += 1) {
     await currentFace.selectOption({ index });
     if (await replacementFace.locator("option").count() > 1) {
       await replacementFace.selectOption({ index: 1 });
-      await page.getByRole("button", { name: "Swap selected face" }).click();
+      await page.getByRole("button", { name: "Swap selected location" }).click();
       return;
     }
   }
@@ -72,7 +72,7 @@ test.describe("desktop workflow review", () => {
     await assertNoHorizontalOverflow(page, "desktop step 2");
     await captureUxReview(page, testInfo, "desktop-02-timing-budget");
 
-    await page.getByRole("button", { name: "Show recommended zones" }).click();
+    await page.getByRole("button", { name: "Show recommended areas" }).click();
     await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
     await expect(page.getByTestId("zone-card")).toHaveCount(3);
     await assertNoHorizontalOverflow(page, "desktop step 3");
@@ -81,12 +81,12 @@ test.describe("desktop workflow review", () => {
 
     const zones = page.getByTestId("zone-card");
     await zones.nth(1).getByRole("button").first().click();
-    const deliveryStoryTrigger = page.getByRole("button", { name: "View delivery story" });
+    const deliveryStoryTrigger = page.getByRole("button", { name: "See how this was estimated" });
     await expect(deliveryStoryTrigger).toBeVisible();
     await captureUxReview(page, testInfo, "desktop-04-focused-zone");
 
     await deliveryStoryTrigger.click();
-    const causalDialog = page.getByRole("dialog", { name: "How delivery was estimated" });
+    const causalDialog = page.getByRole("dialog", { name: "How the estimate was built" });
     await expect(causalDialog).toBeVisible();
     await assertFocusCycle(page, causalDialog, "delivery story");
     await captureUxReview(page, testInfo, "desktop-05-delivery-story", { fullPage: false });
@@ -98,19 +98,19 @@ test.describe("desktop workflow review", () => {
     await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
     await captureUxReview(page, testInfo, "desktop-06-package-confirmed");
 
-    await page.getByRole("button", { name: /Fine-tune package/ }).click();
+    await page.getByRole("button", { name: /^Adjust package/ }).click();
     await expect(page.getByRole("region", { name: /Step 5 of 5:/ })).toBeVisible();
     await assertNoHorizontalOverflow(page, "desktop step 5");
     await captureUxReview(page, testInfo, "desktop-07-fine-tune");
 
     await makeExplicitSwap(page);
-    await expect(page.getByText("Unapplied changes")).toBeVisible();
+    await expect(page.getByText("Changes not yet applied")).toBeVisible();
     await captureUxReview(page, testInfo, "desktop-08-fine-tune-dirty");
 
-    await page.getByRole("button", { name: "Apply & review RFQ" }).click();
-    const rfq = page.getByRole("dialog", { name: "Supplier verification RFQ" });
+    await page.getByRole("button", { name: "Apply & review supplier request" }).click();
+    const rfq = page.getByRole("dialog", { name: "Supplier request" });
     await expect(rfq).toBeVisible();
-    await assertFocusCycle(page, rfq, "supplier verification RFQ");
+    await assertFocusCycle(page, rfq, "supplier request");
     await captureUxReview(page, testInfo, "desktop-09-rfq-review", { fullPage: false });
     await assertAccessible(page);
   });
@@ -138,10 +138,10 @@ test.describe("desktop workflow review", () => {
 
     await page.getByRole("button", { name: "Use uploaded facts as context" }).click();
     await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
-    const uploadStatus = page.getByRole("complementary", { name: "Uploaded planning status" });
-    await expect(uploadStatus).toContainText("Customer inventory · context only");
-    await expect(uploadStatus).toContainText("1 reviewed rows");
-    await expect(uploadStatus).toContainText("CALIBRATION_BUNDLE_MISMATCH");
+    const uploadStatus = page.getByRole("complementary", { name: "Uploaded inventory status" });
+    await expect(uploadStatus).toContainText("Uploaded inventory · comparison only");
+    await expect(uploadStatus).toContainText("1 media locations ready");
+    await expect(uploadStatus).toContainText("Add audience-checking data");
     await expect(uploadStatus).toContainText("Unapplied context change");
     await assertNoHorizontalOverflow(page, "uploaded context status");
     await captureUxReview(page, testInfo, "desktop-13-uploaded-context-status");
@@ -165,8 +165,8 @@ test.describe("responsive review", () => {
 
     const zones = page.getByTestId("zone-card");
     await zones.nth(0).getByRole("button").first().click();
-    await page.getByRole("button", { name: "View delivery story" }).click();
-    const causalDialog = page.getByRole("dialog", { name: "How delivery was estimated" });
+    await page.getByRole("button", { name: "See how this was estimated" }).click();
+    const causalDialog = page.getByRole("dialog", { name: "How the estimate was built" });
     await expect(causalDialog).toBeVisible();
     await assertFocusCycle(page, causalDialog, "tablet delivery story");
     await captureUxReview(page, testInfo, "responsive-834-delivery-story", { fullPage: false });

@@ -8,6 +8,7 @@ import {
   resolveBriefAudience,
 } from "@/planning/briefNormalization";
 import { estimatePackage } from "@/planning/engine";
+import { PUBLIC_COPY, confidenceLabel } from "@/content/plainLanguage";
 
 export function selectVisiblePlan(state: PlannerState) {
   return state.draftPlan ?? state.appliedPlan;
@@ -51,20 +52,20 @@ function resolvedPlanningBundle(bundle: FrozenBundle, plan: Plan): FrozenBundle 
 function objectiveDeliveryDefinition(plan: Plan) {
   if (plan.brief.objective === "influential_core") {
     return {
-      label: "Influence-weighted reached mass",
+      label: PUBLIC_COPY.metrics.priorityAudienceReach,
       unit: "influence_weighted_people" as const,
       value: (scenario: Scenario) => scenario.influenceMass,
     };
   }
   if (plan.brief.objective === "near_conversion") {
     return {
-      label: "Serviceable target reach",
+      label: PUBLIC_COPY.metrics.likelyCustomerReach,
       unit: "people" as const,
       value: (scenario: Scenario) => scenario.serviceableReach,
     };
   }
   return {
-    label: "Target reach",
+    label: PUBLIC_COPY.metrics.estimatedReach,
     unit: "people" as const,
     value: (scenario: Scenario) => scenario.reach,
   };
@@ -151,9 +152,9 @@ function delta(from: Plan, to: Plan, action: string) {
     changedZoneIds: changedIds(from.selectedZoneIds, to.selectedZoneIds),
     affectedPillars,
     tradeOff: reasonCode
-      ? "Delivery is shown side by side and not subtracted because the basis changed."
-      : "Base delivery " + direction(eligibleDelivery!) +
-        " while cost " + direction(costNgn) + ".",
+      ? "Audience delivery is shown side by side because the campaign settings changed."
+      : "Expected audience delivery " + direction(eligibleDelivery!) +
+          " while cost " + direction(costNgn) + ".",
   };
 }
 
@@ -233,7 +234,11 @@ export function selectZoneCards(bundle: FrozenBundle, state: PlannerState): Zone
         baseScenario.serviceableReach === null || reducedBase.serviceableReach === null
           ? null
           : Math.max(0, baseScenario.serviceableReach - reducedBase.serviceableReach),
-      role: index === 0 ? "Lead delivery zone" : index === 1 ? "Complementary audience zone" : "Coverage balance zone",
+      role: index === 0
+        ? PUBLIC_COPY.areas.primary
+        : index === 1
+          ? PUBLIC_COPY.areas.supporting
+          : PUBLIC_COPY.areas.additional,
     };
   });
   zoneCardCache.set(plan, cards);
@@ -252,12 +257,12 @@ export function selectLensFeatures(
     const metric = lens === "plan"
       ? { label: "Recommendation rank", value: card.rank, unit: "rank" as const }
       : lens === "activity"
-        ? { label: "Activity Potential", value: card.activityPotential, unit: "index_0_100" as const }
+        ? { label: PUBLIC_COPY.metrics.areaActivity, value: card.activityPotential, unit: "index_0_100" as const }
         : lens === "influence"
-          ? { label: "Marginal influence-weighted reach", value: card.marginalInfluenceMass, unit: "people" as const }
+          ? { label: PUBLIC_COPY.metrics.additionalPriorityReach, value: card.marginalInfluenceMass, unit: "people" as const }
           : plan.brief.objective === "near_conversion"
-            ? { label: "Marginal serviceable reach", value: card.marginalServiceableReach, unit: "people" as const }
-            : { label: "Marginal target reach", value: card.marginalReach, unit: "people" as const };
+            ? { label: PUBLIC_COPY.metrics.additionalLikelyCustomerReach, value: card.marginalServiceableReach, unit: "people" as const }
+            : { label: PUBLIC_COPY.metrics.additionalReach, value: card.marginalReach, unit: "people" as const };
     return {
       id: card.zoneId,
       coordinateField: {
@@ -278,7 +283,7 @@ export function selectLensFeatures(
         metricLabel: metric.label,
         value: metric.value,
         unit: metric.unit,
-        evidenceLabel: "Evidence " + plan.measurement!.claim.evidence,
+        evidenceLabel: confidenceLabel(plan.measurement!.claim.evidence),
       },
     } satisfies SpatialFeature;
   });
@@ -310,10 +315,10 @@ export function selectLensFeatures(
       },
       visual: {
         label: row.address ?? row.assetId,
-        metricLabel: "Uploaded inventory · context only",
+        metricLabel: "Uploaded inventory · comparison only",
         value: null,
         unit: "none" as const,
-        evidenceLabel: "No calibrated delivery estimate",
+        evidenceLabel: "Audience estimate not available",
       },
     }];
   });
@@ -360,12 +365,12 @@ export function selectCausalDrawerViewModel(
   const label = target.kind === "package"
     ? "Recommended package"
     : target.kind === "pillar"
-      ? target.id + " pillar"
+      ? target.id + " score area"
     : target.kind === "zone"
       ? bundle.zones.find((zone) => zone.id === target.id)?.label ?? target.id
       : target.kind === "site"
         ? bundle.sites.find((site) => site.id === target.id)?.label ?? target.id
-        : "Evidence · " + target.id;
+        : "Source information";
   const sourceIds = [...new Set([
     ...measurement.claim.sourceIds,
     ...(measurement.influence?.sourceIds ?? []),
@@ -408,13 +413,13 @@ export function selectCausalDrawerViewModel(
       ? bundle.sourceManifest.find((source) => source.id === target.id) ?? null
       : null,
     scopeNote: target.kind === "package"
-      ? "Package-level causal estimate"
+      ? "How this package's audience estimate was built"
       : target.kind === "pillar"
         ? target.id === "D"
-          ? "Delivery pillar; this is the only Planning Fit pillar that enters audience-delivery causality"
-          : "Seeded Planning Fit pillar; not an audience-delivery stage"
+          ? "Delivery score area; this is the only score area used in the audience estimate"
+          : "Package score area; it helps rank options but does not change the audience estimate"
         : target.kind === "evidence"
-          ? "Terminal source record for the selected site rerun"
-          : "Entity-specific rerun using the same schedule, panel, and causal primitives",
+          ? "Source record used for this media location"
+          : "Estimate recalculated for this selection using the same dates and audience settings",
   };
 }

@@ -11,7 +11,7 @@ import { StepCard } from "@/features/StepCard";
 describe("explorer components", () => {
   it("compares three distinct package approaches with single-selection semantics", async () => {
     const plan = buildPlan(frozenLagosBundle, {
-      productName: "Demo Spark",
+      productName: "Spark Refresh",
       productDescription: "Affordable on-the-go refreshment launch",
       targetAudience: "Students, young workers, and convenience shoppers",
       sector: "fmcg",
@@ -46,7 +46,7 @@ describe("explorer components", () => {
 
   it("explains when constraints limit the package cohort", () => {
     const plan = buildPlan(frozenLagosBundle, {
-      productName: "Demo Spark",
+      productName: "Spark Refresh",
       productDescription: "Affordable on-the-go refreshment launch",
       targetAudience: "Students, young workers, and convenience shoppers",
       sector: "fmcg",
@@ -68,7 +68,7 @@ describe("explorer components", () => {
     );
 
     expect(screen.getByText("2 ways to plan")).toBeInTheDocument();
-    expect(screen.getByRole("note")).toHaveTextContent(/constraints limited this comparison/i);
+    expect(screen.getByRole("note")).toHaveTextContent(/inventory or campaign dates limited this comparison/i);
   }, 30_000);
 
   it("announces step progress and supports Escape back navigation", async () => {
@@ -110,7 +110,7 @@ describe("explorer components", () => {
       <RecommendationCarousel
         cards={cards}
         objective="broad_reach"
-        evidenceLabel="Evidence D"
+        evidenceLabel="Early estimate"
         selectedZoneId={null}
         onSelect={onSelect}
         onExplain={onExplain}
@@ -124,15 +124,15 @@ describe("explorer components", () => {
       <RecommendationCarousel
         cards={cards}
         objective="broad_reach"
-        evidenceLabel="Evidence D"
+        evidenceLabel="Early estimate"
         selectedZoneId="yaba"
         onSelect={onSelect}
         onExplain={onExplain}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "View delivery story" }));
+    await userEvent.click(screen.getByRole("button", { name: "See how this was estimated" }));
     expect(onExplain).toHaveBeenCalledWith("yaba");
-    await userEvent.click(screen.getByRole("button", { name: "Clear zone focus" }));
+    await userEvent.click(screen.getByRole("button", { name: "Show all areas" }));
     expect(onSelect).toHaveBeenCalledWith(null);
   });
 
@@ -148,15 +148,15 @@ describe("explorer components", () => {
         onFineTune={onFineTune}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /Review RFQ/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Review supplier request/ }));
     await userEvent.click(screen.getByRole("button", { name: /Upload customer inventory/ }));
-    await userEvent.click(screen.getByRole("button", { name: /Fine-tune package/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Adjust package/ }));
     expect(onReviewRfq).toHaveBeenCalledOnce();
     expect(onUpload).toHaveBeenCalledOnce();
     expect(onFineTune).toHaveBeenCalledOnce();
   });
 
-  it("disables only the RFQ outcome when the package is invalid", () => {
+  it("disables only the supplier-request outcome when the package is invalid", () => {
     render(
       <ActionDock
         canReviewRfq={false}
@@ -165,8 +165,8 @@ describe("explorer components", () => {
         onFineTune={() => undefined}
       />,
     );
-    expect(screen.getByRole("button", { name: /Review RFQ/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Review supplier request/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Upload customer inventory/ })).toBeEnabled();
-    expect(screen.getByRole("button", { name: /Fine-tune package/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Adjust package/ })).toBeEnabled();
   });
 });

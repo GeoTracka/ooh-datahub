@@ -64,7 +64,7 @@ export function resolveClaimLadder(input: ClaimAvailability): ClaimResolution {
       influenceEligible: false,
       evidenceCap: "D",
       reasonCode: "LOW_PRECISION_GEOCODE",
-      recoveryAction: "Supply an independently sourced precise coordinate",
+      recoveryAction: "Add a precise coordinate from a trusted source.",
     };
   }
   if (input.runtimeFailure !== "none" && input.fallbackFacts === "none") {
@@ -73,7 +73,7 @@ export function resolveClaimLadder(input: ClaimAvailability): ClaimResolution {
       influenceEligible: false,
       evidenceCap: "D",
       reasonCode: input.runtimeFailure.toUpperCase(),
-      recoveryAction: "Continue with seeded or customer-supplied facts",
+      recoveryAction: "Continue with the available inventory details.",
     };
   }
   if (input.calibration !== "inside") {
@@ -81,15 +81,15 @@ export function resolveClaimLadder(input: ClaimAvailability): ClaimResolution {
       input,
       "CALIBRATION_" + input.calibration.toUpperCase(),
       input.calibration === "bundle_mismatch"
-        ? "Load a feature-compatible calibration bundle"
-        : "Use a passing bundle whose applicability includes this location",
+        ? "Add audience-checking data that matches these location details."
+        : "Use audience-checking data that covers this location.",
     );
   }
   if (!input.movementAvailable || input.movementUnit === null) {
     return activityOrContext(
       input,
       "MOVEMENT_UNAVAILABLE",
-      "Add an eligible movement observation or model input",
+      "Add a usable movement count or movement estimate.",
     );
   }
   const movementOnly =
@@ -106,7 +106,7 @@ export function resolveClaimLadder(input: ClaimAvailability): ClaimResolution {
       reasonCode: input.movementUnit === "vehicle_passages" && !input.personConversionAvailable
         ? "OCCUPANCY_CONVERSION_UNAVAILABLE"
         : "EXPOSURE_GEOMETRY_OR_SCHEDULE_UNAVAILABLE",
-      recoveryAction: "Verify face orientation, view zone, delivery schedule, and any occupancy basis",
+      recoveryAction: "Check the media location's viewing direction, visible area, campaign availability, and any vehicle-to-person conversion.",
     };
   }
   if (!input.targetUniverseAvailable || !input.targetAllocationAvailable) {
@@ -115,7 +115,7 @@ export function resolveClaimLadder(input: ClaimAvailability): ClaimResolution {
       influenceEligible: false,
       evidenceCap: input.schedule === "assumed" ? "D" : "C",
       reasonCode: "TARGET_BASIS_UNAVAILABLE",
-      recoveryAction: "Attach a compatible target universe and allocation source",
+      recoveryAction: "Add compatible audience size and audience-mix data.",
     };
   }
   if (input.overlap === "missing") {
@@ -124,7 +124,7 @@ export function resolveClaimLadder(input: ClaimAvailability): ClaimResolution {
       influenceEligible: false,
       evidenceCap: input.schedule === "assumed" ? "D" : "C",
       reasonCode: "OVERLAP_MODEL_UNAVAILABLE",
-      recoveryAction: "Attach an eligible overlap model or show an assumed sensitivity scenario",
+      recoveryAction: "Add usable audience-overlap data or show a clearly labelled estimate range.",
     };
   }
   const assumed = input.overlap === "assumed" || input.schedule === "assumed";
@@ -135,6 +135,6 @@ export function resolveClaimLadder(input: ClaimAvailability): ClaimResolution {
     reasonCode: input.qiAvailable ? null : "QI_UNAVAILABLE",
     recoveryAction: input.qiAvailable
       ? null
-      : "Attach a named category-specific influence propensity source",
+      : "Add a named priority-audience data source for this sector.",
   };
 }

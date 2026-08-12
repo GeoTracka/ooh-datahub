@@ -3,6 +3,7 @@ import type {
   PackageOptionStyle,
   PlanningResult,
 } from "@/contracts/domain";
+import { PUBLIC_COPY } from "@/content/plainLanguage";
 
 const styleCopy: Record<PackageOptionStyle, {
   label: string;
@@ -10,15 +11,15 @@ const styleCopy: Record<PackageOptionStyle, {
 }> = {
   best_overall: {
     label: "Best overall",
-    description: "Strongest balance of delivery, fit, and cost for this brief.",
+    description: PUBLIC_COPY.package.bestOverallDescription,
   },
   maximum_delivery: {
     label: "Maximum delivery",
-    description: "Prioritizes the campaign objective across eligible locations.",
+    description: PUBLIC_COPY.package.maximumDeliveryDescription,
   },
   budget_smart: {
     label: "Budget smart",
-    description: "Keeps planning fit close while creating more budget flexibility.",
+    description: PUBLIC_COPY.package.budgetSmartDescription,
   },
 };
 
@@ -26,9 +27,9 @@ const deliveryCopy: Record<PlanningResult["brief"]["objective"], {
   label: string;
   suffix: string;
 }> = {
-  broad_reach: { label: "Target reach", suffix: " people" },
-  influential_core: { label: "Influence-weighted reach", suffix: " weighted people" },
-  near_conversion: { label: "Serviceable reach", suffix: " people" },
+  broad_reach: { label: PUBLIC_COPY.metrics.estimatedReach, suffix: " people" },
+  influential_core: { label: PUBLIC_COPY.metrics.priorityAudienceReach, suffix: " people" },
+  near_conversion: { label: PUBLIC_COPY.metrics.likelyCustomerReach, suffix: " people" },
 };
 
 function compact(value: number): string {
@@ -64,8 +65,8 @@ export function PackageOptionComparison({
 
       {optionCount < 3 && (
         <p className="package-options-limited" role="note">
-          Inventory or timing constraints limited this comparison. Fine-tune any available
-          package to repair constraints or shape a custom plan.
+          Available inventory or campaign dates limited this comparison. Adjust any package
+          to resolve the issue or create a custom plan.
         </p>
       )}
 
@@ -120,7 +121,7 @@ export function PackageOptionComparison({
                     </strong>
                   </span>
                   <span>
-                    <small>Planning fit</small>
+                    <small>{PUBLIC_COPY.metrics.planScore}</small>
                     <strong>
                       {candidate.planningFit === null
                         ? "Unavailable"
@@ -133,11 +134,11 @@ export function PackageOptionComparison({
                   </span>
                 </span>
                 <span className="package-option-footnote">
-                  <span>{candidate.zoneIds.length} zones · {candidate.siteIds.length} sites</span>
+                  <span>{candidate.zoneIds.length} areas · {candidate.siteIds.length} media locations</span>
                   <span className={headroom >= 0 ? "budget-headroom" : "budget-overrun"}>
                     {headroom >= 0
-                      ? `₦${compact(headroom)} headroom`
-                      : `₦${compact(Math.abs(headroom))} over budget`}
+                      ? `₦${compact(headroom)} ${PUBLIC_COPY.budget.remaining.toLowerCase()}`
+                      : `₦${compact(Math.abs(headroom))} ${PUBLIC_COPY.budget.over.toLowerCase()}`}
                   </span>
                 </span>
                 {!candidate.valid && (

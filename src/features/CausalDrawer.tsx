@@ -2,22 +2,35 @@ import { useEffect, useRef } from "react";
 import type { EstimatePackageResult } from "@/contracts/metrics";
 import type { DrawerTarget } from "@/contracts/renderer";
 import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
+import { PUBLIC_COPY } from "@/content/plainLanguage";
 
 const labels = {
-  location: "Location",
-  places: "Places",
-  movement: "Movement",
-  ots: "OTS",
-  target: "Target",
-  unique: "Unique",
+  ...PUBLIC_COPY.explanation.stages,
 } as const;
 
 const pillarDescriptions = {
-  A: "Audience / objective alignment",
-  C: "Conversion context",
-  P: "Portfolio coverage",
-  E: "Relative economics",
+  A: "How well the locations match the selected audience and campaign goal",
+  C: "How close the locations are to places where customers can act",
+  P: "How well the locations spread the campaign across Lagos",
+  E: "How much audience value the package provides for its cost",
 } as const;
+
+function friendlySourceLabel(sourceId: string): string {
+  if (/feature|geometry|visibility/i.test(sourceId)) return "Media location and visibility data";
+  if (/movement/i.test(sourceId)) return "Movement estimate";
+  if (/target|influence|serviceability/i.test(sourceId)) return "Audience information";
+  if (/overlap|panel|replicate/i.test(sourceId)) return "Audience reach method";
+  if (/schedule/i.test(sourceId)) return "Campaign schedule";
+  return "Campaign planning data";
+}
+
+function breadcrumbLabel(target: DrawerTarget): string {
+  if (target.kind === "package") return "Recommended package";
+  if (target.kind === "pillar") return target.id + " score area";
+  if (target.kind === "zone") return "Area";
+  if (target.kind === "site") return "Media location";
+  return "Source information";
+}
 
 const focusableSelector = [
   "button:not([disabled])",
@@ -71,6 +84,10 @@ export function CausalDrawer({
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const friendlySources = [...new Set([
+    ...measurement.claim.sourceIds,
+    ...(measurement.influence?.sourceIds ?? []),
+  ].map(friendlySourceLabel))].sort();
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
@@ -111,8 +128,8 @@ export function CausalDrawer({
     const description = pillarDescriptions[target.id];
     return (
       <PlannerDrawerFrame
-        ariaLabel="How delivery was estimated"
-        eyebrow="Delivery explanation"
+        ariaLabel={PUBLIC_COPY.explanation.title}
+        eyebrow={PUBLIC_COPY.explanation.eyebrow}
         className="causal-drawer"
         dialogRef={dialogRef}
         closeRef={closeRef}
@@ -121,25 +138,23 @@ export function CausalDrawer({
         <nav className="planner-drawer-breadcrumb" aria-label="Explanation breadcrumb">
           {ancestors.map((ancestor, index) => (
             <button key={ancestor.kind + "/" + ("id" in ancestor ? ancestor.id : "package")} type="button" onClick={() => onAncestor(index)}>
-              {ancestor.kind === "package"
-                ? "Recommended package"
-                : ancestor.kind + " " + ("id" in ancestor ? ancestor.id : "")}
+              {breadcrumbLabel(ancestor)}
             </button>
           ))}
           <span aria-current="page">{entityLabel}</span>
           {ancestors.length > 0 && <button type="button" onClick={onBack}>Back</button>}
         </nav>
-        <h1>Planning Fit · {target.id} pillar</h1>
+        <h1>{PUBLIC_COPY.metrics.planScore} · {target.id} area</h1>
         <p>{description}</p>
         <dl>
-          <div><dt>Role</dt><dd>Recommendation score input</dd></div>
-          <div><dt>Delivery chain</dt><dd>Not applicable — only D · Delivery enters the audience-delivery causal chain.</dd></div>
-          <div><dt>Current MVP source</dt><dd>Frozen site-level `planningScoresBySector` values.</dd></div>
-          <div><dt>Evidence state</dt><dd>Assumed / seeded demo input.</dd></div>
+          <div><dt>What it does</dt><dd>Helps compare and rank package options</dd></div>
+          <div><dt>Used in the audience estimate</dt><dd>No — only the D · Delivery area feeds into the audience estimate.</dd></div>
+          <div><dt>Data used</dt><dd>Location-level planning scores for the selected campaign type.</dd></div>
+          <div><dt>{PUBLIC_COPY.explanation.confidence}</dt><dd>Early estimate</dd></div>
         </dl>
         <p>
-          Feature-level decomposition for this pillar is not materialized in the current bundle.
-          The UI therefore does not present Location → Unique as an explanation for this score.
+          A location-by-location breakdown is not available for this score area yet.
+          It is shown as a package-ranking input, not as audience delivery.
         </p>
         <p>{scopeNote}</p>
       </PlannerDrawerFrame>
@@ -150,8 +165,8 @@ export function CausalDrawer({
   if (!stage) return null;
   return (
     <PlannerDrawerFrame
-      ariaLabel="How delivery was estimated"
-      eyebrow="Delivery explanation"
+      ariaLabel={PUBLIC_COPY.explanation.title}
+      eyebrow={PUBLIC_COPY.explanation.eyebrow}
       className="causal-drawer"
       dialogRef={dialogRef}
       closeRef={closeRef}
@@ -160,9 +175,7 @@ export function CausalDrawer({
       <nav className="planner-drawer-breadcrumb" aria-label="Explanation breadcrumb">
         {ancestors.map((ancestor, index) => (
           <button key={ancestor.kind + "/" + ("id" in ancestor ? ancestor.id : "package")} type="button" onClick={() => onAncestor(index)}>
-            {ancestor.kind === "package"
-              ? "Recommended package"
-              : ancestor.kind + " " + ("id" in ancestor ? ancestor.id : "")}
+            {breadcrumbLabel(ancestor)}
           </button>
         ))}
         <span aria-current="page">{entityLabel}</span>
@@ -170,9 +183,9 @@ export function CausalDrawer({
           <button type="button" onClick={onBack}>Back</button>
         )}
       </nav>
-      <h1>{target.metric === "influence" ? "Influence" : "Reach"} · {entityLabel}</h1>
+      <h1>{target.metric === "influence" ? "Priority-audience reach" : "Estimated reach"} · {entityLabel}</h1>
       <p>{scopeNote}</p>
-      <nav className="causal-stage-navigation" aria-label="Causal stages">
+      <nav className="causal-stage-navigation" aria-label={PUBLIC_COPY.explanation.title}>
         {measurement.stages.map((stageItem) => (
           <button
             key={stageItem.id}
@@ -187,37 +200,33 @@ export function CausalDrawer({
         <h2>{labels[activeStage]}</h2>
         <strong>{stage.valueText}</strong>
         <dl>
-          <div><dt>Entity</dt><dd>{target.kind} · {"id" in target ? target.id : "package"}</dd></div>
-          <div><dt>Evidence state</dt><dd>{stage.state}</dd></div>
-          <div><dt>Source</dt><dd>{stage.sourceLabel}</dd></div>
-          <div><dt>Freshness / revision</dt><dd>{stage.freshnessLabel}</dd></div>
-          <div><dt>Transformation</dt><dd>{stage.transformation}</dd></div>
-          <div><dt>Next mapping</dt><dd>{stage.nextMapping}</dd></div>
+          <div><dt>Selection</dt><dd>{entityLabel}</dd></div>
+          <div><dt>Estimate type</dt><dd>{stage.state === "modelled" ? "Calculated estimate" : stage.state === "assumed" ? "Planning estimate" : "Unavailable"}</dd></div>
+          <div><dt>Data used</dt><dd>{stage.sourceLabel}</dd></div>
+          <div><dt>Data date / version</dt><dd>{stage.freshnessLabel}</dd></div>
+          <div><dt>How it was calculated</dt><dd>{stage.transformation}</dd></div>
+          <div><dt>Next step</dt><dd>{stage.nextMapping}</dd></div>
         </dl>
         {stage.caveats.map((caveat) => <p key={caveat}>{caveat}</p>)}
-        {stage.recoveryAction && <p>Recovery: {stage.recoveryAction}</p>}
+        {stage.recoveryAction && <p>What to do: {stage.recoveryAction}</p>}
         <details>
-          <summary>Source IDs</summary>
-          <ul>{[...new Set([
-            ...measurement.claim.sourceIds,
-            ...(measurement.influence?.sourceIds ?? []),
-          ])].sort().map((sourceId) => <li key={sourceId}>{sourceId}</li>)}</ul>
+          <summary>Sources used</summary>
+          <ul>{friendlySources.map((source) => <li key={source}>{source}</li>)}</ul>
         </details>
         {target.kind === "evidence" && sourceRecord && <section>
-          <h3>Source record</h3>
+          <h3>Source information</h3>
           <dl>
-            <div><dt>ID</dt><dd>{sourceRecord.id}</dd></div>
-            <div><dt>Kind</dt><dd>{sourceRecord.kind}</dd></div>
-            <div><dt>Sector / product</dt><dd>{sourceRecord.sector ?? "all"} / {sourceRecord.productScope}</dd></div>
-            <div><dt>Geography</dt><dd>{sourceRecord.geographyId}</dd></div>
-            <div><dt>Effective period</dt><dd>{sourceRecord.periodStart} → {sourceRecord.periodEnd}</dd></div>
-            <div><dt>Provenance / use</dt><dd>{sourceRecord.provenance} / {sourceRecord.modelUse}</dd></div>
+            <div><dt>Source</dt><dd>{friendlySourceLabel(sourceRecord.id)}</dd></div>
+            <div><dt>Campaign type</dt><dd>{sourceRecord.sector === "fmcg" ? "Consumer goods" : sourceRecord.sector === "real_estate" ? "Real Estate" : sourceRecord.sector === "bank_fintech" ? "Bank / Fintech" : "All campaign types"}</dd></div>
+            <div><dt>Market</dt><dd>Lagos</dd></div>
+            <div><dt>Available dates</dt><dd>{sourceRecord.periodStart} → {sourceRecord.periodEnd}</dd></div>
+            <div><dt>Use</dt><dd>Planning use only</dd></div>
           </dl>
         </section>}
         {activeStage === "unique" && target.metric === "influence" && measurement.influence && (
           <section>
-            <h3>Influence</h3>
-            <p>Influence-weighted exposure coverage; not persuasion or perception.</p>
+            <h3>Priority audience</h3>
+            <p>Estimated coverage of the selected priority audience. This does not measure persuasion or brand perception.</p>
           </section>
         )}
         {nextTargets.length > 0 && <section aria-label="Drill deeper">
@@ -231,11 +240,11 @@ export function CausalDrawer({
               {next.kind === "pillar"
                 ? next.id + " pillar"
                 : next.kind === "zone"
-                  ? "Zone " + next.id
+                  ? "Area " + next.id
                   : next.kind === "site"
-                    ? "Site " + next.id
+                    ? "Media location " + next.id
                     : next.kind === "evidence"
-                      ? "Evidence " + next.id
+                      ? "Source: " + friendlySourceLabel(next.id)
                       : "Recommended package"}
             </button>
           ))}

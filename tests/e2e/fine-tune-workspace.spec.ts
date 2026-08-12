@@ -14,21 +14,21 @@ async function reachFineTune(page: Page): Promise<Locator> {
   await page.goto("/");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await page.getByRole("button", { name: "Continue with selected package" }).click();
-  await page.getByRole("button", { name: /Fine-tune package/ }).click();
+  await page.getByRole("button", { name: /^Adjust package/ }).click();
   const step = page.getByRole("region", { name: /Step 5 of 5: Make this package yours/ });
   await expect(step).toBeVisible();
   return step;
 }
 
 async function makeExplicitSwap(page: Page): Promise<void> {
-  const currentFace = page.getByLabel("Current face to swap");
-  const replacementFace = page.getByLabel("Replacement face");
+  const currentFace = page.getByLabel("Current media location to swap");
+  const replacementFace = page.getByLabel("Replacement media location");
   const candidateCount = await currentFace.locator("option").count();
   for (let index = 1; index < candidateCount; index += 1) {
     await currentFace.selectOption({ index });
     if (await replacementFace.locator("option").count() > 1) {
       await replacementFace.selectOption({ index: 1 });
-      await page.getByRole("button", { name: "Swap selected face" }).click();
+      await page.getByRole("button", { name: "Swap selected location" }).click();
       return;
     }
   }
@@ -63,10 +63,10 @@ async function expectFullyInViewport(locator: Locator, label: string): Promise<v
 
 async function expectAllAdjustmentModes(page: Page): Promise<void> {
   for (const name of [
-    "Add a compatible face",
-    "Swap a face",
-    "Replace a zone",
-    "Remove a face",
+    "Add a media location",
+    "Swap a media location",
+    "Replace an area",
+    "Remove a media location",
   ]) {
     await expect(page.getByRole("heading", { name })).toBeVisible();
   }
@@ -83,7 +83,7 @@ test.describe("desktop fine-tune workspace", () => {
     const step = await reachFineTune(page);
     await expectNoInternalScroll(step, "clean fine-tune");
     await expectAllAdjustmentModes(page);
-    await expectFullyInViewport(page.getByRole("button", { name: "Review RFQ" }), "Review RFQ");
+    await expectFullyInViewport(page.getByRole("button", { name: "Review supplier request" }), "Review supplier request");
 
     const rail = await page.locator(".explorer-card-rail").boundingBox();
     expect(rail).not.toBeNull();
@@ -102,13 +102,13 @@ test.describe("desktop fine-tune workspace", () => {
   test("keeps dirty decision evidence beside edits without reintroducing card scroll", async ({ page }) => {
     const step = await reachFineTune(page);
     await makeExplicitSwap(page);
-    await expect(page.getByText("Unapplied changes")).toBeVisible();
+    await expect(page.getByText("Changes not yet applied")).toBeVisible();
     await expect(page.getByRole("region", { name: "Proposed package change summary" })).toBeVisible();
     await expectAllAdjustmentModes(page);
     await expectNoInternalScroll(step, "dirty fine-tune");
     await expectFullyInViewport(
-      page.getByRole("button", { name: "Apply & review RFQ" }),
-      "Apply & review RFQ",
+      page.getByRole("button", { name: "Apply & review supplier request" }),
+      "Apply & review supplier request",
     );
 
     const diagnostics = await collectUxReviewDiagnostics(page);
@@ -123,9 +123,9 @@ test("keeps the 1024px fine-tune workspace coherent and horizontally contained",
   await reachFineTune(page);
   await expectAllAdjustmentModes(page);
   await assertNoHorizontalOverflow(page, "1024px fine-tune");
-  const action = page.getByRole("button", { name: "Review RFQ" });
+  const action = page.getByRole("button", { name: "Review supplier request" });
   await action.scrollIntoViewIfNeeded();
-  await expectFullyInViewport(action, "1024px Review RFQ");
+  await expectFullyInViewport(action, "1024px Review supplier request");
   await assertAccessible(page);
 });
 

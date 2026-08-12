@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { selectZoneCards } from "@/application/plannerSelectors";
+import { PUBLIC_COPY } from "@/content/plainLanguage";
 
 type ZoneCard = ReturnType<typeof selectZoneCards>[number];
 
@@ -11,20 +12,20 @@ function deliveryFor(
 ) {
   if (objective === "influential_core") {
     return {
-      label: "Marginal influence-weighted reach",
+      label: PUBLIC_COPY.metrics.additionalPriorityReach,
       value: card.marginalInfluenceMass,
-      suffix: " weighted people",
+      suffix: " people",
     };
   }
   if (objective === "near_conversion") {
     return {
-      label: "Marginal serviceable reach",
+      label: PUBLIC_COPY.metrics.additionalLikelyCustomerReach,
       value: card.marginalServiceableReach,
       suffix: " people",
     };
   }
   return {
-    label: "Marginal target reach",
+    label: PUBLIC_COPY.metrics.additionalReach,
     value: card.marginalReach,
     suffix: " people",
   };
@@ -62,7 +63,7 @@ export function RecommendationCarousel({
   }, [selectedZoneId]);
 
   return (
-    <div className="recommendation-carousel" aria-label="Selected package zones">
+    <div className="recommendation-carousel" aria-label="Selected package areas">
       {cards.map((card) => {
         const delivery = deliveryFor(card, objective);
         const selected = card.zoneId === selectedZoneId;
@@ -90,14 +91,14 @@ export function RecommendationCarousel({
                   ? "Unavailable"
                   : `${Math.round(delivery.value).toLocaleString("en")}${delivery.suffix}`}
               </b>
-              <span>Activity Potential {card.activityPotential?.toFixed(0) ?? "Unavailable"}/100</span>
+              <span>{PUBLIC_COPY.metrics.areaActivity} {card.activityPotential?.toFixed(0) ?? "Unavailable"}/100</span>
               <span className="recommendation-evidence">{evidenceLabel}</span>
             </button>
             {selected && (
               <div className="recommendation-selected-detail">
                 <p>
-                  {card.role}. The delivery figure above is this zone&apos;s incremental
-                  contribution to the selected package, not a standalone total.
+                  {card.role}. The figure above shows the additional audience this area
+                  brings to the package, not the area&apos;s total audience on its own.
                 </p>
                 <div className="recommendation-focus-actions">
                   <button
@@ -105,14 +106,14 @@ export function RecommendationCarousel({
                     className="explorer-link-button recommendation-story"
                     onClick={() => onExplain(card.zoneId)}
                   >
-                    View delivery story
+                    See how this was estimated
                   </button>
                   <button
                     type="button"
                     className="explorer-link-button"
                     onClick={() => onSelect(null)}
                   >
-                    Clear zone focus
+                    Show all areas
                   </button>
                 </div>
               </div>

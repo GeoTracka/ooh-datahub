@@ -110,7 +110,7 @@ export function GoogleRenderer({
   if (!config) return <div data-testid="google-renderer">Loading Google map…</div>;
   if (!config.enabled) {
     return <div data-testid="google-renderer" aria-label="No-map geocode review">
-      <p>Google map is disabled; review the eligible values below.</p>
+      <p>Google map is unavailable; review the available locations below.</p>
       {scene.noMapFallback.features.map((feature) => (
         <button key={feature.id} type="button" onClick={() => onFeatureSelect?.(feature.id)}>
           {feature.visual?.label ?? feature.id}

@@ -10,7 +10,7 @@ export function PackageConstraintNotice({ reasonCodes }: { reasonCodes: string[]
 
   return (
     <RecoveryNotice
-      ariaLabel="Package constraints"
+      ariaLabel="Package issues"
       title={title}
       tone="warning"
       technicalCode={reasonCodes.join(", ")}

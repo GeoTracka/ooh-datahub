@@ -7,7 +7,7 @@ import { generateRfq } from "@/planning/rfq";
 import { seededFmcgPlan as plan } from "../fixtures/seededPlans";
 
 async function completeReview() {
-  await userEvent.type(screen.getByLabelText("Buyer name"), "Demo Buyer");
+  await userEvent.type(screen.getByLabelText("Buyer name"), "Ada Okafor");
   await userEvent.type(screen.getByLabelText("Buyer email"), "buyer@example.test");
   await userEvent.type(screen.getByLabelText("Response deadline"), "2026-08-20");
   await userEvent.click(screen.getByLabelText("Dates confirmed"));
@@ -24,9 +24,9 @@ describe("RfqDrawer", () => {
       onClose={() => undefined}
       onScheduleRevision={() => undefined}
     />);
-    expect(screen.getByRole("button", { name: "Generate RFQ" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Create supplier request" })).toBeDisabled();
     await completeReview();
-    await userEvent.click(screen.getByRole("button", { name: "Generate RFQ" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create supplier request" }));
     expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^Copy .* request$/ }).length)
       .toBeGreaterThan(0);
@@ -57,7 +57,7 @@ describe("RfqDrawer", () => {
     />);
     await completeReview();
 
-    const generateButton = screen.getByRole("button", { name: "Generate RFQ" });
+    const generateButton = screen.getByRole("button", { name: "Create supplier request" });
     await userEvent.dblClick(generateButton);
 
     expect(await screen.findByRole("status", { name: "Generating supplier request…" }))
@@ -66,7 +66,7 @@ describe("RfqDrawer", () => {
     expect(screen.getByLabelText("Buyer email")).toBeDisabled();
     expect(screen.getByLabelText("Response deadline")).toBeDisabled();
     expect(screen.getByLabelText("Dates confirmed")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Generating RFQ…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Creating supplier request…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Close" })).toBeEnabled();
     await waitFor(() => expect(generator).toHaveBeenCalledTimes(1));
 
@@ -75,7 +75,7 @@ describe("RfqDrawer", () => {
     expect(screen.getByLabelText("Buyer name")).toBeEnabled();
   });
 
-  it("preserves RFQ completion across Strict Mode effect replay", async () => {
+  it("preserves supplier-request completion across Strict Mode effect replay", async () => {
     render(
       <StrictMode>
         <RfqDrawer
@@ -86,7 +86,7 @@ describe("RfqDrawer", () => {
       </StrictMode>,
     );
     await completeReview();
-    await userEvent.click(screen.getByRole("button", { name: "Generate RFQ" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create supplier request" }));
     expect(await screen.findByText("Generated", { exact: true })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download consolidated internal request" }))
       .toBeInTheDocument();
@@ -103,18 +103,18 @@ describe("RfqDrawer", () => {
       onScheduleRevision={() => undefined}
     />);
     await completeReview();
-    await userEvent.click(screen.getByRole("button", { name: "Generate RFQ" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create supplier request" }));
     expect(await screen.findByText("Generation failed", { exact: true }))
       .toBeInTheDocument();
-    const alert = screen.getByRole("alert", { name: "RFQ generation failure" });
+    const alert = screen.getByRole("alert", { name: "Supplier request generation failure" });
     expect(alert).toHaveTextContent("We couldn't generate the supplier request");
     expect(alert).toHaveTextContent("Your reviewed fields are still here");
     expect(alert.querySelector(".recovery-notice-copy")).not.toHaveTextContent(
       "FIXTURE_GENERATION_FAILURE",
     );
     expect(alert.querySelector("details")).toHaveTextContent("FIXTURE_GENERATION_FAILURE");
-    expect(screen.getByRole("button", { name: "Retry RFQ generation" })).toBeEnabled();
-    expect(screen.getByLabelText("Buyer name")).toHaveValue("Demo Buyer");
+    expect(screen.getByRole("button", { name: "Retry supplier request" })).toBeEnabled();
+    expect(screen.getByLabelText("Buyer name")).toHaveValue("Ada Okafor");
     expect(screen.getByLabelText("Buyer email")).toHaveValue("buyer@example.test");
     expect(screen.getByLabelText("Response deadline")).toHaveValue("2026-08-20");
     expect(screen.getByLabelText("Dates confirmed")).toBeChecked();
@@ -133,9 +133,9 @@ describe("RfqDrawer", () => {
     />);
     await userEvent.clear(screen.getByLabelText("Flight start"));
     await userEvent.type(screen.getByLabelText("Flight start"), "2026-09-08");
-    expect(screen.getByRole("button", { name: "Generate RFQ" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Create supplier request" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", {
-      name: "Recompute plan with these dates",
+      name: "Update plan with these dates",
     }));
     expect(onScheduleRevision).toHaveBeenCalledWith("2026-09-08", "2026-09-28");
     await userEvent.keyboard("{Escape}");

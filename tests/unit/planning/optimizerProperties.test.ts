@@ -9,7 +9,7 @@ import {
 import { evidenceScore } from "@/planning/evidence";
 
 const brief = {
-  productName: "Demo Spark",
+  productName: "Spark Refresh",
   productDescription: "Affordable on-the-go refreshment launch",
   targetAudience: "Students, young workers, and convenience shoppers",
   sector: "fmcg" as const,

@@ -439,8 +439,8 @@ button, input, select { font: inherit; }
   font-size: 0.85rem;
 }
 
-/* Uploaded planning status aside */
-[aria-label="Uploaded planning status"] {
+/* Uploaded inventory status aside */
+[aria-label="Uploaded inventory status"] {
   padding: 10px 16px;
   background: #fff8e1;
   border-top: 1px solid #e8d48c;

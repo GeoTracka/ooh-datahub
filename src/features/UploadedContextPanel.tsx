@@ -13,9 +13,9 @@ export function UploadedContextPanel({
   if (rows.length === 0) return null;
   return (
     <details className="uploaded-context-panel">
-      <summary>Customer inventory context · {rows.length} row{rows.length === 1 ? "" : "s"}</summary>
+      <summary>Uploaded inventory · {rows.length} row{rows.length === 1 ? "" : "s"}</summary>
       <p>
-        Context-only comparison. These rows do not receive reach, Planning Fit, or evidence upgrades.
+        These rows support map and package comparison only. They do not change audience estimates or the plan score.
       </p>
       <div className="uploaded-context-list">
         {rows.map((row) => (
@@ -26,7 +26,7 @@ export function UploadedContextPanel({
             </header>
             <dl>
               <div>
-                <dt>Nearest selected zone</dt>
+                <dt>Nearest selected area</dt>
                 <dd>{row.nearestSelectedZone
                   ? `${row.nearestSelectedZone.label} · ${row.nearestSelectedZone.distanceKm.toFixed(1)} km`
                   : "Coordinate unavailable"}</dd>
@@ -40,15 +40,15 @@ export function UploadedContextPanel({
                     : "fit unknown"}</dd>
               </div>
               <div>
-                <dt>Indicative rate</dt>
+                <dt>Supplied rate</dt>
                 <dd>{row.rateNgn === null
                   ? "Not supplied"
                   : `₦${row.rateNgn.toLocaleString("en")}${row.rateDeltaPercent === null
                     ? ""
-                    : ` · ${signedPercent(row.rateDeltaPercent)} vs selected-face median`}`}</dd>
+                    : ` · ${signedPercent(row.rateDeltaPercent)} vs the typical selected-location rate`}`}</dd>
               </div>
               <div>
-                <dt>Metadata completeness</dt>
+                <dt>Information supplied</dt>
                 <dd>{Math.round(row.metadataCompleteness * 100)}%</dd>
               </div>
             </dl>

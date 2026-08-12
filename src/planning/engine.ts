@@ -348,7 +348,6 @@ export function estimatePackage(
     : 0;
   const hasReach = canUniqueReach &&
     scenarios.every((scenario) => scenario.reach !== null);
-  const failureCode = scenarios.find((scenario) => scenario.failureCode)?.failureCode;
   const activityPotentialValue = activityPotential(
     baseMovement,
     bundle.activityCohort.map((location) => location.value),
@@ -357,7 +356,7 @@ export function estimatePackage(
     ? {
         id: "target-reach",
         kind: "scenario_target_reach",
-        label: "Scenario target reach",
+        label: "Estimated audience reach",
         state: "assumed",
         evidence: reachEvidence.grade,
         unit: "people",
@@ -369,47 +368,47 @@ export function estimatePackage(
           high: high.reach!,
         },
         sourceIds: uniqueReachSourceIds,
-        caveats: ["Conditional-Poisson overlap scenario; not buying currency"],
+        caveats: ["Planning estimate only; confirm audience figures before buying."],
         applicability: "inside",
       }
     : canTargetOts && base.targetOts !== null
       ? {
           id: "target-ots",
           kind: "target_ots",
-          label: "Target opportunity to see",
+          label: "Possible views from the selected audience",
           state: "assumed",
           evidence: evidenceResults.targetOts.grade,
           unit: "ots",
           value: base.targetOts,
           sourceIds: targetOtsSourceIds,
-          caveats: ["Unique reach unavailable: " + (failureCode ?? claimResolution.reasonCode)],
+          caveats: ["A unique audience estimate is not available for the current data."],
           applicability: "outside",
         }
       : canGeneralOts
         ? {
             id: "general-ots",
             kind: "general_ots",
-            label: "General opportunity to see",
+            label: "Possible ad views",
             state: "modelled",
             evidence: evidenceResults.generalOts.grade,
             unit: "ots",
             value: baseGeneralOts,
             sourceIds: generalOtsSourceIds,
-            caveats: ["Target reach is unavailable because the target basis is incompatible"],
+            caveats: ["Audience reach is unavailable because the current audience data cannot be used with this package."],
             applicability: "outside",
           }
         : permits(claimResolution.highest, "movement")
           ? {
               id: "movement",
               kind: "movement",
-              label: "Modelled person movement",
+              label: "Estimated movement near the locations",
               state: "modelled",
               evidence: evidenceResults.movement.grade,
               unit: "person_passages",
               value: baseMovement,
               sourceIds: movementSourceIds,
               caveats: [
-                "OTS unavailable because exposure geometry or the requested face schedule is incomplete",
+                "Possible ad views are unavailable because location visibility or campaign timing is incomplete.",
               ],
               applicability: "outside",
             }
@@ -418,25 +417,25 @@ export function estimatePackage(
             ? {
                 id: "activity-potential",
                 kind: "activity_potential",
-                label: "Activity Potential",
+                label: "Area activity",
                 state: "modelled",
                 evidence: evidenceResults.activityPotential.grade,
                 unit: "index_0_100",
                 value: activityPotentialValue,
                 sourceIds: movementSourceIds,
-                caveats: ["Relative cohort index; not footfall or reach"],
+                caveats: ["A relative area-activity score, not a visitor count or audience-reach figure."],
                 applicability: "outside",
               }
             : {
                 id: "audience-delivery-unavailable",
                 kind: "unavailable",
-                label: "Audience delivery unavailable",
+                label: "Audience estimate unavailable",
                 state: "unavailable",
                 evidence: "unavailable",
                 unit: "none",
                 reasonCode: claimResolution.reasonCode ?? "MEASUREMENT_INPUTS_UNAVAILABLE",
                 sourceIds: [],
-                caveats: ["No eligible audience-delivery claim can be made"],
+                caveats: ["The current data is not sufficient for an audience estimate."],
                 applicability: "unknown",
               });
 
@@ -448,7 +447,7 @@ export function estimatePackage(
     ? MetricClaimSchema.parse({
         id: "influence-capture",
         kind: "influence_capture",
-        label: "Influence Capture",
+        label: "Priority-audience coverage",
         state: "assumed",
         evidence: influenceEvidence.grade,
         unit: "percent",
@@ -461,8 +460,8 @@ export function estimatePackage(
         },
         sourceIds: influenceClaimSourceIds,
         caveats: [
-          "Exposure coverage of an assumed influence-weighted universe",
-          "Conditional independence of influence propensity and exposure is assumed within each cell; Low/Base/High jointly vary movement and propensity concentration as the registered sensitivity",
+          "Estimated coverage of the selected priority audience.",
+          "Lower, Expected, and Upper values show how the result changes when movement and audience assumptions change together.",
         ],
         applicability: "inside",
       })
@@ -528,11 +527,6 @@ export function estimatePackage(
     flightDays,
   });
 
-  const uniqueUniverseSourceIds = [...new Set(universeSourceIds)].sort();
-  const geometrySourceLabel = exposureGeometrySourceIds.length > 0
-    ? exposureGeometrySourceIds.join(", ")
-    : "Exposure geometry unavailable";
-
   return {
     claim,
     influence,
@@ -548,32 +542,32 @@ export function estimatePackage(
         : !hasReach
           ? {
               reasonCode: "UNIQUE_REACH_UNAVAILABLE",
-              recoveryAction: "Restore an eligible unique-reach basis first",
+              recoveryAction: "Add the audience data needed to estimate unique reach first.",
             }
           : !influenceCompatible
             ? {
                 reasonCode: "INFLUENCE_PROFILE_INCOMPATIBLE",
-                recoveryAction: "Provide a current governed qi profile for this sector and flight",
+                recoveryAction: "Add current priority-audience data for this sector and campaign period.",
               }
             : {
                 reasonCode: "INFLUENCE_EVIDENCE_UNAVAILABLE",
-                recoveryAction: "Restore an eligible influence evidence profile",
+                recoveryAction: "Add a usable priority-audience data source.",
               },
       serviceability: hasServiceability
         ? { reasonCode: null, recoveryAction: null }
         : !hasReach
           ? {
               reasonCode: "UNIQUE_REACH_UNAVAILABLE",
-              recoveryAction: "Restore an eligible unique-reach basis first",
+              recoveryAction: "Add the audience data needed to estimate unique reach first.",
             }
           : !serviceabilityCompatible
             ? {
                 reasonCode: "SERVICEABILITY_PROFILE_INCOMPATIBLE",
-                recoveryAction: "Provide a current governed serviceability profile for this sector and flight",
+                recoveryAction: "Add current likely-customer data for this sector and campaign period.",
               }
             : {
                 reasonCode: "SERVICEABILITY_EVIDENCE_UNAVAILABLE",
-                recoveryAction: "Restore an eligible serviceability evidence profile",
+                recoveryAction: "Add a usable likely-customer data source.",
               },
     },
     scenarios,
@@ -581,51 +575,51 @@ export function estimatePackage(
       {
         id: "location",
         state: "assumed",
-        valueText: selected.length + " selected synthetic media faces with declared orientation",
-        sourceLabel: inventorySourceIds.join(", "),
+        valueText: selected.length + " selected media locations with mapped viewing direction",
+        sourceLabel: "Inventory records and mapped location details",
         freshnessLabel: bundle.manifest.createdAt.slice(0, 10),
-        transformation: "Selected IDs resolve to frozen coordinates, face orientation, and view-zone assumptions",
-        nextMapping: "The frozen context/model snapshot provides the corresponding base movement output",
-        caveats: ["Synthetic demo inventory and exposure geometry"],
+        transformation: "Matches each selected location to its coordinates, viewing direction, and visible area.",
+        nextMapping: "Those location details are combined with the movement estimate.",
+        caveats: ["Inventory locations and mapped visibility inputs"],
         recoveryAction: null,
       },
       {
         id: "places",
         state: "assumed",
-        valueText: "Frozen context snapshot; per-feature values not materialized",
-        sourceLabel: "feature:" + bundle.manifest.featureSnapshotId,
+        valueText: "Area information used by the movement model",
+        sourceLabel: "Lagos area and road information",
         freshnessLabel: bundle.manifest.dataRevision,
-        transformation: "No live POI/place feature calculation runs here; baseMovement is the frozen model output associated with this context snapshot",
-        nextMapping: "Frozen baseMovement enters the Movement scenario",
+        transformation: "Uses the stored Lagos area model linked to these locations.",
+        nextMapping: "The area model provides the starting movement estimate.",
         caveats: [
-          "Do not interpret this stage as observed visits or a runtime POI-to-movement calculation",
+          "This is not a live visitor count.",
         ],
         recoveryAction: null,
       },
       {
         id: "movement",
         state: "modelled",
-        valueText: String(Math.round(baseMovement)) + " person passages",
-        sourceLabel: "movement-model:" + bundle.manifest.modelVersion,
+        valueText: String(Math.round(baseMovement)) + " estimated passers-by",
+        sourceLabel: "Movement estimate for the selected dates and times",
         freshnessLabel: bundle.manifest.dataRevision,
-        transformation: "Frozen base movement × coherent Base scenario multiplier × campaign schedule blocks",
-        nextMapping: "Movement is filtered by declared orientation, view-zone, and delivery factors",
-        caveats: ["Scenario movement; not a live traffic count"],
+        transformation: "Adjusts the starting movement estimate for the expected case and campaign schedule.",
+        nextMapping: "Applies viewing direction, visible area, and planned screen availability.",
+        caveats: ["Planning estimate, not a live traffic count."],
         recoveryAction: null,
       },
       {
         id: "ots",
         state: canGeneralOts ? "modelled" : "unavailable",
         valueText: canGeneralOts
-          ? String(Math.round(baseGeneralOts)) + " general OTS"
-          : "OTS unavailable",
-        sourceLabel: geometrySourceLabel,
+          ? String(Math.round(baseGeneralOts)) + " possible ad views"
+          : "Possible ad views unavailable",
+        sourceLabel: "Mapped visibility and planned display availability",
         freshnessLabel: bundle.manifest.exposureGeometryVersion,
-        transformation: "Movement × orientation factor × view-zone factor × delivery uptime/share",
-        nextMapping: "General OTS is allocated to target cells",
+        transformation: "Combines estimated movement with viewing direction, visible area, and display availability.",
+        nextMapping: "Matches possible views to the selected audience.",
         caveats: canGeneralOts
-          ? ["Opportunity to see is not unique people; exposure geometry is synthetic Evidence D"]
-          : ["A selected face is missing compatible exposure geometry or flight delivery"],
+          ? ["Possible views are not the same as unique people reached. This is an early estimate."]
+          : ["A selected media location is missing visibility details or campaign availability."],
         recoveryAction: canGeneralOts
           ? null
           : claimResolution.recoveryAction,
@@ -634,15 +628,15 @@ export function estimatePackage(
         id: "target",
         state: base.targetOts !== null ? "assumed" : "unavailable",
         valueText: base.targetOts !== null
-          ? String(Math.round(base.targetOts)) + " target OTS"
-          : "Target OTS unavailable",
-        sourceLabel: uniqueUniverseSourceIds.join(", "),
+          ? String(Math.round(base.targetOts)) + " possible views from the selected audience"
+          : "Audience-specific views unavailable",
+        sourceLabel: "Chosen audience and campaign-type information",
         freshnessLabel: bundle.manifest.dataRevision,
-        transformation: "General OTS × governed sector/cell allocation",
-        nextMapping: "Target OTS scales the stable overlap panel",
+        transformation: "Applies the selected audience mix to the possible ad views.",
+        nextMapping: "Removes repeat views to estimate unique people reached.",
         caveats: targetUniverseAvailable && targetAllocationAvailable
-          ? ["Target allocation is assumed in the seeded bundle"]
-          : ["A compatible target universe and allocation source are both required"],
+          ? ["The audience mix is a planning assumption."]
+          : ["A compatible audience size and audience-mix source are required."],
         recoveryAction: base.targetOts !== null
           ? null
           : claimResolution.recoveryAction,
@@ -651,16 +645,16 @@ export function estimatePackage(
         id: "unique",
         state: hasReach ? "assumed" : "unavailable",
         valueText: hasReach
-          ? String(Math.round(base.reach!)) + " target people 1+"
+          ? String(Math.round(base.reach!)) + " people reached at least once"
           : "Unique reach unavailable",
-        sourceLabel: "overlap-model:conditional-poisson-weighted-panel-v1",
+        sourceLabel: "Audience overlap model",
         freshnessLabel: bundle.manifest.replicateSetId,
-        transformation: "Stable member propensities → 1 − exp(−Σλ)",
-        nextMapping: "Eligible unique delivery enters the objective Delivery pillar once",
+        transformation: "Estimates and removes repeat views across the selected media locations.",
+        nextMapping: "The result becomes the package's estimated audience reach.",
         caveats: claim.caveats,
         recoveryAction: hasReach
           ? null
-          : claimResolution.recoveryAction ?? "Return to Target OTS or fit an eligible overlap model",
+          : claimResolution.recoveryAction ?? "Add compatible audience-overlap data.",
       },
     ],
     fingerprint,

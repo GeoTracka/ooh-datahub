@@ -3,7 +3,7 @@ import type { RfqReviewInput } from "@/contracts/rfq";
 import { optimizePackage } from "@/planning/packageOptimizer";
 
 export const seededFmcgPlan = optimizePackage(frozenLagosBundle, {
-  productName: "Demo Spark",
+  productName: "Spark Refresh",
   productDescription: "Affordable on-the-go refreshment launch",
   targetAudience: "Students, young workers, and convenience shoppers",
   sector: "fmcg",
@@ -16,7 +16,7 @@ export const seededFmcgPlan = optimizePackage(frozenLagosBundle, {
 });
 
 export const deterministicReview: RfqReviewInput = {
-  buyerContact: { name: "Demo Buyer", email: "buyer@example.test" },
+  buyerContact: { name: "Ada Okafor", email: "buyer@example.test" },
   responseDeadline: "2026-08-20",
   flightStart: "2026-09-01",
   flightEnd: "2026-09-28",
