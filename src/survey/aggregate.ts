@@ -19,9 +19,15 @@ export const DEFAULT_SURVEY_FACET_GROUPINGS: SurveyFacetDimension[][] = [
   ["city"],
   ["ageBand"],
   ["gender"],
+  ["occupation"],
+  ["incomeBand"],
   ["transportMode"],
+  ["commutePattern"],
   ["city", "ageBand"],
+  ["city", "occupation"],
+  ["city", "incomeBand"],
   ["city", "transportMode"],
+  ["city", "commutePattern"],
 ];
 
 const formatLabels: Record<SurveyFormat, string> = {

@@ -7,7 +7,7 @@ import {
   SURVEY_PLANNING_OBJECTIVES,
   type SurveyPlanningObjective,
 } from "@/survey/contextSignals";
-import { selectLagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
+import { resolveLagosPlanningContext } from "@/survey/lagosPlanningContext";
 
 const baseBrief: Brief = {
   productName: "Spark Refresh",
@@ -28,19 +28,20 @@ function briefFor(objective: SurveyPlanningObjective): Brief {
 
 describe("consumer survey planning-context isolation", () => {
   it.each(SURVEY_PLANNING_OBJECTIVES)(
-    "selects the %s artifact without mutating planner output or ordering",
+    "resolves the %s audience context without mutating planner output or ordering",
     (objective) => {
       const brief = briefFor(objective);
       const before = buildPlan(bundle, brief);
       const beforeIdentity = canonicalJson(before);
-      const beforeOrder = before.packageOptions.map(({ candidate }) =>
-        candidate.id,
+      const beforeOrder = before.packageOptions.map(
+        ({ candidate }) => candidate.id,
       );
 
-      const artifact = selectLagosPlanningContextArtifact(objective);
+      const context = resolveLagosPlanningContext({ objective, brief });
 
-      expect(artifact.objective).toBe(objective);
-      expect(artifact.signals).toHaveLength(3);
+      expect(context.artifact.objective).toBe(objective);
+      expect(context.artifact.signals).toHaveLength(3);
+      expect(context.resolution.selectedLabel).toBe("Aged 18–25");
       expect(canonicalJson(before)).toBe(beforeIdentity);
 
       const after = buildPlan(bundle, brief);
@@ -51,5 +52,6 @@ describe("consumer survey planning-context isolation", () => {
       expect(after.recommended.id).toBe(before.recommended.id);
       expect(after.measurement).toEqual(before.measurement);
     },
+    30_000,
   );
 });

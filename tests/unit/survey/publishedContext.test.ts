@@ -41,14 +41,13 @@ describe("published consumer survey planning context", () => {
         schemaVersion: "consumer-survey-planning-context-v2",
         objective,
         sourceSnapshotDigest:
-          "c0644a87d54060b71963f7b9cedaf994efec3828a62400d5c4c92340ea1b64fa",
+          "b44c4073ceb9056d88a061c40dbeaa70fa2154ff9ad32b4242bc6863bbb8552e",
         scope: { city: "Lagos" },
         scopeLabel: "Lagos",
         sampleSize: 204,
         weightingState: "unweighted_descriptive",
         decisionUse: "context_only",
-        claimBoundary:
-          "self_reported_consumer_context_not_observed_delivery",
+        claimBoundary: "self_reported_consumer_context_not_observed_delivery",
       });
       expect(artifact.signals).toHaveLength(3);
     }
@@ -97,8 +96,7 @@ describe("published consumer survey planning context", () => {
       },
       {
         label: "Recall context",
-        metricLabel:
-          "Recalled an OOH advertisement in the previous four weeks",
+        metricLabel: "Recalled an OOH advertisement in the previous four weeks",
         valueText: "72%",
       },
       {
@@ -139,9 +137,8 @@ describe("published consumer survey planning context", () => {
     const profiles = Object.values(artifacts);
     expect(new Set(profiles.map(({ sourceId }) => sourceId)).size).toBe(1);
     expect(
-      new Set(
-        profiles.map(({ sourceSnapshotDigest }) => sourceSnapshotDigest),
-      ).size,
+      new Set(profiles.map(({ sourceSnapshotDigest }) => sourceSnapshotDigest))
+        .size,
     ).toBe(1);
     expect(new Set(profiles.map(({ sampleSize }) => sampleSize)).size).toBe(1);
     expect(
@@ -151,7 +148,9 @@ describe("published consumer survey planning context", () => {
 
   it("contains no delivery-measurement or scoring contract fields", () => {
     for (const artifact of Object.values(artifacts)) {
-      const keys = new Set(objectKeys(artifact).map((key) => key.toLowerCase()));
+      const keys = new Set(
+        objectKeys(artifact).map((key) => key.toLowerCase()),
+      );
       for (const prohibited of [
         "movement",
         "ots",

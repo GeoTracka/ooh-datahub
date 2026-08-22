@@ -10,6 +10,7 @@ export const RBL_LOMA_2026_HEADERS = {
   gender: "4. Gender",
   occupation: "5a. Primary occupation",
   incomeBand: "SEC 5c.What is Your Approximate Monthly Personal Income?",
+  commutePattern: "6a. Travel days per week: Daily commuter , hybrid or remote?",
   weekdayMorning: "7b. Morning",
   weekdayAfternoon: "7b.Afternoon",
   weekdayEvening: "7b. Evening",
