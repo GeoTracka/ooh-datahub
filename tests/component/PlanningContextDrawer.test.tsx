@@ -5,7 +5,7 @@ import { PlanningContextDrawer } from "@/features/PlanningContextDrawer";
 import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
 
 describe("PlanningContextDrawer", () => {
-  it("explains source, applicable denominators, method, and the non-delivery boundary", async () => {
+  it("explains source, objective selection, denominators, and the non-delivery boundary", async () => {
     const onClose = vi.fn();
     render(
       <PlanningContextDrawer
@@ -22,10 +22,16 @@ describe("PlanningContextDrawer", () => {
         name: "What people reported about outdoor advertising",
       }),
     ).toBeVisible();
+    expect(screen.getByText("Broad reach")).toBeVisible();
     expect(screen.getByText("204 respondents")).toBeVisible();
     expect(screen.getByText("20 May–3 Jun 2026")).toBeVisible();
     expect(screen.getByText(/177 applicable responses/)).toBeVisible();
     expect(screen.getByText(/202 applicable responses/)).toBeVisible();
+    expect(
+      screen.getByText(
+        /objective selects which survey facts are shown; it does not change package calculations or ranking/i,
+      ),
+    ).toBeVisible();
     expect(
       screen.getByText(/not observed movement, exposure geometry, OTS, reach/),
     ).toBeVisible();
