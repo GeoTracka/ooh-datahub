@@ -10,6 +10,7 @@ export default defineConfig({
     "fine-tune-workspace.spec.ts",
     "degraded-recovery.spec.ts",
     "transition-quality.spec.ts",
+    "planning-context.spec.ts",
   ],
   fullyParallel: false,
   workers: 1,
@@ -37,8 +38,10 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: true,
   },
-  projects: [{
-    name: "chromium",
-    use: devices["Desktop Chrome"],
-  }],
+  projects: [
+    {
+      name: "chromium",
+      use: devices["Desktop Chrome"],
+    },
+  ],
 });

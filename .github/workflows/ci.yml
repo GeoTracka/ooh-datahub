@@ -86,6 +86,7 @@ jobs:
           tests/e2e/sector-presets.spec.ts
           tests/e2e/network-disabled.spec.ts
           tests/e2e/upload-enrichment.spec.ts
+          tests/e2e/planning-context.spec.ts
       - name: Build production app for map performance gate
         run: pnpm build
       - name: Run production map performance gate

@@ -13,7 +13,10 @@ import {
   recalculateSelectedSites,
   replaceZoneWithZone,
 } from "@/application/plannerService";
-import { initialPlannerState, plannerReducer } from "@/application/plannerReducer";
+import {
+  initialPlannerState,
+  plannerReducer,
+} from "@/application/plannerReducer";
 import {
   selectIsDirty,
   selectCausalDrawerViewModel,
@@ -31,6 +34,8 @@ import { MapStage } from "@/features/MapStage";
 import { OperationStatus } from "@/features/OperationStatus";
 import { PackageConstraintNotice } from "@/features/PackageConstraintNotice";
 import { PackageOptionComparison } from "@/features/PackageOptionComparison";
+import { PlanningContextDrawer } from "@/features/PlanningContextDrawer";
+import { PlanningContextStrip } from "@/features/PlanningContextStrip";
 import { PackageStrip } from "@/features/PackageStrip";
 import { RecommendationCarousel } from "@/features/RecommendationCarousel";
 import { RfqDrawer } from "@/features/RfqDrawer";
@@ -39,6 +44,7 @@ import { UploadDialog } from "@/features/UploadDialog";
 import { UploadedContextPanel } from "@/features/UploadedContextPanel";
 import { projectMapLibreScene } from "@/maps/projectScene";
 import { PUBLIC_COPY, confidenceLabel } from "@/content/plainLanguage";
+import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
 
 const initialBrief: Brief = {
   productName: PUBLIC_COPY.campaign.defaultProductName,
@@ -55,7 +61,11 @@ const initialBrief: Brief = {
 
 type CampaignProfile = Pick<
   Brief,
-  "productName" | "productDescription" | "targetAudience" | "sector" | "objective"
+  | "productName"
+  | "productDescription"
+  | "targetAudience"
+  | "sector"
+  | "objective"
 >;
 
 type ExplorerStep = 1 | 2 | 3 | 4 | 5;
@@ -81,8 +91,10 @@ const campaignPresets: Array<{
     label: "Real Estate · Priority audience",
     profile: {
       productName: "Harbour Residences",
-      productDescription: "Premium Lagos residential development for buyers and investors",
-      targetAudience: "Affluent professionals, property investors, and diaspora buyers",
+      productDescription:
+        "Premium Lagos residential development for buyers and investors",
+      targetAudience:
+        "Affluent professionals, property investors, and diaspora buyers",
       sector: "real_estate",
       objective: "influential_core",
     },
@@ -92,7 +104,8 @@ const campaignPresets: Array<{
     label: "Bank / Fintech · Likely customers",
     profile: {
       productName: "SwiftPay Business",
-      productDescription: "Digital banking and payments for everyday business transactions",
+      productDescription:
+        "Digital banking and payments for everyday business transactions",
       targetAudience: "SME owners, merchants, and salaried professionals",
       sector: "bank_fintech",
       objective: "near_conversion",
@@ -123,15 +136,18 @@ const objectiveLabels: Record<Brief["objective"], string> = {
 };
 
 function profileMatches(brief: Brief, profile: CampaignProfile): boolean {
-  return brief.productName === profile.productName &&
+  return (
+    brief.productName === profile.productName &&
     brief.productDescription === profile.productDescription &&
     brief.targetAudience === profile.targetAudience &&
     brief.sector === profile.sector &&
-    brief.objective === profile.objective;
+    brief.objective === profile.objective
+  );
 }
 
 function briefsMatch(left: Brief, right: Brief): boolean {
-  return left.productName === right.productName &&
+  return (
+    left.productName === right.productName &&
     left.productDescription === right.productDescription &&
     left.targetAudience === right.targetAudience &&
     left.sector === right.sector &&
@@ -140,7 +156,8 @@ function briefsMatch(left: Brief, right: Brief): boolean {
     left.budgetNgn === right.budgetNgn &&
     left.normalizationBudgetNgn === right.normalizationBudgetNgn &&
     left.flightStart === right.flightStart &&
-    left.flightEnd === right.flightEnd;
+    left.flightEnd === right.flightEnd
+  );
 }
 
 function nextPaint(): Promise<void> {
@@ -166,6 +183,7 @@ export function PlannerPage() {
     history: DrawerTarget[];
   } | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [planningContextOpen, setPlanningContextOpen] = useState(false);
   const [planning, setPlanning] = useState(false);
   const planningRef = useRef(false);
 
@@ -173,20 +191,22 @@ export function PlannerPage() {
   const dirty = selectIsDirty(state);
   const cards = visible ? selectZoneCards(bundle, state) : [];
   const deltas = selectPlanDeltas(state);
-  const adjustmentOptions = visible ? listAdjustmentOptions(bundle, visible) : null;
+  const adjustmentOptions = visible
+    ? listAdjustmentOptions(bundle, visible)
+    : null;
   const uploadedContextRows = visible
     ? selectUploadedContextComparisons(bundle, visible)
     : [];
-  const drawerView = drawer && visible
-    ? selectCausalDrawerViewModel(bundle, visible, drawer.target)
-    : null;
+  const drawerView =
+    drawer && visible
+      ? selectCausalDrawerViewModel(bundle, visible, drawer.target)
+      : null;
   const influenceAvailable = Boolean(visible?.measurement?.influence);
-  const resolvedLens: MapLens = lens === "influence" && !influenceAvailable
-    ? "plan"
-    : lens;
-  const selectedPresetId = campaignPresets.find((preset) =>
-    profileMatches(brief, preset.profile)
-  )?.id ?? null;
+  const resolvedLens: MapLens =
+    lens === "influence" && !influenceAvailable ? "plan" : lens;
+  const selectedPresetId =
+    campaignPresets.find((preset) => profileMatches(brief, preset.profile))
+      ?.id ?? null;
   const scene = useMemo(
     () => projectMapLibreScene(selectLensFeatures(bundle, state, resolvedLens)),
     [state, resolvedLens],
@@ -248,14 +268,21 @@ export function PlannerPage() {
   function swapSite(siteId: string, replacementSiteId: string) {
     if (!visible || siteId === replacementSiteId) return;
     draftSites(
-      visible.recommended.siteIds.map((id) => id === siteId ? replacementSiteId : id),
+      visible.recommended.siteIds.map((id) =>
+        id === siteId ? replacementSiteId : id,
+      ),
       "Swap media location · " + siteId + " → " + replacementSiteId,
     );
   }
 
   function replaceZone(zoneId: string, replacementZoneId: string) {
     if (!visible) return;
-    const next = replaceZoneWithZone(bundle, visible, zoneId, replacementZoneId);
+    const next = replaceZoneWithZone(
+      bundle,
+      visible,
+      zoneId,
+      replacementZoneId,
+    );
     dispatch({
       type: "drafted",
       plan: next,
@@ -267,9 +294,10 @@ export function PlannerPage() {
   function openDrawer(target: DrawerTarget, history: DrawerTarget[] = []) {
     setDrawer({
       target,
-      stage: target.kind === "package" || target.metric === "influence"
-        ? "unique"
-        : "location",
+      stage:
+        target.kind === "package" || target.metric === "influence"
+          ? "unique"
+          : "location",
       history,
     });
   }
@@ -279,7 +307,8 @@ export function PlannerPage() {
     openDrawer({
       kind: "zone",
       id: zoneId,
-      metric: visible.brief.objective === "influential_core" ? "influence" : "reach",
+      metric:
+        visible.brief.objective === "influential_core" ? "influence" : "reach",
     });
   }
 
@@ -313,13 +342,18 @@ export function PlannerPage() {
   }
 
   function navigateDrawer(target: DrawerTarget) {
-    setDrawer((current) => current ? {
-      target,
-      stage: target.kind === "package" || target.metric === "influence"
-        ? "unique"
-        : "location",
-      history: [...current.history, current.target],
-    } : current);
+    setDrawer((current) =>
+      current
+        ? {
+            target,
+            stage:
+              target.kind === "package" || target.metric === "influence"
+                ? "unique"
+                : "location",
+            history: [...current.history, current.target],
+          }
+        : current,
+    );
   }
 
   function reviewRfq() {
@@ -344,7 +378,8 @@ export function PlannerPage() {
     dispatch({ type: "reset" });
   }
 
-  const stepTwoValid = brief.budgetNgn > 0 && brief.flightStart <= brief.flightEnd;
+  const stepTwoValid =
+    brief.budgetNgn > 0 && brief.flightStart <= brief.flightEnd;
   const evidenceLabel = confidenceLabel(visible?.measurement?.claim.evidence);
 
   return (
@@ -376,7 +411,10 @@ export function PlannerPage() {
             total={5}
             title="Who is this campaign for?"
             busy={planning}
-            primaryAction={{ label: "Continue to timing", onClick: () => setStep(2) }}
+            primaryAction={{
+              label: "Continue to timing",
+              onClick: () => setStep(2),
+            }}
           >
             <div className="explorer-preset-grid" aria-label="Campaign presets">
               {campaignPresets.map((preset) => (
@@ -391,31 +429,63 @@ export function PlannerPage() {
                 </button>
               ))}
             </div>
-            <section className="campaign-profile-summary" aria-label="Campaign profile summary">
+            <section
+              className="campaign-profile-summary"
+              aria-label="Campaign profile summary"
+            >
               <span className="campaign-profile-kicker">Current campaign</span>
               <strong>{brief.productName}</strong>
               <span>{brief.targetAudience}</span>
-              <span>{sectorLabels[brief.sector]} · {objectiveLabels[brief.objective]}</span>
+              <span>
+                {sectorLabels[brief.sector]} ·{" "}
+                {objectiveLabels[brief.objective]}
+              </span>
             </section>
             <details className="campaign-edit-details">
               <summary>Edit campaign details</summary>
               <div className="explorer-fields">
                 <label>
                   Product name
-                  <input disabled={planning} value={brief.productName} onChange={(event) => changeBrief({ productName: event.target.value })} />
+                  <input
+                    disabled={planning}
+                    value={brief.productName}
+                    onChange={(event) =>
+                      changeBrief({ productName: event.target.value })
+                    }
+                  />
                 </label>
                 <label>
                   Product information
-                  <textarea disabled={planning} value={brief.productDescription} onChange={(event) => changeBrief({ productDescription: event.target.value })} />
+                  <textarea
+                    disabled={planning}
+                    value={brief.productDescription}
+                    onChange={(event) =>
+                      changeBrief({ productDescription: event.target.value })
+                    }
+                  />
                 </label>
                 <label>
                   Target audience
-                  <textarea disabled={planning} value={brief.targetAudience} onChange={(event) => changeBrief({ targetAudience: event.target.value })} />
+                  <textarea
+                    disabled={planning}
+                    value={brief.targetAudience}
+                    onChange={(event) =>
+                      changeBrief({ targetAudience: event.target.value })
+                    }
+                  />
                 </label>
                 <div className="explorer-field-pair">
                   <label>
                     Sector
-                    <select disabled={planning} value={brief.sector} onChange={(event) => changeBrief({ sector: event.target.value as Brief["sector"] })}>
+                    <select
+                      disabled={planning}
+                      value={brief.sector}
+                      onChange={(event) =>
+                        changeBrief({
+                          sector: event.target.value as Brief["sector"],
+                        })
+                      }
+                    >
                       <option value="fmcg">Consumer goods</option>
                       <option value="real_estate">Real Estate</option>
                       <option value="bank_fintech">Bank / Fintech</option>
@@ -423,9 +493,19 @@ export function PlannerPage() {
                   </label>
                   <label>
                     Objective
-                    <select disabled={planning} value={brief.objective} onChange={(event) => changeBrief({ objective: event.target.value as Brief["objective"] })}>
+                    <select
+                      disabled={planning}
+                      value={brief.objective}
+                      onChange={(event) =>
+                        changeBrief({
+                          objective: event.target.value as Brief["objective"],
+                        })
+                      }
+                    >
                       <option value="broad_reach">Broad reach</option>
-                      <option value="influential_core">Priority audience</option>
+                      <option value="influential_core">
+                        Priority audience
+                      </option>
                       <option value="near_conversion">Likely customers</option>
                     </select>
                   </label>
@@ -444,7 +524,9 @@ export function PlannerPage() {
               disabled={planning}
               onClick={() => void showRecommendations()}
             >
-              {planning ? PUBLIC_COPY.campaign.building : "Use default timing & budget"}
+              {planning
+                ? PUBLIC_COPY.campaign.building
+                : "Use default timing & budget"}
             </button>
           </StepCard>
         )}
@@ -457,14 +539,20 @@ export function PlannerPage() {
             onBack={() => setStep(1)}
             busy={planning}
             primaryAction={{
-              label: planning ? PUBLIC_COPY.campaign.building : "Show recommended areas",
+              label: planning
+                ? PUBLIC_COPY.campaign.building
+                : "Show recommended areas",
               onClick: () => void showRecommendations(),
               disabled: !stepTwoValid,
             }}
           >
             <div className="explorer-choice-group">
               <span>Campaign time</span>
-              <div className="explorer-chip-row" role="group" aria-label="Campaign time">
+              <div
+                className="explorer-chip-row"
+                role="group"
+                aria-label="Campaign time"
+              >
                 {daypartChoices.map((choice) => (
                   <button
                     key={choice.value}
@@ -480,7 +568,11 @@ export function PlannerPage() {
             </div>
             <div className="explorer-choice-group">
               <span>Budget</span>
-              <div className="explorer-chip-row" role="group" aria-label="Budget options">
+              <div
+                className="explorer-chip-row"
+                role="group"
+                aria-label="Budget options"
+              >
                 {budgetChoices.map((budget) => (
                   <button
                     key={budget}
@@ -500,18 +592,34 @@ export function PlannerPage() {
                   min={1}
                   disabled={planning}
                   value={brief.budgetNgn}
-                  onChange={(event) => changeBrief({ budgetNgn: Number(event.target.value) })}
+                  onChange={(event) =>
+                    changeBrief({ budgetNgn: Number(event.target.value) })
+                  }
                 />
               </label>
             </div>
             <div className="explorer-field-pair">
               <label>
                 Flight start
-                <input type="date" disabled={planning} value={brief.flightStart} onChange={(event) => changeBrief({ flightStart: event.target.value })} />
+                <input
+                  type="date"
+                  disabled={planning}
+                  value={brief.flightStart}
+                  onChange={(event) =>
+                    changeBrief({ flightStart: event.target.value })
+                  }
+                />
               </label>
               <label>
                 Flight end
-                <input type="date" disabled={planning} value={brief.flightEnd} onChange={(event) => changeBrief({ flightEnd: event.target.value })} />
+                <input
+                  type="date"
+                  disabled={planning}
+                  value={brief.flightEnd}
+                  onChange={(event) =>
+                    changeBrief({ flightEnd: event.target.value })
+                  }
+                />
               </label>
             </div>
             {planning && (
@@ -520,7 +628,12 @@ export function PlannerPage() {
                 detail={PUBLIC_COPY.campaign.buildingDetail}
               />
             )}
-            {!stepTwoValid && <p role="alert">Budget must be positive and flight end must not precede flight start.</p>}
+            {!stepTwoValid && (
+              <p role="alert">
+                Budget must be positive and flight end must not precede flight
+                start.
+              </p>
+            )}
           </StepCard>
         )}
 
@@ -554,6 +667,10 @@ export function PlannerPage() {
               onExplain={(metric) => openDrawer({ kind: "package", metric })}
               onReviewRfq={reviewRfq}
             />
+            <PlanningContextStrip
+              artifact={lagosPlanningContextArtifact}
+              onExplore={() => setPlanningContextOpen(true)}
+            />
             <RecommendationCarousel
               cards={cards}
               objective={visible.brief.objective}
@@ -563,14 +680,29 @@ export function PlannerPage() {
               onExplain={openZoneStory}
             />
             {!visible.recommended.valid && (
-              <PackageConstraintNotice reasonCodes={visible.recommended.invalidReasonCodes} />
+              <PackageConstraintNotice
+                reasonCodes={visible.recommended.invalidReasonCodes}
+              />
             )}
             {visible.contextRevision && (
-              <aside className="explorer-context-status" aria-label="Uploaded inventory status">
+              <aside
+                className="explorer-context-status"
+                aria-label="Uploaded inventory status"
+              >
                 <strong>Uploaded inventory · comparison only</strong>
-                <span>{visible.contextRevision.selectedRows.length} media locations ready</span>
-                <span>{visible.contextRevision.claimResolution.recoveryAction ?? "Audience estimates remain unchanged."}</span>
-                <span>{dirty ? "Inventory change not yet applied" : "Inventory added to this plan"}</span>
+                <span>
+                  {visible.contextRevision.selectedRows.length} media locations
+                  ready
+                </span>
+                <span>
+                  {visible.contextRevision.claimResolution.recoveryAction ??
+                    "Audience estimates remain unchanged."}
+                </span>
+                <span>
+                  {dirty
+                    ? "Inventory change not yet applied"
+                    : "Inventory added to this plan"}
+                </span>
               </aside>
             )}
             {visible.contextRevision && (
@@ -602,7 +734,9 @@ export function PlannerPage() {
             title="Make this package yours"
             onBack={() => setStep(fineTuneReturnStep)}
             primaryAction={{
-              label: dirty ? "Apply & review supplier request" : PUBLIC_COPY.rfq.action,
+              label: dirty
+                ? "Apply & review supplier request"
+                : PUBLIC_COPY.rfq.action,
               onClick: reviewRfq,
               disabled: !visible.recommended.valid,
             }}
@@ -622,10 +756,12 @@ export function PlannerPage() {
                 deltas={deltas}
                 invalidReasons={visible.recommended.invalidReasonCodes}
                 onAdd={addSite}
-                onRemove={(siteId) => draftSites(
-                  visible.recommended.siteIds.filter((id) => id !== siteId),
-                  "Remove media location · " + siteId,
-                )}
+                onRemove={(siteId) =>
+                  draftSites(
+                    visible.recommended.siteIds.filter((id) => id !== siteId),
+                    "Remove media location · " + siteId,
+                  )
+                }
                 onSwap={swapSite}
                 onReplaceZone={replaceZone}
                 onUndo={undoDraft}
@@ -646,22 +782,41 @@ export function PlannerPage() {
           ancestors={drawer.history}
           nextTargets={drawerView.nextTargets}
           sourceRecord={drawerView.sourceRecord}
-          onStage={(activeStage) => setDrawer((current) => current ? { ...current, stage: activeStage } : current)}
+          onStage={(activeStage) =>
+            setDrawer((current) =>
+              current ? { ...current, stage: activeStage } : current,
+            )
+          }
           onNavigate={navigateDrawer}
-          onAncestor={(index) => setDrawer((current) => {
-            if (!current || !current.history[index]) return current;
-            return {
-              target: current.history[index],
-              stage: "location",
-              history: current.history.slice(0, index),
-            };
-          })}
-          onBack={() => setDrawer((current) => {
-            if (!current || current.history.length === 0) return current;
-            const target = current.history.at(-1)!;
-            return { target, stage: "location", history: current.history.slice(0, -1) };
-          })}
+          onAncestor={(index) =>
+            setDrawer((current) => {
+              if (!current || !current.history[index]) return current;
+              return {
+                target: current.history[index],
+                stage: "location",
+                history: current.history.slice(0, index),
+              };
+            })
+          }
+          onBack={() =>
+            setDrawer((current) => {
+              if (!current || current.history.length === 0) return current;
+              const target = current.history.at(-1)!;
+              return {
+                target,
+                stage: "location",
+                history: current.history.slice(0, -1),
+              };
+            })
+          }
           onClose={() => setDrawer(null)}
+        />
+      )}
+
+      {planningContextOpen && (
+        <PlanningContextDrawer
+          artifact={lagosPlanningContextArtifact}
+          onClose={() => setPlanningContextOpen(false)}
         />
       )}
 
@@ -671,11 +826,16 @@ export function PlannerPage() {
           onDraft={(contextRevision) => {
             const basis = visible ?? buildPlan(bundle, brief);
             if (!visible) dispatch({ type: "loaded", plan: basis });
-            const next = applyUploadContextToPlan(bundle, basis, contextRevision);
+            const next = applyUploadContextToPlan(
+              bundle,
+              basis,
+              contextRevision,
+            );
             dispatch({
               type: "drafted",
               plan: next,
-              reason: "Add uploaded inventory · " + contextRevision.dataRevision,
+              reason:
+                "Add uploaded inventory · " + contextRevision.dataRevision,
             });
             setSelectedZoneId(null);
             setLens("plan");
