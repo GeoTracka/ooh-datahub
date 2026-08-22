@@ -77,8 +77,8 @@ test("local upload stays context-only and requires preflight before provider enr
     path.resolve("tests/fixtures/customer-owned-inventory.csv"),
   );
   expect(apiCalls).toEqual([]);
-  await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
-  await page.getByRole("button", { name: "Use uploaded facts as context" }).click();
+  await expect(page.getByText("1 ready · 0 need review · 0 cannot be used")).toBeVisible();
+  await page.getByRole("button", { name: "Add uploaded inventory to the plan" }).click();
   expect(apiCalls).toEqual([]);
 
   const firstStatus = page.getByRole("complementary", { name: "Uploaded inventory status" });
@@ -95,14 +95,14 @@ test("local upload stays context-only and requires preflight before provider enr
   await page.getByLabel("Inventory spreadsheet").setInputFiles(
     path.resolve("tests/fixtures/customer-owned-inventory.csv"),
   );
-  await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
-  await page.getByRole("button", { name: "Review enrichment" }).click();
+  await expect(page.getByText("1 ready · 0 need review · 0 cannot be used")).toBeVisible();
+  await page.getByRole("button", { name: "Check location details" }).click();
   await expect.poll(() => apiCalls).toEqual(["preflight"]);
-  await page.getByRole("button", { name: "Enrich locations" }).click();
+  await page.getByRole("button", { name: "Check suggested locations" }).click();
   await expect.poll(() => apiCalls).toEqual(["preflight", "run"]);
-  await expect(page.getByRole("region", { name: "Geocode review" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Location review" })).toBeVisible();
   await expect(page.getByText(/Yaba, Lagos, Nigeria/)).toBeVisible();
-  await page.getByRole("button", { name: "Use reviewed facts as context" }).click();
+  await page.getByRole("button", { name: "Add reviewed inventory to the plan" }).click();
 
   const reviewedStatus = page.getByRole("complementary", { name: "Uploaded inventory status" });
   await expect(reviewedStatus).toContainText("Uploaded inventory · comparison only");
