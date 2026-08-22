@@ -1,0 +1,191 @@
+diff --git a/docs/consumer-survey.md b/docs/consumer-survey.md
+index 3394db0..8f913cc 100644
+--- a/docs/consumer-survey.md
++++ b/docs/consumer-survey.md
+@@ -86,18 +86,22 @@ and city × transport mode. Additional dimensions remain explicit and versioned.
+ 
+ ## Product integration
+ 
+-`selectSurveyContextSignals()` selects the most specific available facet for a
+-transparent query and emits no more than three signals:
+-
+-1. relative format affinity;
+-2. most common OOH environment;
+-3. leading creative/memorability cue;
+-4. audience attention as fallback;
+-5. four-week recall as fallback.
+-
+-Signals retain source period, sample size, selected scope, evidence state and claim
+-boundary. They are independent facts, not a composite opportunity/confidence score.
+-They are designed for the Planning context strip and drill-down specified by #69.
++`selectSurveyContextSignals()` remains the general-purpose bounded selector for a
++transparent facet query. `selectSurveyObjectiveContextProfile()` applies a separately
++versioned presentation policy for the three planner objectives:
++
++- **Broad reach:** recent recall, the leading visibility environment, and the
++  hardest-to-ignore format;
++- **Priority audience:** perceived format trust, personal relevance, and the leading
++  creative memorability cue;
++- **Likely customers:** perceived format effect and the strongest available
++  self-reported actions after noticing OOH.
++
++Each profile emits no more than three independent facts. The campaign objective only
++selects which approved facts are presented; it does not alter package calculation,
++ordering, delivery, Planning Fit, or evidence grade. Signals retain source period,
++sample size, selected scope, applicable question denominator, evidence state and claim
++boundary. They are not a composite opportunity or confidence score.
+ 
+ ## Published planning-context projection
+ 
+@@ -112,12 +116,14 @@ pnpm survey:publish-context \
+ ```
+ 
+ The publisher independently verifies the aggregate snapshot digest before selecting
+-the most specific eligible facet. The checked-in client artifact contains exactly
+-three signals, the Lagos sample size and collection period, the source snapshot
+-digest, an independent publication digest, and the unchanged `context_only` claim
+-boundary. Respondent records and the full aggregate matrix are not shipped to the
+-client.
+-
+-The Step 3 planning-context strip and exploration drawer may explain these findings,
+-but must not change package selection, delivery estimates, evidence grade, Planning
++the most specific eligible facet. The checked-in `consumer-survey-planning-context-v2`
++artifact contains one deterministic profile for each planner objective, with exactly
++three signals per profile, plus the shared Lagos sample size and collection period,
++source snapshot digest, independent publication digest, and unchanged `context_only`
++claim boundary. Respondent records and the full aggregate matrix are not shipped to
++the client.
++
++The Step 3 strip selects the profile from the already-calculated campaign objective.
++The drawer explains that selection policy and applicable denominators. Neither surface
++may change package selection or ordering, delivery estimates, evidence grade, Planning
+ Fit, movement, OTS, reach, frequency, influence, target share, or calibration.
+diff --git a/package.json b/package.json
+index 9b857f2..c3c9f99 100644
+--- a/package.json
++++ b/package.json
+@@ -20,9 +20,9 @@
+     "data:derive:vector": "tsx scripts/derive-overture-vector-context.ts",
+     "data:derive:accessibility": "tsx scripts/derive-grid3-accessibility.ts",
+     "data:derive:settlement": "tsx scripts/derive-grid3-settlement-context.ts",
+-    "survey:validate": "tsx scripts/validate-consumer-survey.ts",
+-    "survey:derive": "tsx scripts/derive-consumer-survey-context.ts",
+-    "survey:publish-context": "tsx scripts/publish-consumer-survey-planning-context.ts",
++    "survey:validate": "node --conditions=react-server --import tsx scripts/validate-consumer-survey.ts",
++    "survey:derive": "node --conditions=react-server --import tsx scripts/derive-consumer-survey-context.ts",
++    "survey:publish-context": "node --conditions=react-server --import tsx scripts/publish-consumer-survey-planning-context.ts",
+     "enrichment:land": "tsx scripts/land-open-source.ts",
+     "enrichment:register": "tsx scripts/register-open-artifact.ts",
+     "enrichment:register:grid3-raster": "tsx scripts/register-grid3-raster.ts",
+diff --git a/scripts/publish-consumer-survey-planning-context.ts b/scripts/publish-consumer-survey-planning-context.ts
+index b228773..e9e65eb 100644
+--- a/scripts/publish-consumer-survey-planning-context.ts
++++ b/scripts/publish-consumer-survey-planning-context.ts
+@@ -52,7 +52,13 @@ async function main(): Promise<void> {
+         sourceSnapshotDigest: artifact.sourceSnapshotDigest,
+         scope: artifact.scope,
+         sampleSize: artifact.sampleSize,
+-        signalCount: artifact.signals.length,
++        profileCount: Object.keys(artifact.profiles).length,
++        signalCounts: Object.fromEntries(
++          Object.entries(artifact.profiles).map(([objective, profile]) => [
++            objective,
++            profile.signals.length,
++          ]),
++        ),
+         decisionUse: artifact.decisionUse,
+       },
+       null,
+diff --git a/src/features/PlannerPage.tsx b/src/features/PlannerPage.tsx
+index b5b900c..6296d61 100644
+--- a/src/features/PlannerPage.tsx
++++ b/src/features/PlannerPage.tsx
+@@ -669,6 +669,7 @@ export function PlannerPage() {
+             />
+             <PlanningContextStrip
+               artifact={lagosPlanningContextArtifact}
++              objective={visible.brief.objective}
+               onExplore={() => setPlanningContextOpen(true)}
+             />
+             <RecommendationCarousel
+@@ -813,9 +814,10 @@ export function PlannerPage() {
+         />
+       )}
+ 
+-      {planningContextOpen && (
++      {planningContextOpen && visible && (
+         <PlanningContextDrawer
+           artifact={lagosPlanningContextArtifact}
++          objective={visible.brief.objective}
+           onClose={() => setPlanningContextOpen(false)}
+         />
+       )}
+diff --git a/src/features/PlanningContextDrawer.tsx b/src/features/PlanningContextDrawer.tsx
+index a4ea934..e5cd2a5 100644
+--- a/src/features/PlanningContextDrawer.tsx
++++ b/src/features/PlanningContextDrawer.tsx
+@@ -2,7 +2,12 @@
+ 
+ import { useEffect, useRef } from "react";
+ import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
+-import type { SurveyPlanningContextArtifact } from "@/survey/publishedContext";
++import type { SurveyPlanningObjective } from "@/survey/contracts";
++import type {
++  SurveyPlanningContextArtifact,
++  SurveyPlanningContextProfile,
++} from "@/survey/publishedContext";
++import { selectSurveyPlanningContextProfile } from "@/survey/publishedContext";
+ import {
+   SURVEY_CONTEXT_BOUNDARY_COPY,
+   surveyPeriodLabel,
+@@ -19,11 +24,15 @@ const focusableSelector = [
+ 
+ export function PlanningContextDrawer({
+   artifact,
++  objective,
+   onClose,
+ }: {
+   artifact: SurveyPlanningContextArtifact;
++  objective: SurveyPlanningObjective;
+   onClose(): void;
+ }) {
++  const profile: SurveyPlanningContextProfile =
++    selectSurveyPlanningContextProfile(artifact, objective);
+   const dialogRef = useRef<HTMLDivElement>(null);
+   const closeRef = useRef<HTMLButtonElement>(null);
+   const returnFocusRef = useRef<HTMLElement | null>(null);
+@@ -81,18 +90,24 @@ export function PlanningContextDrawer({
+       onClose={onClose}
+     >
+       <section className="planning-context-drawer-intro">
+-        <span className="planning-context-kicker">Lagos consumer research</span>
+-        <h1>What people reported about outdoor advertising</h1>
++        <span className="planning-context-kicker">
++          Lagos consumer research · {profile.label}
++        </span>
++        <h1>What people reported for this objective</h1>
+         <p>
+-          These findings add local consumer perspective beside the selected
+-          package. They do not alter its delivery estimate, plan score, or
+-          evidence grade.
++          {profile.selectionRationale} These findings add local consumer
++          perspective beside the selected package. They do not alter its
++          delivery estimate, plan score, ordering, or evidence grade.
+         </p>
+         <dl className="planning-context-source-summary">
+           <div>
+             <dt>Market</dt>
+             <dd>{artifact.scopeLabel}</dd>
+           </div>
++          <div>
++            <dt>Campaign objective</dt>
++            <dd>{profile.label}</dd>
++          </div>
+           <div>
+             <dt>Survey sample</dt>
+             <dd>{artifact.sampleSize.toLocaleString("en-NG")} respondents</dd>
+@@ -101,10 +116,6 @@ export function PlanningContextDrawer({
+             <dt>Collection period</dt>
+             <dd>{surveyPeriodLabel(artifact.sourcePeriod)}</dd>
+           </div>
+-          <div>
