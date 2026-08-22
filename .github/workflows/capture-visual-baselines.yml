@@ -1,5 +1,6 @@
 name: Capture visual baselines
 
+# One-shot branch-only capture. The successful job removes this workflow.
 on:
   push:
     branches:
