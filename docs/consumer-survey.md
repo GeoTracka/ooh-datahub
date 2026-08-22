@@ -127,3 +127,11 @@ The Step 3 strip selects the profile from the already-calculated campaign object
 The drawer explains that selection policy and applicable denominators. Neither surface
 may change package selection or ordering, delivery estimates, evidence grade, Planning
 Fit, movement, OTS, reach, frequency, influence, target share, or calibration.
+
+The current Lagos publication is bound to:
+
+- aggregate snapshot digest: `c0644a87d54060b71963f7b9cedaf994efec3828a62400d5c4c92340ea1b64fa`;
+- objective-aware publication digest: `795e392c77ef8ece87e4ff3ff35dfbce478ca483def211ec5ba3a47d8497e928`;
+- Lagos sample: `204` respondents;
+- profile cardinality: exactly `3` signals for each of `broad_reach`,
+  `influential_core`, and `near_conversion`.
