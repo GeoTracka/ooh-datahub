@@ -34,11 +34,41 @@ jobs:
           else
             echo "applied=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Apply planner wiring
+      - name: Apply deterministic planner wiring
         if: steps.state.outputs.applied != 'true'
         run: |
-          git apply --check .github/patches/objective-aware-planner.patch
-          git apply --index .github/patches/objective-aware-planner.patch
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/features/PlannerPage.tsx")
+          content = path.read_text(encoding="utf-8")
+          replacements = [
+              (
+                  'import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";',
+                  'import { selectLagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";',
+                  1,
+              ),
+              (
+                  "  const visible = selectVisiblePlan(state);\n  const dirty = selectIsDirty(state);",
+                  "  const visible = selectVisiblePlan(state);\n  const planningContextArtifact = selectLagosPlanningContextArtifact(\n    visible?.brief.objective ?? \"broad_reach\",\n  );\n  const dirty = selectIsDirty(state);",
+                  1,
+              ),
+              (
+                  "artifact={lagosPlanningContextArtifact}",
+                  "artifact={planningContextArtifact}",
+                  2,
+              ),
+          ]
+          for old, new, expected in replacements:
+              actual = content.count(old)
+              if actual != expected:
+                  raise SystemExit(
+                      f"PLANNER_WIRING_BASIS_MISMATCH: expected {expected}, found {actual}: {old}"
+                  )
+              content = content.replace(old, new)
+          path.write_text(content, encoding="utf-8")
+          PY
+          git add src/features/PlannerPage.tsx
           git rm -r .github/patches .github/workflows/apply-objective-aware-context.yml
       - name: Commit and push
         if: steps.state.outputs.applied != 'true'
