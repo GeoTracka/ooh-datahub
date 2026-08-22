@@ -44,7 +44,7 @@ import { UploadDialog } from "@/features/UploadDialog";
 import { UploadedContextPanel } from "@/features/UploadedContextPanel";
 import { projectMapLibreScene } from "@/maps/projectScene";
 import { PUBLIC_COPY, confidenceLabel } from "@/content/plainLanguage";
-import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
+import { selectLagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
 
 const initialBrief: Brief = {
   productName: PUBLIC_COPY.campaign.defaultProductName,
@@ -188,6 +188,9 @@ export function PlannerPage() {
   const planningRef = useRef(false);
 
   const visible = selectVisiblePlan(state);
+  const planningContextArtifact = selectLagosPlanningContextArtifact(
+    visible?.brief.objective ?? "broad_reach",
+  );
   const dirty = selectIsDirty(state);
   const cards = visible ? selectZoneCards(bundle, state) : [];
   const deltas = selectPlanDeltas(state);
@@ -668,7 +671,7 @@ export function PlannerPage() {
               onReviewRfq={reviewRfq}
             />
             <PlanningContextStrip
-              artifact={lagosPlanningContextArtifact}
+              artifact={planningContextArtifact}
               onExplore={() => setPlanningContextOpen(true)}
             />
             <RecommendationCarousel
@@ -815,7 +818,7 @@ export function PlannerPage() {
 
       {planningContextOpen && (
         <PlanningContextDrawer
-          artifact={lagosPlanningContextArtifact}
+          artifact={planningContextArtifact}
           onClose={() => setPlanningContextOpen(false)}
         />
       )}
