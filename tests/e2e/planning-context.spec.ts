@@ -1,12 +1,18 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   assertNoHorizontalOverflow,
   captureUxReview,
 } from "./helpers/uxReview";
 
-async function reachRecommendedPackage(page: import("@playwright/test").Page) {
+async function reachRecommendedPackage(
+  page: Page,
+  preset?: string | RegExp,
+): Promise<void> {
   await page.goto("/");
+  if (preset) {
+    await page.getByRole("button", { name: preset }).click();
+  }
   await page
     .getByRole("button", { name: "Use default timing & budget" })
     .click();
@@ -59,7 +65,7 @@ test("exposes three Lagos survey signals without changing package evidence", asy
     "c0644a87d54060b71963f7b9cedaf994efec3828a62400d5c4c92340ea1b64fa",
   );
   await expect(drawer).toContainText(
-    "cb9aefb8119ff0c1d6c7a7935b0b184600466d8a47bf73d2667c0bffb330bf8a",
+    "686f005fd0b0a43669971f7d9ecf8c6d861aa70c1390223f71a0b0107d33a075",
   );
 
   await assertNoHorizontalOverflow(page, "planning-context drawer");
@@ -75,6 +81,52 @@ test("exposes three Lagos survey signals without changing package evidence", asy
   expect(await page.getByTestId("package-strip").innerText()).toBe(
     packageBefore,
   );
+});
+
+test("selects independent context families for each campaign objective", async ({
+  page,
+}) => {
+  const cases = [
+    {
+      preset: /^Consumer goods .* Broad reach$/,
+      expected: [
+        "Large billboard overall affinity",
+        "Major roads or highways",
+        "Creative design",
+      ],
+      absent: ["Searched online", "Large billboard — trust"],
+    },
+    {
+      preset: /^Real Estate .* Priority audience$/,
+      expected: [
+        "Large billboard — trust",
+        "Recalled an OOH advertisement in the previous four weeks",
+        "Creative design",
+      ],
+      absent: ["Major roads or highways", "Searched online"],
+    },
+    {
+      preset: /^Bank \/ Fintech .* Likely customers$/,
+      expected: [
+        "Searched online",
+        "Visited store or location",
+        "Purchased product or service",
+      ],
+      absent: ["Major roads or highways", "Large billboard — trust"],
+    },
+  ] as const;
+
+  for (const item of cases) {
+    await reachRecommendedPackage(page, item.preset);
+    const context = page.getByRole("region", { name: "Planning context" });
+    await expect(context.getByTestId("planning-context-signal")).toHaveCount(3);
+    for (const expected of item.expected) {
+      await expect(context).toContainText(expected);
+    }
+    for (const absent of item.absent) {
+      await expect(context).not.toContainText(absent);
+    }
+  }
 });
 
 test("keeps the compact context strip and drawer horizontally contained on mobile", async ({
