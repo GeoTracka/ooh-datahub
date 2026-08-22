@@ -50,10 +50,9 @@ test("reviews invalid package recovery without leading with machine codes", asyn
   await budget.fill("1");
   await page.getByRole("button", { name: "Show recommended areas" }).click();
 
-  const alert = page.getByRole("alert", { name: "Package constraints" });
-  await expect(alert).toContainText("over the campaign budget");
-  await expect(alert.locator(".recovery-notice-copy")).not.toContainText("BUDGET_EXCEEDED");
-  await expect(alert.locator("details")).toContainText("BUDGET_EXCEEDED");
+  await expect(page.getByText("Needs fine-tuning before continuing").first()).toBeVisible();
+  await expect(page.getByText(/over budget/i).first()).toBeVisible();
+  await expect(page.getByText("BUDGET_EXCEEDED", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Continue with selected package" })).toBeDisabled();
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-01-invalid-package");
@@ -75,22 +74,22 @@ test("reviews approximate column mapping before any rows are used", async ({ pag
   await assertReviewClean(page, diagnostics, "upload mapping review");
 });
 
-test("summarizes quarantined and rejected rows without echoing sensitive values", async ({ page }, testInfo) => {
+test("summarizes rows needing review or exclusion without echoing sensitive values", async ({ page }, testInfo) => {
   await openUpload(page);
   await page.getByLabel("Inventory spreadsheet").setInputFiles(
     path.resolve("tests/fixtures/mixed-validity-inventory.csv"),
   );
 
-  await expect(page.getByText("1 accepted · 1 quarantined · 1 rejected")).toBeVisible();
+  await expect(page.getByText("1 ready · 1 need review · 1 cannot be used")).toBeVisible();
   const summary = page.getByRole("region", { name: "Upload validation summary" });
   await expect(summary).toContainText("Some rows were kept out of planning");
-  await expect(summary).toContainText("1 quarantined · Possible personal data");
-  await expect(summary).toContainText("1 rejected · Missing asset ID");
+  await expect(summary).toContainText("1 need review · Possible personal data");
+  await expect(summary).toContainText("1 cannot be used · Missing asset ID");
   await expect(page.getByText("Ada Example", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Private home", { exact: true })).toHaveCount(0);
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-03-upload-validation", { fullPage: false });
-  await assertReviewClean(page, diagnostics, "upload quarantine and rejection");
+  await assertReviewClean(page, diagnostics, "upload validation exclusions");
 });
 
 test("keeps local upload usable when provider preflight fails", async ({ page }, testInfo) => {
@@ -101,14 +100,14 @@ test("keeps local upload usable when provider preflight fails", async ({ page },
   await page.getByLabel("Inventory spreadsheet").setInputFiles(
     path.resolve("tests/fixtures/customer-owned-inventory.csv"),
   );
-  await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
-  await page.getByRole("button", { name: "Review enrichment" }).click();
+  await expect(page.getByText("1 ready · 0 need review · 0 cannot be used")).toBeVisible();
+  await page.getByRole("button", { name: "Check location details" }).click();
 
-  const alert = page.getByRole("alert", { name: "Enrichment failure" });
-  await expect(alert).toContainText("Location enrichment is temporarily unavailable");
-  await expect(alert).toContainText("uploaded facts are still available offline");
+  const alert = page.getByRole("alert", { name: "Location check failure" });
+  await expect(alert).toContainText("Location checking is temporarily unavailable");
+  await expect(alert).toContainText("Your uploaded details are still available");
   await expect(alert.locator("details")).toContainText("PREFLIGHT_FAILED");
-  await expect(page.getByRole("button", { name: "Use uploaded facts as context" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Add uploaded inventory to the plan" })).toBeEnabled();
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-04-provider-failure", { fullPage: false });
   await assertReviewClean(page, diagnostics, "provider recovery");
@@ -119,7 +118,7 @@ test("clears stale upload state when a replacement spreadsheet cannot be read", 
   await page.getByLabel("Inventory spreadsheet").setInputFiles(
     path.resolve("tests/fixtures/customer-owned-inventory.csv"),
   );
-  await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
+  await expect(page.getByText("1 ready · 0 need review · 0 cannot be used")).toBeVisible();
 
   await page.getByLabel("Inventory spreadsheet").setInputFiles(
     path.resolve("tests/fixtures/unreadable-inventory.xlsx"),
@@ -127,9 +126,9 @@ test("clears stale upload state when a replacement spreadsheet cannot be read", 
   const alert = page.getByRole("alert", { name: "Spreadsheet read failure" });
   await expect(alert).toContainText("We couldn't read this spreadsheet");
   await expect(alert).toContainText("Nothing from this file has been added to planning");
-  await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Geocode review" })).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "Select up to 50 accepted rows" })).toHaveCount(0);
+  await expect(page.getByText("1 ready · 0 need review · 0 cannot be used")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Location review" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Select up to 50 ready rows" })).toHaveCount(0);
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-05-upload-parse-failure", { fullPage: false });
   await assertReviewClean(page, diagnostics, "spreadsheet parse recovery");
@@ -143,8 +142,10 @@ test("makes RFQ schedule revision a clear recoverable state", async ({ page }, t
   await rfq.getByLabel("Flight start").fill("2026-09-08");
 
   const revision = rfq.getByRole("region", { name: "Schedule revision required" });
-  await expect(revision).toContainText("Recompute a dirty plan revision before generating the RFQ");
-  await expect(revision.getByRole("button", { name: "Recompute plan with these dates" })).toBeEnabled();
+  await expect(revision).toContainText(
+    "Dates changed. Update the plan with these dates before creating the supplier request.",
+  );
+  await expect(revision.getByRole("button", { name: "Update plan with these dates" })).toBeEnabled();
   await expect(rfq.getByRole("button", { name: "Create supplier request" })).toBeDisabled();
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-06-rfq-schedule-revision", { fullPage: false });
