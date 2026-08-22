@@ -19,6 +19,10 @@ const entrypoints = [
     "survey:publish-context",
     "scripts/publish-consumer-survey-planning-context.ts",
   ],
+  [
+    "survey:publish-segments",
+    "scripts/publish-consumer-survey-segment-catalogue.ts",
+  ],
 ] as const;
 
 describe("consumer survey CLI entrypoints", () => {

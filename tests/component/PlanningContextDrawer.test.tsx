@@ -2,16 +2,22 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PlanningContextDrawer } from "@/features/PlanningContextDrawer";
-import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
+import { resolveLagosPlanningContext } from "@/survey/lagosPlanningContext";
+
+const studentContext = resolveLagosPlanningContext({
+  objective: "broad_reach",
+  brief: {
+    targetAudience: "Students, young workers, and convenience shoppers",
+    productDescription: "Affordable on-the-go refreshment launch",
+    sector: "fmcg",
+  },
+});
 
 describe("PlanningContextDrawer", () => {
-  it("explains source, objective selection, denominators, and the non-delivery boundary", async () => {
+  it("explains segment resolution, denominators, source, and the non-delivery boundary", async () => {
     const onClose = vi.fn();
     render(
-      <PlanningContextDrawer
-        artifact={lagosPlanningContextArtifact}
-        onClose={onClose}
-      />,
+      <PlanningContextDrawer context={studentContext} onClose={onClose} />,
     );
 
     expect(
@@ -23,13 +29,18 @@ describe("PlanningContextDrawer", () => {
       }),
     ).toBeVisible();
     expect(screen.getByText("Broad reach")).toBeVisible();
-    expect(screen.getByText("204 respondents")).toBeVisible();
+    expect(screen.getByText("Aged 18–25")).toBeVisible();
+    expect(screen.getByText("43 respondents")).toBeVisible();
     expect(screen.getByText("20 May–3 Jun 2026")).toBeVisible();
-    expect(screen.getByText(/177 applicable responses/)).toBeVisible();
-    expect(screen.getByText(/202 applicable responses/)).toBeVisible();
+    expect(screen.getByText(/41 applicable responses/)).toBeVisible();
+    expect(
+      screen.getByText(/Occupation = Student did not clear the minimum sample/),
+    ).toBeVisible();
+    expect(screen.getByText("Age band = 18-25")).toBeVisible();
+    expect(screen.getByText(/“students”/)).toBeVisible();
     expect(
       screen.getByText(
-        /objective selects which survey facts are shown; it does not change package calculations or ranking/i,
+        /do not change package calculations, ranking, target shares, or delivery/i,
       ),
     ).toBeVisible();
     expect(
@@ -39,10 +50,11 @@ describe("PlanningContextDrawer", () => {
 
     await userEvent.click(screen.getByText("Technical source details"));
     expect(
-      screen.getByText(lagosPlanningContextArtifact.sourceSnapshotDigest),
+      screen.getByText(studentContext.artifact.sourceSnapshotDigest),
     ).toBeVisible();
+    expect(screen.getByText(studentContext.catalogueDigest)).toBeVisible();
     expect(
-      screen.getByText(lagosPlanningContextArtifact.artifactDigest),
+      screen.getByText(studentContext.artifact.artifactDigest),
     ).toBeVisible();
   });
 
@@ -54,10 +66,7 @@ describe("PlanningContextDrawer", () => {
     opener.focus();
 
     const rendered = render(
-      <PlanningContextDrawer
-        artifact={lagosPlanningContextArtifact}
-        onClose={onClose}
-      />,
+      <PlanningContextDrawer context={studentContext} onClose={onClose} />,
     );
 
     expect(screen.getByRole("button", { name: "Close" })).toHaveFocus();

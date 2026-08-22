@@ -25,6 +25,7 @@ function fixture() {
   set("gender", "Female");
   set("occupation", "Professional");
   set("incomeBand", "N500,000+");
+  set("commutePattern", "hybrid");
   set("transportMode", "Private car");
   set("oohAttention", "High");
   set("weeklyNoticeFrequency", "8-14");
@@ -86,6 +87,7 @@ describe("RBL–LOMA 2026 survey adapter", () => {
       city: "Lagos",
       ageBand: "26-35",
       transportMode: "Private car",
+      commutePattern: "Hybrid",
       recalledOohLastFourWeeks: true,
       recallDetailComplete: true,
       topFormats: ["Large billboard", "Digital screen or LED", "Bus or vehicle wrap"],

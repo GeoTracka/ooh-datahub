@@ -1,5 +1,5 @@
 export const SURVEY_CONTEXT_SCHEMA_VERSION =
-  "consumer-survey-context-v1" as const;
+  "consumer-survey-context-v2" as const;
 export const SURVEY_DECISION_USE = "context_only" as const;
 export const SURVEY_CLAIM_BOUNDARY =
   "self_reported_consumer_context_not_observed_delivery" as const;
@@ -27,6 +27,7 @@ export const SURVEY_FACET_DIMENSIONS = [
   "occupation",
   "incomeBand",
   "transportMode",
+  "commutePattern",
 ] as const;
 
 export type SurveyFormat = (typeof SURVEY_FORMATS)[number];
@@ -83,6 +84,7 @@ export type CanonicalSurveyResponse = {
   occupation: string | null;
   incomeBand: string | null;
   transportMode: string | null;
+  commutePattern: string | null;
   weekdayDayparts: string[];
   weekendDayparts: string[];
   oohAttention: string | null;

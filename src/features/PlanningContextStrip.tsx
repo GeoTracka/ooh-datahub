@@ -1,16 +1,28 @@
-import type { SurveyPlanningContextArtifact } from "@/survey/publishedContext";
+import type { ResolvedSurveyPlanningContext } from "@/survey/lagosPlanningContext";
 import {
   SURVEY_CONTEXT_BOUNDARY_COPY,
   surveyPeriodLabel,
 } from "@/survey/display";
 
+function resolutionStatus(
+  mode: ResolvedSurveyPlanningContext["resolution"]["mode"],
+): string {
+  if (mode === "matched") return "Matched from campaign brief";
+  if (mode === "matched_after_suppression") {
+    return "Next available matched segment";
+  }
+  if (mode === "fallback_suppressed") return "Broader sample used";
+  return "City sample used";
+}
+
 export function PlanningContextStrip({
-  artifact,
+  context,
   onExplore,
 }: {
-  artifact: SurveyPlanningContextArtifact;
+  context: ResolvedSurveyPlanningContext;
   onExplore(): void;
 }) {
+  const { artifact, resolution } = context;
   return (
     <section
       className="planning-context-strip"
@@ -32,6 +44,24 @@ export function PlanningContextStrip({
         </button>
       </header>
 
+      <div
+        className="planning-context-audience-lens"
+        role="group"
+        aria-label="Survey audience lens"
+      >
+        <div>
+          <span>Audience lens</span>
+          <strong>{resolution.selectedLabel}</strong>
+        </div>
+        <small>{resolutionStatus(resolution.mode)}</small>
+        {resolution.matchedTerms.length > 0 && (
+          <p>
+            Matched brief terms:{" "}
+            {resolution.matchedTerms.map((term) => `“${term}”`).join(", ")}.
+          </p>
+        )}
+      </div>
+
       <div className="planning-context-signal-grid">
         {artifact.signals.map((signal) => (
           <article key={signal.id} data-testid="planning-context-signal">
@@ -46,11 +76,13 @@ export function PlanningContextStrip({
         className="planning-context-meta"
         id="planning-context-boundary-note"
       >
-        <span>{artifact.scopeLabel}</span>
+        <span>{artifact.scope.city ?? artifact.scopeLabel}</span>
         <span>n={artifact.sampleSize.toLocaleString("en-NG")}</span>
         <span>{surveyPeriodLabel(artifact.sourcePeriod)}</span>
         <strong>Context only</strong>
-        <span className="sr-only">{SURVEY_CONTEXT_BOUNDARY_COPY}</span>
+        <span className="sr-only">
+          {resolution.explanation} {SURVEY_CONTEXT_BOUNDARY_COPY}
+        </span>
       </footer>
     </section>
   );

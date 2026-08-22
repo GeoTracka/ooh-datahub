@@ -68,6 +68,7 @@ function response(
     occupation: "Professional",
     incomeBand: "N500,000+",
     transportMode: "Private car",
+    commutePattern: "Daily commuter",
     weekdayDayparts: ["Morning", "Evening"],
     weekendDayparts: ["Afternoon"],
     oohAttention: "High",

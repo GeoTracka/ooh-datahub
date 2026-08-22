@@ -152,6 +152,15 @@ function isoDateTime(value: SurveySpreadsheetCell): string | null {
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : raw;
 }
 
+function commutePattern(value: SurveySpreadsheetCell): string | null {
+  const normalized = text(value)?.toLocaleLowerCase("en");
+  if (!normalized) return null;
+  if (normalized === "daily commuter") return "Daily commuter";
+  if (normalized === "hybrid") return "Hybrid";
+  if (normalized === "remote") return "Remote";
+  return text(value);
+}
+
 function appendDiagnostic(
   diagnostics: SurveyRowDiagnostic[],
   code: SurveyRowDiagnostic["code"],
@@ -268,6 +277,7 @@ export function parseRblLoma2026Response(
     occupation: text(row[index.occupation]),
     incomeBand: text(row[index.incomeBand]),
     transportMode: text(row[index.transportMode]),
+    commutePattern: commutePattern(row[index.commutePattern]),
     weekdayDayparts,
     weekendDayparts,
     oohAttention: text(row[index.oohAttention]),

@@ -70,7 +70,7 @@ so the same source, policy and code inputs reproduce the same identity.
 
 ## Aggregate contract
 
-`consumer-survey-context-v1` contains:
+`consumer-survey-context-v2` contains:
 
 - immutable source identity and rights/authority state;
 - response and included-response counts;
@@ -81,8 +81,9 @@ so the same source, policy and code inputs reproduce the same identity.
 - `self_reported_consumer_context_not_observed_delivery` claim boundary;
 - canonical snapshot digest.
 
-Default facets are overall, city, age band, gender, transport mode, city × age band
-and city × transport mode. Additional dimensions remain explicit and versioned.
+Default facets are overall, city, age band, gender, occupation, income band,
+transport mode, commute pattern and the corresponding city × segment facets.
+Additional dimensions remain explicit and versioned.
 
 ## Objective-aware product integration
 
@@ -137,3 +138,47 @@ not shipped to the client.
 The Step 3 planning-context strip and exploration drawer may explain these findings,
 but must not change package selection, delivery estimates, evidence grade, Planning
 Fit, movement, OTS, reach, frequency, influence, target share or calibration.
+
+## Transparent brief-to-segment resolution
+
+The client publishes a digest-bound Lagos segment catalogue from the same verified
+aggregate snapshot:
+
+```bash
+pnpm survey:publish-segments \
+  --snapshot="/secure/derived/rbl-loma-2026-context.json" \
+  --out="src/survey/data/rbl-loma-2026-lagos-segment-catalogue.json" \
+  --city="Lagos"
+```
+
+`consumer-survey-segment-catalogue-v1` contains only city-plus-one-dimension facets
+that clear the configured minimum sample size. The current n≥30 catalogue publishes
+age, occupation, income, primary-transport and commute-pattern segments. It contains
+no respondent rows and no target-universe, target-share, reach, Planning Fit or
+calibration fields.
+
+At Step 3, deterministic rules inspect only the campaign's target-audience and
+product-description text. Resolution follows a declared precedence:
+
+1. collect supported matched predicates in rule order;
+2. choose the first published predicate that clears n≥30;
+3. disclose matched terms, requested predicate, selected predicate and sample size;
+4. if no matched predicate is publishable, use the broader Lagos sample and explain
+   the suppression fallback;
+5. if no supported terms are detected, use the broader Lagos sample without implying
+   a segment match.
+
+Resolution is evaluated read-only from the visible plan brief—or the current draft
+before a plan exists. It never writes inferred segment terms back into the campaign
+brief, planner audience cells, target shares, package calculations or evidence state.
+
+Examples:
+
+- `Students, young workers` first requests `Occupation = Student`; because that Lagos
+  cell is below n=30, the published lens becomes `Age band = 18-25` (n=43).
+- `SME owners, merchants` resolves to `Occupation = Business/trader` (n=77).
+- `Private car commuters` is recognised, but the Lagos cell is below n=30, so the UI
+  visibly falls back to all Lagos respondents (n=204).
+
+This resolver selects survey context only. The existing planner audience resolver and
+all package, delivery, scoring and evidence contracts remain unchanged.
