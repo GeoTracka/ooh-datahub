@@ -98,3 +98,26 @@ transparent query and emits no more than three signals:
 Signals retain source period, sample size, selected scope, evidence state and claim
 boundary. They are independent facts, not a composite opportunity/confidence score.
 They are designed for the Planning context strip and drill-down specified by #69.
+
+## Published planning-context projection
+
+The full aggregate snapshot is an offline governed derivative and is not bundled into
+the browser. Publish the bounded Lagos product projection from a verified snapshot:
+
+```bash
+pnpm survey:publish-context \
+  --snapshot="/secure/derived/rbl-loma-2026-context.json" \
+  --out="src/survey/data/rbl-loma-2026-lagos-planning-context.json" \
+  --city="Lagos"
+```
+
+The publisher independently verifies the aggregate snapshot digest before selecting
+the most specific eligible facet. The checked-in client artifact contains exactly
+three signals, the Lagos sample size and collection period, the source snapshot
+digest, an independent publication digest, and the unchanged `context_only` claim
+boundary. Respondent records and the full aggregate matrix are not shipped to the
+client.
+
+The Step 3 planning-context strip and exploration drawer may explain these findings,
+but must not change package selection, delivery estimates, evidence grade, Planning
+Fit, movement, OTS, reach, frequency, influence, target share, or calibration.

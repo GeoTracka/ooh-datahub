@@ -7,6 +7,7 @@ import { PUBLIC_COPY } from "@/content/plainLanguage";
 import "./explorer.css";
 import "./explorer-polish.css";
 import "./package-options.css";
+import "./planning-context.css";
 import "./finetune-polish.css";
 import "./drawer-polish.css";
 import "./recovery-polish.css";
@@ -17,7 +18,9 @@ export const metadata: Metadata = {
   description: PUBLIC_COPY.metadata.description,
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <head>
