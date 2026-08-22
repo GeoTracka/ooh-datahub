@@ -1,0 +1,173 @@
+diff --git a/tests/unit/survey/publishedContext.test.ts b/tests/unit/survey/publishedContext.test.ts
+index 36ecf52..eb74283 100644
+--- a/tests/unit/survey/publishedContext.test.ts
++++ b/tests/unit/survey/publishedContext.test.ts
+@@ -1,9 +1,11 @@
+ import { describe, expect, it } from "vitest";
+ import artifactJson from "@/survey/data/rbl-loma-2026-lagos-planning-context.json";
+ import { surveyPlanningContextArtifactDigest } from "@/server/survey/publishedContextDigest";
+-import type {
+-  SurveyPlanningContextArtifact,
+-  SurveyPlanningContextArtifactContent,
++import { SURVEY_PLANNING_OBJECTIVES } from "@/survey/contracts";
++import {
++  selectSurveyPlanningContextProfile,
++  type SurveyPlanningContextArtifact,
++  type SurveyPlanningContextArtifactContent,
+ } from "@/survey/publishedContext";
+ 
+ const artifact = artifactJson as SurveyPlanningContextArtifact;
+@@ -17,7 +19,7 @@ function objectKeys(value: unknown): string[] {
+ }
+ 
+ describe("published consumer survey planning context", () => {
+-  it("binds the compact Lagos projection to the exact aggregate snapshot", () => {
++  it("binds the objective-aware Lagos projection to the exact aggregate snapshot", () => {
+     const { artifactDigest, ...content } = artifact;
+     expect(
+       surveyPlanningContextArtifactDigest(
+@@ -25,7 +27,9 @@ describe("published consumer survey planning context", () => {
+       ),
+     ).toBe(artifactDigest);
+     expect(artifact).toMatchObject({
+-      schemaVersion: "consumer-survey-planning-context-v1",
++      schemaVersion: "consumer-survey-planning-context-v2",
++      artifactDigest:
++        "795e392c77ef8ece87e4ff3ff35dfbce478ca483def211ec5ba3a47d8497e928",
+       sourceSnapshotDigest:
+         "c0644a87d54060b71963f7b9cedaf994efec3828a62400d5c4c92340ea1b64fa",
+       scope: { city: "Lagos" },
+@@ -37,24 +41,77 @@ describe("published consumer survey planning context", () => {
+     });
+   });
+ 
+-  it("publishes exactly three independent signals with applicable denominators", () => {
+-    expect(artifact.signals).toHaveLength(3);
++  it("publishes exactly three independent signals for every planner objective", () => {
++    expect(Object.keys(artifact.profiles).sort()).toEqual(
++      [...SURVEY_PLANNING_OBJECTIVES].sort(),
++    );
++    for (const objective of SURVEY_PLANNING_OBJECTIVES) {
++      const profile = selectSurveyPlanningContextProfile(artifact, objective);
++      expect(profile.objective).toBe(objective);
++      expect(profile.signals).toHaveLength(3);
++      expect(
++        profile.signals.every(
++          (signal) =>
++            signal.decisionUse === "context_only" &&
++            signal.claimBoundary ===
++              "self_reported_consumer_context_not_observed_delivery",
++        ),
++      ).toBe(true);
++    }
++  });
++
++  it("selects objective-relevant metrics with their applicable denominators", () => {
+     expect(
+-      artifact.signals.map(({ label, metricLabel, valueText }) => ({
+-        label,
+-        metricLabel,
+-        valueText,
+-      })),
++      artifact.profiles.broad_reach.signals.map(
++        ({ label, metricLabel, valueText, evidenceSentence }) => ({
++          label,
++          metricLabel,
++          valueText,
++          evidenceSentence,
++        }),
++      ),
+     ).toEqual([
+       {
+-        label: "Format affinity",
+-        metricLabel: "Large billboard overall affinity",
+-        valueText: "4.14 / 5",
++        label: "Recent recall",
++        metricLabel: "Recalled an OOH advertisement in the previous four weeks",
++        valueText: "72%",
++        evidenceSentence:
++          "Recalled an OOH advertisement in the previous four weeks was reported by 72% of 201 applicable responses in Lagos.",
+       },
+       {
+-        label: "Environment pattern",
++        label: "Visibility environment",
+         metricLabel: "Major roads or highways",
+         valueText: "35%",
++        evidenceSentence:
++          "Major roads or highways was reported by 35% of 202 applicable responses in Lagos.",
++      },
++      {
++        label: "Hardest-to-ignore format",
++        metricLabel: "Large static billboard",
++        valueText: "38%",
++        evidenceSentence:
++          "Large static billboard was reported by 38% of 204 applicable responses in Lagos.",
++      },
++    ]);
++
++    expect(
++      artifact.profiles.influential_core.signals.map(
++        ({ label, metricLabel, valueText }) => ({
++          label,
++          metricLabel,
++          valueText,
++        }),
++      ),
++    ).toEqual([
++      {
++        label: "Perceived trust",
++        metricLabel: "Large billboard — trust",
++        valueText: "4.13 / 5",
++      },
++      {
++        label: "Personal relevance",
++        metricLabel: "Relevant to my life",
++        valueText: "36%",
+       },
+       {
+         label: "Creative cue",
+@@ -62,12 +119,31 @@ describe("published consumer survey planning context", () => {
+         valueText: "28%",
+       },
+     ]);
++
+     expect(
+-      artifact.signals.map(({ evidenceSentence }) => evidenceSentence),
++      artifact.profiles.near_conversion.signals.map(
++        ({ label, metricLabel, valueText }) => ({
++          label,
++          metricLabel,
++          valueText,
++        }),
++      ),
+     ).toEqual([
+-      "Large billboard overall affinity scored 4.14 out of 5 across 177 applicable responses in Lagos.",
+-      "Major roads or highways was reported by 35% of 202 applicable responses in Lagos.",
+-      "Creative design was reported by 28% of 204 applicable responses in Lagos.",
++      {
++        label: "Perceived effect",
++        metricLabel: "Large billboard — effect",
++        valueText: "4.16 / 5",
++      },
++      {
++        label: "Reported store visit",
++        metricLabel: "Visited store or location",
++        valueText: "27%",
++      },
++      {
++        label: "Reported online search",
++        metricLabel: "Searched online",
++        valueText: "21%",
++      },
+     ]);
+   });
+ 
+@@ -84,6 +160,8 @@ describe("published consumer survey planning context", () => {
+       "planningfit",
+       "calibration",
+       "evidencegrade",
++      "packageid",
++      "deliveryraw",
+     ]) {
+       expect(keys.has(prohibited)).toBe(false);
+     }
