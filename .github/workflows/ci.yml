@@ -9,6 +9,21 @@ permissions:
   contents: read
 
 jobs:
+  export-survey-worktree:
+    if: github.event_name == 'pull_request' && github.head_ref == 'agent/authoritative-consumer-survey-20260822'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package worktree
+        run: tar --exclude=.git -czf survey-branch-worktree.tgz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survey-branch-worktree-${{ github.run_id }}
+          path: survey-branch-worktree.tgz
+          if-no-files-found: error
+          retention-days: 2
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
