@@ -1,0 +1,211 @@
+     schemaVersion: SURVEY_PLANNING_CONTEXT_SCHEMA_VERSION,
+     sourceId: input.snapshot.source.id,
+@@ -67,6 +83,22 @@ export function buildSurveyPlanningContextArtifactContent(input: {
+     qualityState: "owner_approved_cleaned_with_advisory_diagnostics",
+     decisionUse: SURVEY_DECISION_USE,
+     claimBoundary: SURVEY_CLAIM_BOUNDARY,
+-    signals,
++    profiles,
+   };
+ }
++
++export function selectSurveyPlanningContextProfile(
++  artifact: SurveyPlanningContextArtifact,
++  objective: SurveyPlanningObjective,
++): SurveyPlanningContextProfile {
++  const profile = artifact.profiles[objective];
++  if (
++    !profile ||
++    profile.objective !== objective ||
++    profile.signals.length === 0 ||
++    profile.signals.length > 3
++  ) {
++    throw new Error(`SURVEY_PLANNING_CONTEXT_PROFILE_INVALID:${objective}`);
++  }
++  return profile;
++}
+diff --git a/tests/component/PlanningContextDrawer.test.tsx b/tests/component/PlanningContextDrawer.test.tsx
+index b5207a2..db10cfc 100644
+--- a/tests/component/PlanningContextDrawer.test.tsx
++++ b/tests/component/PlanningContextDrawer.test.tsx
+@@ -5,11 +5,12 @@ import { PlanningContextDrawer } from "@/features/PlanningContextDrawer";
+ import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
+ 
+ describe("PlanningContextDrawer", () => {
+-  it("explains source, applicable denominators, method, and the non-delivery boundary", async () => {
++  it("explains objective selection, applicable denominators, method, and the non-delivery boundary", async () => {
+     const onClose = vi.fn();
+     render(
+       <PlanningContextDrawer
+         artifact={lagosPlanningContextArtifact}
++        objective="near_conversion"
+         onClose={onClose}
+       />,
+     );
+@@ -19,19 +20,29 @@ describe("PlanningContextDrawer", () => {
+     ).toBeVisible();
+     expect(
+       screen.getByRole("heading", {
+-        name: "What people reported about outdoor advertising",
++        name: "What people reported for this objective",
+       }),
+     ).toBeVisible();
++    expect(screen.getAllByText("Likely customers").length).toBeGreaterThan(0);
+     expect(screen.getByText("204 respondents")).toBeVisible();
+     expect(screen.getByText("20 May–3 Jun 2026")).toBeVisible();
+     expect(screen.getByText(/177 applicable responses/)).toBeVisible();
+-    expect(screen.getByText(/202 applicable responses/)).toBeVisible();
++    expect(screen.getAllByText(/204 applicable responses/)).toHaveLength(2);
++    expect(
++      screen.getByText(
++        /self-reported actions taken after noticing outdoor advertising/,
++      ),
++    ).toBeVisible();
++    expect(
++      screen.getByText(/does not change the package calculation or ranking/),
++    ).toBeVisible();
+     expect(
+       screen.getByText(/not observed movement, exposure geometry, OTS, reach/),
+     ).toBeVisible();
+     expect(screen.getByText(/unweighted descriptive aggregates/)).toBeVisible();
+ 
+     await userEvent.click(screen.getByText("Technical source details"));
++    expect(screen.getByText("near_conversion")).toBeVisible();
+     expect(
+       screen.getByText(lagosPlanningContextArtifact.sourceSnapshotDigest),
+     ).toBeVisible();
+@@ -50,6 +61,7 @@ describe("PlanningContextDrawer", () => {
+     const rendered = render(
+       <PlanningContextDrawer
+         artifact={lagosPlanningContextArtifact}
++        objective="broad_reach"
+         onClose={onClose}
+       />,
+     );
+diff --git a/tests/component/PlanningContextStrip.test.tsx b/tests/component/PlanningContextStrip.test.tsx
+index fe5908e..837a10a 100644
+--- a/tests/component/PlanningContextStrip.test.tsx
++++ b/tests/component/PlanningContextStrip.test.tsx
+@@ -5,32 +5,60 @@ import { PlanningContextStrip } from "@/features/PlanningContextStrip";
+ import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
+ 
+ describe("PlanningContextStrip", () => {
+-  it("shows no more than three digest-bound Lagos signals and their context boundary", () => {
++  it("shows no more than three digest-bound broad-reach signals and their boundary", () => {
+     render(
+       <PlanningContextStrip
+         artifact={lagosPlanningContextArtifact}
++        objective="broad_reach"
+         onExplore={() => undefined}
+       />,
+     );
+ 
+-    expect(
+-      screen.getByRole("region", { name: "Planning context" }),
+-    ).toBeVisible();
++    const region = screen.getByRole("region", { name: "Planning context" });
++    expect(region).toHaveAttribute("data-objective", "broad_reach");
+     expect(screen.getAllByTestId("planning-context-signal")).toHaveLength(3);
+-    expect(screen.getByText("4.14 / 5")).toBeVisible();
++    expect(screen.getByText("72%")).toBeVisible();
+     expect(screen.getByText("35%")).toBeVisible();
+-    expect(screen.getByText("28%")).toBeVisible();
++    expect(screen.getByText("38%")).toBeVisible();
+     expect(screen.getByText("Lagos")).toBeVisible();
++    expect(screen.getByText("Broad reach objective")).toBeVisible();
+     expect(screen.getByText("n=204")).toBeVisible();
+     expect(screen.getByText("20 May–3 Jun 2026")).toBeVisible();
+     expect(screen.getByText("Context only")).toBeVisible();
+   });
+ 
++  it("switches only the displayed profile when the planner objective changes", () => {
++    const rendered = render(
++      <PlanningContextStrip
++        artifact={lagosPlanningContextArtifact}
++        objective="broad_reach"
++        onExplore={() => undefined}
++      />,
++    );
++
++    rendered.rerender(
++      <PlanningContextStrip
++        artifact={lagosPlanningContextArtifact}
++        objective="influential_core"
++        onExplore={() => undefined}
++      />,
++    );
++    expect(
++      screen.getByRole("region", { name: "Planning context" }),
++    ).toHaveAttribute("data-objective", "influential_core");
++    expect(screen.getAllByTestId("planning-context-signal")).toHaveLength(3);
++    expect(screen.getByText("4.13 / 5")).toBeVisible();
++    expect(screen.getByText("36%")).toBeVisible();
++    expect(screen.getByText("28%")).toBeVisible();
++    expect(screen.queryByText("72%")).not.toBeInTheDocument();
++  });
++
+   it("opens the exploration surface through an explicit dialog action", async () => {
+     const onExplore = vi.fn();
+     render(
+       <PlanningContextStrip
+         artifact={lagosPlanningContextArtifact}
++        objective="near_conversion"
+         onExplore={onExplore}
+       />,
+     );
+diff --git a/tests/e2e/planning-context.spec.ts b/tests/e2e/planning-context.spec.ts
+index 4c0cc59..520830d 100644
+--- a/tests/e2e/planning-context.spec.ts
++++ b/tests/e2e/planning-context.spec.ts
+@@ -5,8 +5,12 @@ import {
+   captureUxReview,
+ } from "./helpers/uxReview";
+ 
+-async function reachRecommendedPackage(page: import("@playwright/test").Page) {
++async function reachRecommendedPackage(
++  page: import("@playwright/test").Page,
++  preset?: string,
++) {
+   await page.goto("/");
++  if (preset) await page.getByRole("button", { name: preset }).click();
+   await page
+     .getByRole("button", { name: "Use default timing & budget" })
+     .click();
+@@ -21,23 +25,30 @@ test.beforeEach(async ({ page }) => {
+   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
+ });
+ 
+-test("exposes three Lagos survey signals without changing package evidence", async ({
++test("exposes broad-reach Lagos signals without changing package evidence", async ({
+   page,
+ }, testInfo) => {
+   await page.setViewportSize({ width: 1440, height: 1000 });
+   await reachRecommendedPackage(page);
+ 
+   const packageBefore = await page.getByTestId("package-strip").innerText();
++  const optionOrderBefore = await page
++    .locator(".package-option-card")
++    .allTextContents();
+   const context = page.getByRole("region", { name: "Planning context" });
+   await expect(context).toBeVisible();
++  await expect(context).toHaveAttribute("data-objective", "broad_reach");
+   await expect(context.getByTestId("planning-context-signal")).toHaveCount(3);
+-  await expect(context).toContainText("4.14 / 5");
+-  await expect(context).toContainText("Large billboard overall affinity");
++  await expect(context).toContainText("72%");
++  await expect(context).toContainText(
++    "Recalled an OOH advertisement in the previous four weeks",
++  );
+   await expect(context).toContainText("35%");
+   await expect(context).toContainText("Major roads or highways");
+-  await expect(context).toContainText("28%");
+-  await expect(context).toContainText("Creative design");
++  await expect(context).toContainText("38%");
++  await expect(context).toContainText("Large static billboard");
+   await expect(context).toContainText("Lagos");
++  await expect(context).toContainText("Broad reach objective");
+   await expect(context).toContainText("n=204");
+   await expect(context).toContainText("20 May–3 Jun 2026");
+   await expect(context).toContainText("Context only");
+@@ -48,18 +59,27 @@ test("exposes three Lagos survey signals without changing package evidence", asy
+   await explore.click();
