@@ -1,0 +1,49 @@
+name: Apply objective-aware survey context
+
+on:
+  push:
+    branches:
+      - agent/survey-objective-aware-context-20260822
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-objective-aware-survey-context
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: ${{ github.head_ref == 'agent/survey-objective-aware-context-20260822' || github.ref_name == 'agent/survey-objective-aware-context-20260822' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/survey-objective-aware-context-20260822
+          fetch-depth: 0
+      - id: state
+        name: Check whether planner wiring is already applied
+        run: |
+          if grep -q 'selectLagosPlanningContextArtifact' src/features/PlannerPage.tsx; then
+            echo "applied=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Apply planner wiring
+        if: steps.state.outputs.applied != 'true'
+        run: |
+          git apply --check .github/patches/objective-aware-planner.patch
+          git apply --index .github/patches/objective-aware-planner.patch
+          git rm -r .github/patches .github/workflows/apply-objective-aware-context.yml
+      - name: Commit and push
+        if: steps.state.outputs.applied != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat: select survey context by campaign objective"
+          git push origin HEAD:agent/survey-objective-aware-context-20260822
