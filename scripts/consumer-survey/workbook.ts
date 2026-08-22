@@ -42,9 +42,11 @@ export async function loadConsumerSurveyWorkbook(input: {
   const bytes = await readFile(input.sourcePath);
   const sourceSha256 = createHash("sha256").update(bytes).digest("hex");
   const workbook = new ExcelJS.Workbook();
-  // ExcelJS 4's declaration predates Node 26's generic Buffer variance. The
-  // runtime API accepts the exact Buffer returned by readFile without copying.
-  await workbook.xlsx.load(bytes as unknown as Buffer);
+  // ExcelJS 4's declaration predates Node 26's generic Buffer variance. Its
+  // runtime loader consumes Uint8Array-compatible bytes, which Node Buffer is.
+  const loadWorkbook = workbook.xlsx.load.bind(workbook.xlsx) as unknown as
+    (data: Uint8Array) => Promise<unknown>;
+  await loadWorkbook(bytes);
   const worksheet = workbook.getWorksheet(input.sheetName);
   if (!worksheet) throw new Error(`SURVEY_SHEET_MISSING:${input.sheetName}`);
   const columnCount = worksheet.actualColumnCount;
