@@ -7,14 +7,29 @@ import type {
   SurveyFacetDimension,
 } from "@/survey/contracts";
 
+export const SURVEY_PLANNING_OBJECTIVES = [
+  "broad_reach",
+  "influential_core",
+  "near_conversion",
+] as const;
+
+export type SurveyPlanningObjective =
+  (typeof SURVEY_PLANNING_OBJECTIVES)[number];
+
+export function isSurveyPlanningObjective(
+  value: string,
+): value is SurveyPlanningObjective {
+  return (SURVEY_PLANNING_OBJECTIVES as readonly string[]).includes(value);
+}
+
 function available(
   metric: SurveyAggregateMetric | undefined,
 ): metric is SurveyAggregateMetric {
   return Boolean(
     metric &&
-    !metric.suppressed &&
-    metric.value !== null &&
-    metric.denominator !== null,
+      !metric.suppressed &&
+      metric.value !== null &&
+      metric.denominator !== null,
   );
 }
 
@@ -22,8 +37,15 @@ function metricWithPrefix(
   facet: SurveyAggregateFacet,
   prefix: string,
 ): SurveyAggregateMetric | undefined {
+  return topMetricMatching(facet, (metric) => metric.id.startsWith(prefix));
+}
+
+function topMetricMatching(
+  facet: SurveyAggregateFacet,
+  predicate: (metric: SurveyAggregateMetric) => boolean,
+): SurveyAggregateMetric | undefined {
   return facet.metrics
-    .filter((metric) => metric.id.startsWith(prefix) && available(metric))
+    .filter((metric) => predicate(metric) && available(metric))
     .sort(
       (left, right) =>
         (right.value ?? Number.NEGATIVE_INFINITY) -
@@ -104,9 +126,133 @@ function signalForMetric(input: {
   };
 }
 
+function signalCandidate(input: {
+  snapshot: SurveyAggregateSnapshot;
+  facet: SurveyAggregateFacet;
+  metric: SurveyAggregateMetric | undefined;
+  id: string;
+  label: string;
+}): SurveyContextSignal | null {
+  return input.metric
+    ? signalForMetric({
+        snapshot: input.snapshot,
+        facet: input.facet,
+        metric: input.metric,
+        id: input.id,
+        label: input.label,
+      })
+    : null;
+}
+
+function broadReachSignals(
+  snapshot: SurveyAggregateSnapshot,
+  facet: SurveyAggregateFacet,
+): Array<SurveyContextSignal | null> {
+  const topFormat = metricWithPrefix(facet, "format.overall.");
+  const environment = metricWithPrefix(facet, "environment.");
+  const memorability = metricWithPrefix(facet, "memorability.");
+  return [
+    signalCandidate({
+      snapshot,
+      facet,
+      metric: topFormat,
+      id: topFormat ? `survey-format:${topFormat.id}` : "survey-format",
+      label: "Format affinity",
+    }),
+    signalCandidate({
+      snapshot,
+      facet,
+      metric: environment,
+      id: environment
+        ? `survey-environment:${environment.id}`
+        : "survey-environment",
+      label: "Environment pattern",
+    }),
+    signalCandidate({
+      snapshot,
+      facet,
+      metric: memorability,
+      id: memorability
+        ? `survey-creative:${memorability.id}`
+        : "survey-creative",
+      label: "Creative cue",
+    }),
+  ];
+}
+
+function influentialCoreSignals(
+  snapshot: SurveyAggregateSnapshot,
+  facet: SurveyAggregateFacet,
+): Array<SurveyContextSignal | null> {
+  const trust = topMetricMatching(
+    facet,
+    (metric) => /^format\.[^.]+\.trust$/.test(metric.id),
+  );
+  const recall = exactMetric(facet, "recall.four_week");
+  const memorability = metricWithPrefix(facet, "memorability.");
+  return [
+    signalCandidate({
+      snapshot,
+      facet,
+      metric: trust,
+      id: trust ? `survey-trust:${trust.id}` : "survey-trust",
+      label: "Trust affinity",
+    }),
+    signalCandidate({
+      snapshot,
+      facet,
+      metric: recall,
+      id: "survey-recall",
+      label: "Recall context",
+    }),
+    signalCandidate({
+      snapshot,
+      facet,
+      metric: memorability,
+      id: memorability
+        ? `survey-creative:${memorability.id}`
+        : "survey-creative",
+      label: "Creative cue",
+    }),
+  ];
+}
+
+function nearConversionSignals(
+  snapshot: SurveyAggregateSnapshot,
+  facet: SurveyAggregateFacet,
+): Array<SurveyContextSignal | null> {
+  const definitions = [
+    {
+      metricId: "action.searched_online",
+      signalId: "survey-action:action.searched_online",
+      label: "Search response",
+    },
+    {
+      metricId: "action.visited_store_or_location",
+      signalId: "survey-action:action.visited_store_or_location",
+      label: "Visit response",
+    },
+    {
+      metricId: "action.purchased_product_or_service",
+      signalId: "survey-action:action.purchased_product_or_service",
+      label: "Purchase response",
+    },
+  ] as const;
+  return definitions.map(({ metricId, signalId, label }) =>
+    signalCandidate({
+      snapshot,
+      facet,
+      metric: exactMetric(facet, metricId),
+      id: signalId,
+      label,
+    }),
+  );
+}
+
 export function selectSurveyContextSignals(input: {
   snapshot: SurveyAggregateSnapshot;
   query?: SurveyContextQuery;
+  objective?: SurveyPlanningObjective;
   maximumSignals?: number;
 }): SurveyContextSignal[] {
   const maximumSignals = Math.max(0, Math.min(3, input.maximumSignals ?? 3));
@@ -114,71 +260,13 @@ export function selectSurveyContextSignals(input: {
   const facet = selectSurveyFacet(input.snapshot, input.query ?? {});
   if (!facet) return [];
 
-  const candidates: Array<SurveyContextSignal | null> = [];
-  const topFormat = metricWithPrefix(facet, "format.overall.");
-  candidates.push(
-    topFormat
-      ? signalForMetric({
-          snapshot: input.snapshot,
-          facet,
-          metric: topFormat,
-          id: `survey-format:${topFormat.id}`,
-          label: "Format affinity",
-        })
-      : null,
-  );
-
-  const environment = metricWithPrefix(facet, "environment.");
-  candidates.push(
-    environment
-      ? signalForMetric({
-          snapshot: input.snapshot,
-          facet,
-          metric: environment,
-          id: `survey-environment:${environment.id}`,
-          label: "Environment pattern",
-        })
-      : null,
-  );
-
-  const memorability = metricWithPrefix(facet, "memorability.");
-  candidates.push(
-    memorability
-      ? signalForMetric({
-          snapshot: input.snapshot,
-          facet,
-          metric: memorability,
-          id: `survey-creative:${memorability.id}`,
-          label: "Creative cue",
-        })
-      : null,
-  );
-
-  const attention = exactMetric(facet, "attention.high_or_very_high");
-  candidates.push(
-    attention
-      ? signalForMetric({
-          snapshot: input.snapshot,
-          facet,
-          metric: attention,
-          id: "survey-attention",
-          label: "Audience attention",
-        })
-      : null,
-  );
-
-  const recall = exactMetric(facet, "recall.four_week");
-  candidates.push(
-    recall
-      ? signalForMetric({
-          snapshot: input.snapshot,
-          facet,
-          metric: recall,
-          id: "survey-recall",
-          label: "Recall context",
-        })
-      : null,
-  );
+  const objective = input.objective ?? "broad_reach";
+  const candidates =
+    objective === "influential_core"
+      ? influentialCoreSignals(input.snapshot, facet)
+      : objective === "near_conversion"
+        ? nearConversionSignals(input.snapshot, facet)
+        : broadReachSignals(input.snapshot, facet);
 
   return candidates
     .filter((candidate): candidate is SurveyContextSignal => candidate !== null)
