@@ -52,7 +52,7 @@ test("reviews invalid package recovery without leading with machine codes", asyn
 
   await expect(page.getByText("Needs fine-tuning before continuing").first()).toBeVisible();
   await expect(page.getByText(/over budget/i).first()).toBeVisible();
-  await expect(page.getByText("BUDGET_EXCEEDED", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("BUDGET_EXCEEDED", { exact: true })).toBeHidden();
   await expect(page.getByRole("button", { name: "Continue with selected package" })).toBeDisabled();
 
   const diagnostics = await captureUxReview(page, testInfo, "degraded-01-invalid-package");
