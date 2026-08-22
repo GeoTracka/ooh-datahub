@@ -20,6 +20,8 @@
     "data:derive:vector": "tsx scripts/derive-overture-vector-context.ts",
     "data:derive:accessibility": "tsx scripts/derive-grid3-accessibility.ts",
     "data:derive:settlement": "tsx scripts/derive-grid3-settlement-context.ts",
+    "survey:validate": "tsx scripts/validate-consumer-survey.ts",
+    "survey:derive": "tsx scripts/derive-consumer-survey-context.ts",
     "enrichment:land": "tsx scripts/land-open-source.ts",
     "enrichment:register": "tsx scripts/register-open-artifact.ts",
     "enrichment:register:grid3-raster": "tsx scripts/register-grid3-raster.ts",
