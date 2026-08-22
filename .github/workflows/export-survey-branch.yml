@@ -1,0 +1,27 @@
+name: Export survey branch worktree
+
+on:
+  push:
+    branches:
+      - agent/authoritative-consumer-survey-20260822
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    if: ${{ !contains(github.event.head_commit.message, 'chore: remove survey branch export') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/authoritative-consumer-survey-20260822
+          fetch-depth: 0
+      - name: Package worktree
+        run: tar --exclude=.git -czf survey-branch-worktree.tgz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survey-branch-worktree-${{ github.run_id }}
+          path: survey-branch-worktree.tgz
+          if-no-files-found: error
+          retention-days: 2
