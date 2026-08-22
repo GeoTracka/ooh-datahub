@@ -81,7 +81,9 @@ so the same source, policy and code inputs reproduce the same identity.
 - `self_reported_consumer_context_not_observed_delivery` claim boundary;
 - canonical snapshot digest.
 
-Default facets are overall, city, age band, gender, occupation, income band, transport mode, commute pattern, and the corresponding city × segment facets. Additional dimensions remain explicit and versioned.
+Default facets are overall, city, age band, gender, occupation, income band,
+transport mode, commute pattern and the corresponding city × segment facets.
+Additional dimensions remain explicit and versioned.
 
 ## Objective-aware product integration
 
@@ -165,6 +167,10 @@ product-description text. Resolution follows a declared precedence:
    the suppression fallback;
 5. if no supported terms are detected, use the broader Lagos sample without implying
    a segment match.
+
+Resolution is evaluated read-only from the visible plan brief—or the current draft
+before a plan exists. It never writes inferred segment terms back into the campaign
+brief, planner audience cells, target shares, package calculations or evidence state.
 
 Examples:
 
