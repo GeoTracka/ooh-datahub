@@ -6,6 +6,7 @@ import type {
   SurveyAggregateSnapshot,
   SurveyAggregateSnapshotContent,
 } from "@/survey/contracts";
+import { isSurveyPlanningObjective } from "@/survey/contextSignals";
 import { buildSurveyPlanningContextArtifactContent } from "@/survey/publishedContext";
 
 function argValue(name: string): string {
@@ -26,6 +27,10 @@ async function main(): Promise<void> {
   const snapshotPath = path.resolve(argValue("snapshot"));
   const outputPath = path.resolve(argValue("out"));
   const city = argValue("city");
+  const objectiveInput = argValue("objective");
+  if (!isSurveyPlanningObjective(objectiveInput)) {
+    throw new Error(`SURVEY_PLANNING_OBJECTIVE_INVALID:${objectiveInput}`);
+  }
   const snapshot = JSON.parse(
     await readFile(snapshotPath, "utf8"),
   ) as SurveyAggregateSnapshot;
@@ -38,6 +43,7 @@ async function main(): Promise<void> {
   }
   const content = buildSurveyPlanningContextArtifactContent({
     snapshot,
+    objective: objectiveInput,
     query: { city },
     maximumSignals: 3,
   });
@@ -50,6 +56,7 @@ async function main(): Promise<void> {
         outputPath,
         artifactDigest: artifact.artifactDigest,
         sourceSnapshotDigest: artifact.sourceSnapshotDigest,
+        objective: artifact.objective,
         scope: artifact.scope,
         sampleSize: artifact.sampleSize,
         signalCount: artifact.signals.length,
