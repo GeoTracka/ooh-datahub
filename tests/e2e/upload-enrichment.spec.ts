@@ -116,5 +116,6 @@ test("local upload stays context-only and requires preflight before provider enr
   await expect(rfq).toBeVisible();
   await rfq.getByRole("button", { name: "Close" }).click();
   await page.getByRole("button", { name: "Back" }).click();
-  await expect(page.getByRole("complementary", { name: "Uploaded planning status" })).toContainText("Applied plan context");
+  await expect(page.getByRole("complementary", { name: "Uploaded inventory status" }))
+    .toContainText("Inventory added to this plan");
 });
