@@ -137,13 +137,13 @@ describe("published consumer survey planning context", () => {
 
   it("keeps source provenance identical while objective profiles differ", () => {
     const profiles = Object.values(artifacts);
-    expect(new Set(profiles.map(({ sourceId }) => sourceId))).toHaveLength(1);
+    expect(new Set(profiles.map(({ sourceId }) => sourceId)).size).toBe(1);
     expect(
-      new Set(profiles.map(({ sourceSnapshotDigest }) => sourceSnapshotDigest)),
-    ).toHaveLength(1);
-    expect(
-      new Set(profiles.map(({ sampleSize }) => sampleSize)),
-    ).toHaveLength(1);
+      new Set(
+        profiles.map(({ sourceSnapshotDigest }) => sourceSnapshotDigest),
+      ).size,
+    ).toBe(1);
+    expect(new Set(profiles.map(({ sampleSize }) => sampleSize)).size).toBe(1);
     expect(
       new Set(profiles.map(({ artifactDigest }) => artifactDigest)).size,
     ).toBe(3);
