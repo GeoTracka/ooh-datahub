@@ -142,7 +142,7 @@ test.describe("desktop workflow review", () => {
     await expect(uploadStatus).toContainText("Uploaded inventory · comparison only");
     await expect(uploadStatus).toContainText("1 media locations ready");
     await expect(uploadStatus).toContainText("Add audience-checking data");
-    await expect(uploadStatus).toContainText("Unapplied context change");
+    await expect(uploadStatus).toContainText("Inventory change not yet applied");
     await assertNoHorizontalOverflow(page, "uploaded context status");
     await captureUxReview(page, testInfo, "desktop-13-uploaded-context-status");
   });
