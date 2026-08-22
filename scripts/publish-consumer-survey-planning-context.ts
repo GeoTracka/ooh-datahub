@@ -52,7 +52,13 @@ async function main(): Promise<void> {
         sourceSnapshotDigest: artifact.sourceSnapshotDigest,
         scope: artifact.scope,
         sampleSize: artifact.sampleSize,
-        signalCount: artifact.signals.length,
+        profileCount: Object.keys(artifact.profiles).length,
+        signalCounts: Object.fromEntries(
+          Object.entries(artifact.profiles).map(([objective, profile]) => [
+            objective,
+            profile.signals.length,
+          ]),
+        ),
         decisionUse: artifact.decisionUse,
       },
       null,

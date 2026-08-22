@@ -86,18 +86,22 @@ and city × transport mode. Additional dimensions remain explicit and versioned.
 
 ## Product integration
 
-`selectSurveyContextSignals()` selects the most specific available facet for a
-transparent query and emits no more than three signals:
+`selectSurveyContextSignals()` remains the general-purpose bounded selector for a
+transparent facet query. `selectSurveyObjectiveContextProfile()` applies a separately
+versioned presentation policy for the three planner objectives:
 
-1. relative format affinity;
-2. most common OOH environment;
-3. leading creative/memorability cue;
-4. audience attention as fallback;
-5. four-week recall as fallback.
+- **Broad reach:** recent recall, the leading visibility environment, and the
+  hardest-to-ignore format;
+- **Priority audience:** perceived format trust, personal relevance, and the leading
+  creative memorability cue;
+- **Likely customers:** perceived format effect and the strongest available
+  self-reported actions after noticing OOH.
 
-Signals retain source period, sample size, selected scope, evidence state and claim
-boundary. They are independent facts, not a composite opportunity/confidence score.
-They are designed for the Planning context strip and drill-down specified by #69.
+Each profile emits no more than three independent facts. The campaign objective only
+selects which approved facts are presented; it does not alter package calculation,
+ordering, delivery, Planning Fit, or evidence grade. Signals retain source period,
+sample size, selected scope, applicable question denominator, evidence state and claim
+boundary. They are not a composite opportunity or confidence score.
 
 ## Published planning-context projection
 
@@ -112,12 +116,14 @@ pnpm survey:publish-context \
 ```
 
 The publisher independently verifies the aggregate snapshot digest before selecting
-the most specific eligible facet. The checked-in client artifact contains exactly
-three signals, the Lagos sample size and collection period, the source snapshot
-digest, an independent publication digest, and the unchanged `context_only` claim
-boundary. Respondent records and the full aggregate matrix are not shipped to the
-client.
+the most specific eligible facet. The checked-in `consumer-survey-planning-context-v2`
+artifact contains one deterministic profile for each planner objective, with exactly
+three signals per profile, plus the shared Lagos sample size and collection period,
+source snapshot digest, independent publication digest, and unchanged `context_only`
+claim boundary. Respondent records and the full aggregate matrix are not shipped to
+the client.
 
-The Step 3 planning-context strip and exploration drawer may explain these findings,
-but must not change package selection, delivery estimates, evidence grade, Planning
+The Step 3 strip selects the profile from the already-calculated campaign objective.
+The drawer explains that selection policy and applicable denominators. Neither surface
+may change package selection or ordering, delivery estimates, evidence grade, Planning
 Fit, movement, OTS, reach, frequency, influence, target share, or calibration.

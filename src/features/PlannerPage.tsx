@@ -669,6 +669,7 @@ export function PlannerPage() {
             />
             <PlanningContextStrip
               artifact={lagosPlanningContextArtifact}
+              objective={visible.brief.objective}
               onExplore={() => setPlanningContextOpen(true)}
             />
             <RecommendationCarousel
@@ -813,9 +814,10 @@ export function PlannerPage() {
         />
       )}
 
-      {planningContextOpen && (
+      {planningContextOpen && visible && (
         <PlanningContextDrawer
           artifact={lagosPlanningContextArtifact}
+          objective={visible.brief.objective}
           onClose={() => setPlanningContextOpen(false)}
         />
       )}

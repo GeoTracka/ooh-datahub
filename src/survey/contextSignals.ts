@@ -5,6 +5,7 @@ import type {
   SurveyContextQuery,
   SurveyContextSignal,
   SurveyFacetDimension,
+  SurveyPlanningObjective,
 } from "@/survey/contracts";
 
 function available(
@@ -18,18 +19,33 @@ function available(
   );
 }
 
-function metricWithPrefix(
+function rankedMetric(
   facet: SurveyAggregateFacet,
-  prefix: string,
+  predicate: (metric: SurveyAggregateMetric) => boolean,
 ): SurveyAggregateMetric | undefined {
   return facet.metrics
-    .filter((metric) => metric.id.startsWith(prefix) && available(metric))
+    .filter((metric) => predicate(metric) && available(metric))
     .sort(
       (left, right) =>
         (right.value ?? Number.NEGATIVE_INFINITY) -
           (left.value ?? Number.NEGATIVE_INFINITY) ||
         left.id.localeCompare(right.id),
     )[0];
+}
+
+function metricWithPrefix(
+  facet: SurveyAggregateFacet,
+  prefix: string,
+): SurveyAggregateMetric | undefined {
+  return rankedMetric(facet, (metric) => metric.id.startsWith(prefix));
+}
+
+function formatAttributeMetric(
+  facet: SurveyAggregateFacet,
+  attribute: "trust" | "effect",
+): SurveyAggregateMetric | undefined {
+  const matcher = new RegExp(`^format\\.[^.]+\\.${attribute}$`);
+  return rankedMetric(facet, (metric) => matcher.test(metric.id));
 }
 
 function exactMetric(
@@ -183,4 +199,153 @@ export function selectSurveyContextSignals(input: {
   return candidates
     .filter((candidate): candidate is SurveyContextSignal => candidate !== null)
     .slice(0, maximumSignals);
+}
+
+type ObjectiveSignalCandidate = {
+  idPrefix: string;
+  label: string;
+  select(facet: SurveyAggregateFacet): SurveyAggregateMetric | undefined;
+};
+
+type ObjectiveContextDefinition = {
+  label: string;
+  selectionRationale: string;
+  candidates: ObjectiveSignalCandidate[];
+};
+
+export type SelectedSurveyObjectiveContextProfile = {
+  objective: SurveyPlanningObjective;
+  label: string;
+  selectionRationale: string;
+  signals: SurveyContextSignal[];
+};
+
+const OBJECTIVE_CONTEXT_DEFINITIONS: Record<
+  SurveyPlanningObjective,
+  ObjectiveContextDefinition
+> = {
+  broad_reach: {
+    label: "Broad reach",
+    selectionRationale:
+      "Prioritizes recent recall, the most common visibility environment, and the format respondents found hardest to ignore.",
+    candidates: [
+      {
+        idPrefix: "survey-recall",
+        label: "Recent recall",
+        select: (facet) => exactMetric(facet, "recall.four_week"),
+      },
+      {
+        idPrefix: "survey-environment",
+        label: "Visibility environment",
+        select: (facet) => metricWithPrefix(facet, "environment."),
+      },
+      {
+        idPrefix: "survey-hardest-format",
+        label: "Hardest-to-ignore format",
+        select: (facet) => metricWithPrefix(facet, "hardest_format."),
+      },
+      {
+        idPrefix: "survey-format",
+        label: "Format affinity",
+        select: (facet) => metricWithPrefix(facet, "format.overall."),
+      },
+    ],
+  },
+  influential_core: {
+    label: "Priority audience",
+    selectionRationale:
+      "Prioritizes perceived trust, personal relevance, and the strongest reported creative memorability cue.",
+    candidates: [
+      {
+        idPrefix: "survey-trust",
+        label: "Perceived trust",
+        select: (facet) => formatAttributeMetric(facet, "trust"),
+      },
+      {
+        idPrefix: "survey-relevance",
+        label: "Personal relevance",
+        select: (facet) =>
+          exactMetric(facet, "attention_driver.relevant_to_my_life"),
+      },
+      {
+        idPrefix: "survey-creative",
+        label: "Creative cue",
+        select: (facet) => metricWithPrefix(facet, "memorability."),
+      },
+      {
+        idPrefix: "survey-recall",
+        label: "Recent recall",
+        select: (facet) => exactMetric(facet, "recall.four_week"),
+      },
+    ],
+  },
+  near_conversion: {
+    label: "Likely customers",
+    selectionRationale:
+      "Prioritizes perceived format effect and self-reported actions taken after noticing outdoor advertising.",
+    candidates: [
+      {
+        idPrefix: "survey-effect",
+        label: "Perceived effect",
+        select: (facet) => formatAttributeMetric(facet, "effect"),
+      },
+      {
+        idPrefix: "survey-action",
+        label: "Reported store visit",
+        select: (facet) =>
+          exactMetric(facet, "action.visited_store_or_location"),
+      },
+      {
+        idPrefix: "survey-action",
+        label: "Reported online search",
+        select: (facet) => exactMetric(facet, "action.searched_online"),
+      },
+      {
+        idPrefix: "survey-action",
+        label: "Reported purchase",
+        select: (facet) =>
+          exactMetric(facet, "action.purchased_product_or_service"),
+      },
+      {
+        idPrefix: "survey-recall",
+        label: "Recent recall",
+        select: (facet) => exactMetric(facet, "recall.four_week"),
+      },
+    ],
+  },
+};
+
+export function selectSurveyObjectiveContextProfile(input: {
+  snapshot: SurveyAggregateSnapshot;
+  query?: SurveyContextQuery;
+  objective: SurveyPlanningObjective;
+  maximumSignals?: number;
+}): SelectedSurveyObjectiveContextProfile | null {
+  const maximumSignals = Math.max(0, Math.min(3, input.maximumSignals ?? 3));
+  const facet = selectSurveyFacet(input.snapshot, input.query ?? {});
+  if (!facet) return null;
+  const definition = OBJECTIVE_CONTEXT_DEFINITIONS[input.objective];
+  const selectedMetricIds = new Set<string>();
+  const signals: SurveyContextSignal[] = [];
+  for (const candidate of definition.candidates) {
+    if (signals.length >= maximumSignals) break;
+    const metric = candidate.select(facet);
+    if (!metric || selectedMetricIds.has(metric.id)) continue;
+    selectedMetricIds.add(metric.id);
+    signals.push(
+      signalForMetric({
+        snapshot: input.snapshot,
+        facet,
+        metric,
+        id: `${candidate.idPrefix}:${metric.id}`,
+        label: candidate.label,
+      }),
+    );
+  }
+  return {
+    objective: input.objective,
+    label: definition.label,
+    selectionRationale: definition.selectionRationale,
+    signals,
+  };
 }

@@ -5,11 +5,12 @@ import { PlanningContextDrawer } from "@/features/PlanningContextDrawer";
 import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
 
 describe("PlanningContextDrawer", () => {
-  it("explains source, applicable denominators, method, and the non-delivery boundary", async () => {
+  it("explains objective selection, applicable denominators, method, and the non-delivery boundary", async () => {
     const onClose = vi.fn();
     render(
       <PlanningContextDrawer
         artifact={lagosPlanningContextArtifact}
+        objective="near_conversion"
         onClose={onClose}
       />,
     );
@@ -19,19 +20,29 @@ describe("PlanningContextDrawer", () => {
     ).toBeVisible();
     expect(
       screen.getByRole("heading", {
-        name: "What people reported about outdoor advertising",
+        name: "What people reported for this objective",
       }),
     ).toBeVisible();
+    expect(screen.getAllByText("Likely customers").length).toBeGreaterThan(0);
     expect(screen.getByText("204 respondents")).toBeVisible();
     expect(screen.getByText("20 May–3 Jun 2026")).toBeVisible();
     expect(screen.getByText(/177 applicable responses/)).toBeVisible();
-    expect(screen.getByText(/202 applicable responses/)).toBeVisible();
+    expect(screen.getAllByText(/204 applicable responses/)).toHaveLength(2);
+    expect(
+      screen.getByText(
+        /self-reported actions taken after noticing outdoor advertising/,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/does not change the package calculation or ranking/),
+    ).toBeVisible();
     expect(
       screen.getByText(/not observed movement, exposure geometry, OTS, reach/),
     ).toBeVisible();
     expect(screen.getByText(/unweighted descriptive aggregates/)).toBeVisible();
 
     await userEvent.click(screen.getByText("Technical source details"));
+    expect(screen.getByText("near_conversion")).toBeVisible();
     expect(
       screen.getByText(lagosPlanningContextArtifact.sourceSnapshotDigest),
     ).toBeVisible();
@@ -50,6 +61,7 @@ describe("PlanningContextDrawer", () => {
     const rendered = render(
       <PlanningContextDrawer
         artifact={lagosPlanningContextArtifact}
+        objective="broad_reach"
         onClose={onClose}
       />,
     );

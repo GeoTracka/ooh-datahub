@@ -29,9 +29,17 @@ export const SURVEY_FACET_DIMENSIONS = [
   "transportMode",
 ] as const;
 
+export const SURVEY_PLANNING_OBJECTIVES = [
+  "broad_reach",
+  "influential_core",
+  "near_conversion",
+] as const;
+
 export type SurveyFormat = (typeof SURVEY_FORMATS)[number];
 export type SurveyFormatAttribute = (typeof SURVEY_FORMAT_ATTRIBUTES)[number];
 export type SurveyFacetDimension = (typeof SURVEY_FACET_DIMENSIONS)[number];
+export type SurveyPlanningObjective =
+  (typeof SURVEY_PLANNING_OBJECTIVES)[number];
 
 export type SurveySourceSpec = {
   id: string;

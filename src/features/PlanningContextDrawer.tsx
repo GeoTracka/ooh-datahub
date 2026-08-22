@@ -2,7 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import { PlannerDrawerFrame } from "@/features/PlannerDrawerFrame";
-import type { SurveyPlanningContextArtifact } from "@/survey/publishedContext";
+import type { SurveyPlanningObjective } from "@/survey/contracts";
+import type {
+  SurveyPlanningContextArtifact,
+  SurveyPlanningContextProfile,
+} from "@/survey/publishedContext";
+import { selectSurveyPlanningContextProfile } from "@/survey/publishedContext";
 import {
   SURVEY_CONTEXT_BOUNDARY_COPY,
   surveyPeriodLabel,
@@ -19,11 +24,15 @@ const focusableSelector = [
 
 export function PlanningContextDrawer({
   artifact,
+  objective,
   onClose,
 }: {
   artifact: SurveyPlanningContextArtifact;
+  objective: SurveyPlanningObjective;
   onClose(): void;
 }) {
+  const profile: SurveyPlanningContextProfile =
+    selectSurveyPlanningContextProfile(artifact, objective);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -81,17 +90,23 @@ export function PlanningContextDrawer({
       onClose={onClose}
     >
       <section className="planning-context-drawer-intro">
-        <span className="planning-context-kicker">Lagos consumer research</span>
-        <h1>What people reported about outdoor advertising</h1>
+        <span className="planning-context-kicker">
+          Lagos consumer research · {profile.label}
+        </span>
+        <h1>What people reported for this objective</h1>
         <p>
-          These findings add local consumer perspective beside the selected
-          package. They do not alter its delivery estimate, plan score, or
-          evidence grade.
+          {profile.selectionRationale} These findings add local consumer
+          perspective beside the selected package. They do not alter its
+          delivery estimate, plan score, ordering, or evidence grade.
         </p>
         <dl className="planning-context-source-summary">
           <div>
             <dt>Market</dt>
             <dd>{artifact.scopeLabel}</dd>
+          </div>
+          <div>
+            <dt>Campaign objective</dt>
+            <dd>{profile.label}</dd>
           </div>
           <div>
             <dt>Survey sample</dt>
@@ -100,10 +115,6 @@ export function PlanningContextDrawer({
           <div>
             <dt>Collection period</dt>
             <dd>{surveyPeriodLabel(artifact.sourcePeriod)}</dd>
-          </div>
-          <div>
-            <dt>Use in planning</dt>
-            <dd>Context only</dd>
           </div>
         </dl>
       </section>
@@ -114,7 +125,7 @@ export function PlanningContextDrawer({
           <h2 id="planning-context-findings-title">Independent findings</h2>
         </div>
         <div className="planning-context-finding-list">
-          {artifact.signals.map((signal) => (
+          {profile.signals.map((signal) => (
             <article key={signal.id}>
               <header>
                 <span>{signal.label}</span>
@@ -151,6 +162,10 @@ export function PlanningContextDrawer({
             The solution owner supplied and approved the final cleaned workbook.
           </li>
           <li>
+            The campaign objective selects which three facts are surfaced; it
+            does not change the package calculation or ranking.
+          </li>
+          <li>
             Results are unweighted descriptive aggregates, not population
             estimates.
           </li>
@@ -167,6 +182,12 @@ export function PlanningContextDrawer({
               <dt>Source ID</dt>
               <dd>
                 <code>{artifact.sourceId}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>Objective profile</dt>
+              <dd>
+                <code>{profile.objective}</code>
               </dd>
             </div>
             <div>
