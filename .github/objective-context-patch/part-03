@@ -1,0 +1,70 @@
++{"artifactDigest":"795e392c77ef8ece87e4ff3ff35dfbce478ca483def211ec5ba3a47d8497e928","claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","profiles":{"broad_reach":{"label":"Broad reach","objective":"broad_reach","selectionRationale":"Prioritizes recent recall, the most common visibility environment, and the format respondents found hardest to ignore.","signals":[{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Recalled an OOH advertisement in the previous four weeks was reported by 72% of 201 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-recall:recall.four_week","label":"Recent recall","metricLabel":"Recalled an OOH advertisement in the previous four weeks","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"72%"},{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Major roads or highways was reported by 35% of 202 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-environment:environment.major_roads_or_highways","label":"Visibility environment","metricLabel":"Major roads or highways","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"35%"},{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Large static billboard was reported by 38% of 204 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-hardest-format:hardest_format.large_static_billboard","label":"Hardest-to-ignore format","metricLabel":"Large static billboard","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"38%"}]},"influential_core":{"label":"Priority audience","objective":"influential_core","selectionRationale":"Prioritizes perceived trust, personal relevance, and the strongest reported creative memorability cue.","signals":[{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Large billboard — trust scored 4.13 out of 5 across 177 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-trust:format.large_billboard.trust","label":"Perceived trust","metricLabel":"Large billboard — trust","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"4.13 / 5"},{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Relevant to my life was reported by 36% of 114 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-relevance:attention_driver.relevant_to_my_life","label":"Personal relevance","metricLabel":"Relevant to my life","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"36%"},{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Creative design was reported by 28% of 204 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-creative:memorability.creative_design","label":"Creative cue","metricLabel":"Creative design","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"28%"}]},"near_conversion":{"label":"Likely customers","objective":"near_conversion","selectionRationale":"Prioritizes perceived format effect and self-reported actions taken after noticing outdoor advertising.","signals":[{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Large billboard — effect scored 4.16 out of 5 across 177 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-effect:format.large_billboard.effect","label":"Perceived effect","metricLabel":"Large billboard — effect","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"4.16 / 5"},{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Visited store or location was reported by 27% of 204 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-action:action.visited_store_or_location","label":"Reported store visit","metricLabel":"Visited store or location","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"27%"},{"claimBoundary":"self_reported_consumer_context_not_observed_delivery","decisionUse":"context_only","evidenceSentence":"Searched online was reported by 21% of 204 applicable responses in Lagos.","evidenceState":"authoritative_owner_supplied_survey","id":"survey-action:action.searched_online","label":"Reported online search","metricLabel":"Searched online","sampleSize":204,"scope":{"city":"Lagos"},"sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"valueText":"21%"}]}},"qualityState":"owner_approved_cleaned_with_advisory_diagnostics","query":{"city":"Lagos"},"sampleSize":204,"schemaVersion":"consumer-survey-planning-context-v2","scope":{"city":"Lagos"},"scopeLabel":"Lagos","sourceId":"rbl-loma-nigeria-ooh-consumer-penetration-2026-r1","sourcePeriod":{"end":"2026-06-03","start":"2026-05-20"},"sourceSnapshotDigest":"c0644a87d54060b71963f7b9cedaf994efec3828a62400d5c4c92340ea1b64fa","weightingState":"unweighted_descriptive"}
+diff --git a/src/survey/publishedContext.ts b/src/survey/publishedContext.ts
+index 711ad20..1b04739 100644
+--- a/src/survey/publishedContext.ts
++++ b/src/survey/publishedContext.ts
+@@ -1,18 +1,27 @@
+ import {
+   SURVEY_CLAIM_BOUNDARY,
+   SURVEY_DECISION_USE,
++  SURVEY_PLANNING_OBJECTIVES,
+   type SurveyAggregateSnapshot,
+   type SurveyContextQuery,
+   type SurveyContextSignal,
+   type SurveyFacetScope,
++  type SurveyPlanningObjective,
+ } from "@/survey/contracts";
+ import {
+-  selectSurveyContextSignals,
+   selectSurveyFacet,
++  selectSurveyObjectiveContextProfile,
+ } from "@/survey/contextSignals";
+ 
+ export const SURVEY_PLANNING_CONTEXT_SCHEMA_VERSION =
+-  "consumer-survey-planning-context-v1" as const;
++  "consumer-survey-planning-context-v2" as const;
++
++export type SurveyPlanningContextProfile = {
++  objective: SurveyPlanningObjective;
++  label: string;
++  selectionRationale: string;
++  signals: SurveyContextSignal[];
++};
+ 
+ export type SurveyPlanningContextArtifactContent = {
+   schemaVersion: typeof SURVEY_PLANNING_CONTEXT_SCHEMA_VERSION;
+@@ -27,7 +36,7 @@ export type SurveyPlanningContextArtifactContent = {
+   qualityState: "owner_approved_cleaned_with_advisory_diagnostics";
+   decisionUse: typeof SURVEY_DECISION_USE;
+   claimBoundary: typeof SURVEY_CLAIM_BOUNDARY;
+-  signals: SurveyContextSignal[];
++  profiles: Record<SurveyPlanningObjective, SurveyPlanningContextProfile>;
+ };
+ 
+ export type SurveyPlanningContextArtifact =
+@@ -47,13 +56,20 @@ export function buildSurveyPlanningContextArtifactContent(input: {
+ }): SurveyPlanningContextArtifactContent {
+   const facet = selectSurveyFacet(input.snapshot, input.query);
+   if (!facet) throw new Error("SURVEY_CONTEXT_FACET_NOT_FOUND");
+-  const signals = selectSurveyContextSignals({
+-    snapshot: input.snapshot,
+-    query: input.query,
+-    maximumSignals: input.maximumSignals ?? 3,
+-  });
+-  if (signals.length === 0)
+-    throw new Error("SURVEY_CONTEXT_SIGNALS_UNAVAILABLE");
++  const profiles = Object.fromEntries(
++    SURVEY_PLANNING_OBJECTIVES.map((objective) => {
++      const profile = selectSurveyObjectiveContextProfile({
++        snapshot: input.snapshot,
++        query: input.query,
++        objective,
++        maximumSignals: input.maximumSignals ?? 3,
++      });
++      if (!profile || profile.signals.length === 0) {
++        throw new Error(`SURVEY_CONTEXT_SIGNALS_UNAVAILABLE:${objective}`);
++      }
++      return [objective, profile];
++    }),
++  ) as Record<SurveyPlanningObjective, SurveyPlanningContextProfile>;
+   return {
