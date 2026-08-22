@@ -52,11 +52,12 @@ export function MapStage({
           </button>
           <button
             type="button"
+            aria-label="Focus selected area"
             aria-pressed={cameraRequest.mode === "selected"}
             disabled={!selectedFeatureId}
             onClick={() => requestCamera("selected")}
           >
-            Focus selected area
+            Focus area
           </button>
         </div>
       )}

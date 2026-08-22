@@ -95,7 +95,7 @@ for (const viewport of [
       await expect(renderer).toHaveAttribute("data-camera-focus-state", "overview");
     }
 
-    const retry = page.getByRole("button", { name: "Retry map context" });
+    const retry = page.getByRole("button", { name: "Retry map" });
     const retryBox = await retry.boundingBox();
     expect(retryBox).not.toBeNull();
     expect(retryBox!.height).toBeGreaterThanOrEqual(44);

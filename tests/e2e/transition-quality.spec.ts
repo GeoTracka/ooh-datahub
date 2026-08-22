@@ -36,7 +36,7 @@ async function openUploadWithFixture(page: Page): Promise<void> {
   await page.getByLabel("Inventory spreadsheet").setInputFiles(
     path.resolve("tests/fixtures/customer-owned-inventory.csv"),
   );
-  await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
+  await expect(page.getByText("1 ready · 0 need review · 0 cannot be used")).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -63,17 +63,17 @@ test("keeps enrichment preflight single-flight and visibly locked", async ({ pag
 
   await openUploadWithFixture(page);
   const dialog = page.getByRole("dialog", { name: "Upload inventory" });
-  const review = dialog.getByRole("button", { name: "Review enrichment" });
+  const review = dialog.getByRole("button", { name: "Check location details" });
   await review.dblclick();
 
-  await expect(dialog.getByRole("status", { name: "Checking enrichment requirements…" }))
+  await expect(dialog.getByRole("status", { name: "Checking location-service requirements…" }))
     .toBeVisible();
   expect(calls).toBe(1);
   await expect(dialog).toHaveAttribute("aria-modal", "true");
   await expect(dialog.locator(".planner-drawer-body")).toHaveAttribute("aria-busy", "true");
   await expect(dialog.getByLabel("Inventory spreadsheet")).toBeDisabled();
   await expect(dialog.getByRole("checkbox", { name: /UP-001/ })).toBeDisabled();
-  await expect(dialog.getByRole("button", { name: "Checking enrichment…" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Checking requirements…" })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Close" })).toBeEnabled();
 
   const diagnostics = await captureUxReview(
@@ -85,9 +85,9 @@ test("keeps enrichment preflight single-flight and visibly locked", async ({ pag
   await assertReviewClean(page, diagnostics, "enrichment preflight transition");
 
   release();
-  await expect(dialog.getByRole("status", { name: "Checking enrichment requirements…" }))
+  await expect(dialog.getByRole("status", { name: "Checking location-service requirements…" }))
     .toHaveCount(0);
-  await expect(dialog.getByRole("region", { name: "Enrichment preflight" })).toBeVisible();
+  await expect(dialog.getByRole("region", { name: "Location-service requirements" })).toBeVisible();
 });
 
 test("invalidates preflight on selection change and locks provider enrichment", async ({ page }, testInfo) => {
@@ -114,26 +114,26 @@ test("invalidates preflight on selection change and locks provider enrichment", 
 
   await openUploadWithFixture(page);
   const dialog = page.getByRole("dialog", { name: "Upload inventory" });
-  const review = dialog.getByRole("button", { name: "Review enrichment" });
+  const review = dialog.getByRole("button", { name: "Check location details" });
   const row = dialog.getByRole("checkbox", { name: /UP-001/ });
 
   await review.click();
-  await expect(dialog.getByRole("region", { name: "Enrichment preflight" })).toBeVisible();
+  await expect(dialog.getByRole("region", { name: "Location-service requirements" })).toBeVisible();
   await row.uncheck();
-  await expect(dialog.getByRole("region", { name: "Enrichment preflight" })).toHaveCount(0);
+  await expect(dialog.getByRole("region", { name: "Location-service requirements" })).toHaveCount(0);
   await row.check();
   await review.click();
   expect(preflightCalls).toBe(2);
 
-  const enrich = dialog.getByRole("button", { name: "Enrich locations" });
+  const enrich = dialog.getByRole("button", { name: "Check suggested locations" });
   await enrich.dblclick();
-  await expect(dialog.getByRole("status", { name: "Reviewing provider location candidates…" }))
+  await expect(dialog.getByRole("status", { name: "Checking suggested locations…" }))
     .toBeVisible();
   expect(runCalls).toBe(1);
   await expect(row).toBeDisabled();
   await expect(dialog.getByLabel("Inventory spreadsheet")).toBeDisabled();
-  await expect(dialog.getByRole("button", { name: "Reviewing locations…" })).toBeDisabled();
-  await expect(dialog.getByRole("button", { name: "Use reviewed facts as context" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Checking locations…" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Add reviewed inventory to the plan" })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Close" })).toBeEnabled();
 
   const diagnostics = await captureUxReview(
@@ -145,6 +145,6 @@ test("invalidates preflight on selection change and locks provider enrichment", 
   await assertReviewClean(page, diagnostics, "provider enrichment transition");
 
   releaseRun();
-  await expect(dialog.getByRole("status", { name: "Reviewing provider location candidates…" }))
+  await expect(dialog.getByRole("status", { name: "Checking suggested locations…" }))
     .toHaveCount(0);
 });

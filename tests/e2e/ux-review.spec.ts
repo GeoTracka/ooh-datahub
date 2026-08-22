@@ -133,16 +133,16 @@ test.describe("desktop workflow review", () => {
     await page.getByLabel("Inventory spreadsheet").setInputFiles(
       path.resolve("tests/fixtures/customer-owned-inventory.csv"),
     );
-    await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
+    await expect(page.getByText("1 ready · 0 need review · 0 cannot be used")).toBeVisible();
     await captureUxReview(page, testInfo, "desktop-12-upload-preview", { fullPage: false });
 
-    await page.getByRole("button", { name: "Use uploaded facts as context" }).click();
+    await page.getByRole("button", { name: "Add uploaded inventory to the plan" }).click();
     await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
     const uploadStatus = page.getByRole("complementary", { name: "Uploaded inventory status" });
     await expect(uploadStatus).toContainText("Uploaded inventory · comparison only");
     await expect(uploadStatus).toContainText("1 media locations ready");
     await expect(uploadStatus).toContainText("Add audience-checking data");
-    await expect(uploadStatus).toContainText("Unapplied context change");
+    await expect(uploadStatus).toContainText("Inventory change not yet applied");
     await assertNoHorizontalOverflow(page, "uploaded context status");
     await captureUxReview(page, testInfo, "desktop-13-uploaded-context-status");
   });
@@ -184,7 +184,7 @@ test.describe("responsive review", () => {
     await page.getByRole("button", { name: "Use default timing & budget" }).click();
     await expect(page.getByRole("region", { name: /Step 3 of 5:/ })).toBeVisible();
     await assertNoHorizontalOverflow(page, "390px recommended package");
-    await expect(page.getByTestId("maplibre-renderer")).toHaveAttribute("data-camera-focus-state", "selected");
+    await expect(page.getByTestId("maplibre-renderer")).toHaveAttribute("data-camera-focus-state", "overview");
     await captureUxReview(page, testInfo, "responsive-390-recommended-package");
     await assertAccessible(page);
   });
