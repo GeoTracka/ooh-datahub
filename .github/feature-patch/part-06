@@ -1,0 +1,21 @@
++    ]);
++  });
++
++  it("contains no delivery-measurement or scoring contract fields", () => {
++    const keys = new Set(objectKeys(artifact).map((key) => key.toLowerCase()));
++    for (const prohibited of [
++      "movement",
++      "ots",
++      "reach",
++      "frequency",
++      "uniquereach",
++      "targetshare",
++      "influence",
++      "planningfit",
++      "calibration",
++      "evidencegrade",
++    ]) {
++      expect(keys.has(prohibited)).toBe(false);
++    }
++  });
++});
