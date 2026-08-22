@@ -6,6 +6,7 @@ import {
   type CalibrationFailure,
   type MovementCalibrationReport,
 } from "@/planning/calibrationGate";
+import type { MovementEvaluationFailure } from "@/planning/movementCalibrationEvaluation";
 
 export const CALIBRATION_EVIDENCE_PACKAGE_VERSION = "calibration-evidence-package-v1" as const;
 export const CALIBRATION_PROMOTION_POLICY_VERSION = "calibration-promotion-policy-v1" as const;
@@ -88,16 +89,21 @@ export type CalibrationPackageFailure =
   | "MISSING_INDEPENDENT_DATE_REPLICATION_EVIDENCE"
   | "INDEPENDENT_DATE_NOT_POST_FREEZE";
 
-export type CalibrationPromotionFailure = "TEST_FIXTURE_NOT_PROMOTABLE";
+export type CalibrationPromotionFailure =
+  | "TEST_FIXTURE_NOT_PROMOTABLE"
+  | "MOVEMENT_EVALUATION_NOT_VERIFIED"
+  | "MOVEMENT_EVALUATION_INVALID";
 
 export type CalibrationPromotionDecision = {
   policyVersion: typeof CALIBRATION_PROMOTION_POLICY_VERSION;
   movementCalibrationGateVersion: typeof MOVEMENT_CALIBRATION_GATE_VERSION;
   packageValid: boolean;
+  movementEvaluationVerified: boolean;
   calibrationPassed: boolean;
   eligibleForEvidenceC: boolean;
   packageFailures: CalibrationPackageFailure[];
   promotionFailures: CalibrationPromotionFailure[];
+  evaluationFailures: MovementEvaluationFailure[];
   calibrationFailures: CalibrationFailure[];
 };
 
@@ -219,37 +225,76 @@ export function canonicalCalibrationEvidencePackage(pkg: CalibrationEvidencePack
   });
 }
 
-export function evaluateCalibrationPromotion(input: unknown): CalibrationPromotionDecision {
-  const validation = validateCalibrationEvidencePackage(input);
+function decision(input: {
+  validation: ReturnType<typeof validateCalibrationEvidencePackage>;
+  report: MovementCalibrationReport | null;
+  movementEvaluationVerified: boolean;
+  evaluationFailures?: MovementEvaluationFailure[];
+}): CalibrationPromotionDecision {
+  const { validation } = input;
   if (!validation.package) {
     return {
       policyVersion: CALIBRATION_PROMOTION_POLICY_VERSION,
       movementCalibrationGateVersion: MOVEMENT_CALIBRATION_GATE_VERSION,
       packageValid: false,
+      movementEvaluationVerified: false,
       calibrationPassed: false,
       eligibleForEvidenceC: false,
       packageFailures: validation.failures,
       promotionFailures: [],
+      evaluationFailures: input.evaluationFailures ?? [],
       calibrationFailures: [],
     };
   }
 
-  const report = validation.package.movementCalibrationReport satisfies MovementCalibrationReport;
-  const calibration = evaluateMovementCalibration(report);
-  const promotionFailures: CalibrationPromotionFailure[] =
-    validation.package.evidenceEnvironment === "test_fixture"
-      ? ["TEST_FIXTURE_NOT_PROMOTABLE"]
-      : [];
+  const calibration = input.report ? evaluateMovementCalibration(input.report) : { passed: false, failures: [] as CalibrationFailure[] };
+  const promotionFailures: CalibrationPromotionFailure[] = [];
+  if (validation.package.evidenceEnvironment === "test_fixture") {
+    promotionFailures.push("TEST_FIXTURE_NOT_PROMOTABLE");
+  } else if (!input.movementEvaluationVerified) {
+    promotionFailures.push((input.evaluationFailures?.length ?? 0) > 0
+      ? "MOVEMENT_EVALUATION_INVALID"
+      : "MOVEMENT_EVALUATION_NOT_VERIFIED");
+  }
 
   return {
     policyVersion: CALIBRATION_PROMOTION_POLICY_VERSION,
     movementCalibrationGateVersion: MOVEMENT_CALIBRATION_GATE_VERSION,
     packageValid: validation.failures.length === 0,
+    movementEvaluationVerified: input.movementEvaluationVerified,
     calibrationPassed: calibration.passed,
     eligibleForEvidenceC:
-      validation.failures.length === 0 && promotionFailures.length === 0 && calibration.passed,
+      validation.failures.length === 0
+      && promotionFailures.length === 0
+      && input.movementEvaluationVerified
+      && calibration.passed,
     packageFailures: validation.failures,
     promotionFailures,
+    evaluationFailures: input.evaluationFailures ?? [],
     calibrationFailures: calibration.failures,
   };
+}
+
+export function evaluateCalibrationPromotion(input: unknown): CalibrationPromotionDecision {
+  const validation = validateCalibrationEvidencePackage(input);
+  return decision({
+    validation,
+    report: validation.package?.movementCalibrationReport ?? null,
+    movementEvaluationVerified: validation.package?.evidenceEnvironment === "test_fixture",
+  });
+}
+
+export function evaluateVerifiedCalibrationPromotion(input: {
+  packageInput: unknown;
+  derivedReport: MovementCalibrationReport | null;
+  evaluationFailures: MovementEvaluationFailure[];
+}): CalibrationPromotionDecision {
+  const validation = validateCalibrationEvidencePackage(input.packageInput);
+  return decision({
+    validation,
+    report: input.derivedReport,
+    movementEvaluationVerified:
+      Boolean(input.derivedReport) && input.evaluationFailures.length === 0,
+    evaluationFailures: input.evaluationFailures,
+  });
 }
