@@ -84,7 +84,7 @@ test("local upload stays context-only and requires preflight before provider enr
   const firstStatus = page.getByRole("complementary", { name: "Uploaded inventory status" });
   await expect(firstStatus).toContainText("Uploaded inventory · comparison only");
   await expect(firstStatus).toContainText("Add audience-checking data");
-  await expect(firstStatus).toContainText("Unapplied context change");
+  await expect(firstStatus).toContainText("Inventory change not yet applied");
 
   await page.getByRole("button", { name: "Continue with selected package" }).click();
   await page.getByRole("button", { name: /^Adjust package/ }).click();
@@ -107,7 +107,7 @@ test("local upload stays context-only and requires preflight before provider enr
   const reviewedStatus = page.getByRole("complementary", { name: "Uploaded inventory status" });
   await expect(reviewedStatus).toContainText("Uploaded inventory · comparison only");
   await expect(reviewedStatus).toContainText("Add audience-checking data");
-  await expect(reviewedStatus).toContainText("Unapplied context change");
+  await expect(reviewedStatus).toContainText("Inventory change not yet applied");
 
   await page.getByRole("button", { name: "Continue with selected package" }).click();
   await page.getByRole("button", { name: /^Adjust package/ }).click();
