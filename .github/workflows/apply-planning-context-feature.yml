@@ -26,16 +26,28 @@ jobs:
         with:
           ref: agent/consumer-survey-planning-context-ui-20260822
           fetch-depth: 0
+      - id: state
+        name: Check whether feature is already applied
+        run: |
+          if [ -f src/features/PlanningContextStrip.tsx ]; then
+            echo "applied=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Reconstruct and verify patch
+        if: steps.state.outputs.applied != 'true'
         run: |
           cat .github/feature-patch/part-* > /tmp/planning-context-feature.patch
           echo '631e749659e3441bf8e5471340512cefd7834e80882216afcbf6fc2b566d9587  /tmp/planning-context-feature.patch' | sha256sum --check
           git apply --check /tmp/planning-context-feature.patch
-      - name: Apply atomic feature
+      - name: Apply product and test files
+        if: steps.state.outputs.applied != 'true'
         run: |
           git apply --index /tmp/planning-context-feature.patch
-          git rm -r .github/feature-patch .github/workflows/apply-planning-context-feature.yml
+          git restore --staged --worktree .github/workflows/ci.yml
+          git rm -r .github/feature-patch
       - name: Commit and push
+        if: steps.state.outputs.applied != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
