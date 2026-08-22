@@ -17,6 +17,15 @@ const focusableSelector = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
+const objectiveLabels: Record<
+  SurveyPlanningContextArtifact["objective"],
+  string
+> = {
+  broad_reach: "Broad reach",
+  influential_core: "Priority audience",
+  near_conversion: "Likely customers",
+};
+
 export function PlanningContextDrawer({
   artifact,
   onClose,
@@ -94,6 +103,10 @@ export function PlanningContextDrawer({
             <dd>{artifact.scopeLabel}</dd>
           </div>
           <div>
+            <dt>Campaign objective</dt>
+            <dd>{objectiveLabels[artifact.objective]}</dd>
+          </div>
+          <div>
             <dt>Survey sample</dt>
             <dd>{artifact.sampleSize.toLocaleString("en-NG")} respondents</dd>
           </div>
@@ -149,6 +162,10 @@ export function PlanningContextDrawer({
         <ul>
           <li>
             The solution owner supplied and approved the final cleaned workbook.
+          </li>
+          <li>
+            The campaign objective selects which survey facts are shown; it does
+            not change package calculations or ranking.
           </li>
           <li>
             Results are unweighted descriptive aggregates, not population

@@ -84,40 +84,56 @@ so the same source, policy and code inputs reproduce the same identity.
 Default facets are overall, city, age band, gender, transport mode, city × age band
 and city × transport mode. Additional dimensions remain explicit and versioned.
 
-## Product integration
+## Objective-aware product integration
 
 `selectSurveyContextSignals()` selects the most specific available facet for a
-transparent query and emits no more than three signals:
+transparent query and emits no more than three independent signals. The campaign
+objective controls only which survey facts are surfaced:
 
-1. relative format affinity;
-2. most common OOH environment;
-3. leading creative/memorability cue;
-4. audience attention as fallback;
-5. four-week recall as fallback.
+- `broad_reach`: strongest format affinity, dominant noticing environment and leading
+  creative cue;
+- `influential_core`: strongest format trust affinity, four-week recall context and
+  leading creative cue;
+- `near_conversion`: self-reported search, visit and purchase actions.
 
-Signals retain source period, sample size, selected scope, evidence state and claim
-boundary. They are independent facts, not a composite opportunity/confidence score.
-They are designed for the Planning context strip and drill-down specified by #69.
+The objective profile does not change package ranking, delivery, Planning Fit,
+evidence grade or any measurement contract. Signals retain source period, sample
+size, selected scope, evidence state and claim boundary. They are facts, not a
+composite opportunity or confidence score.
 
-## Published planning-context projection
+## Published planning-context projections
 
 The full aggregate snapshot is an offline governed derivative and is not bundled into
-the browser. Publish the bounded Lagos product projection from a verified snapshot:
+the browser. Publish each bounded Lagos objective projection from the same verified
+snapshot:
 
 ```bash
 pnpm survey:publish-context \
   --snapshot="/secure/derived/rbl-loma-2026-context.json" \
   --out="src/survey/data/rbl-loma-2026-lagos-planning-context.json" \
-  --city="Lagos"
+  --city="Lagos" \
+  --objective="broad_reach"
+
+pnpm survey:publish-context \
+  --snapshot="/secure/derived/rbl-loma-2026-context.json" \
+  --out="src/survey/data/rbl-loma-2026-lagos-influential-core-context.json" \
+  --city="Lagos" \
+  --objective="influential_core"
+
+pnpm survey:publish-context \
+  --snapshot="/secure/derived/rbl-loma-2026-context.json" \
+  --out="src/survey/data/rbl-loma-2026-lagos-near-conversion-context.json" \
+  --city="Lagos" \
+  --objective="near_conversion"
 ```
 
 The publisher independently verifies the aggregate snapshot digest before selecting
-the most specific eligible facet. The checked-in client artifact contains exactly
-three signals, the Lagos sample size and collection period, the source snapshot
-digest, an independent publication digest, and the unchanged `context_only` claim
-boundary. Respondent records and the full aggregate matrix are not shipped to the
-client.
+the most specific eligible facet. Each `consumer-survey-planning-context-v2`
+artifact binds its objective, exactly three signals, Lagos sample size, collection
+period, source snapshot digest, independent publication digest and unchanged
+`context_only` claim boundary. Respondent records and the full aggregate matrix are
+not shipped to the client.
 
 The Step 3 planning-context strip and exploration drawer may explain these findings,
 but must not change package selection, delivery estimates, evidence grade, Planning
-Fit, movement, OTS, reach, frequency, influence, target share, or calibration.
+Fit, movement, OTS, reach, frequency, influence, target share or calibration.
