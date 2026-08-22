@@ -1,0 +1,39 @@
+name: Export audience-lens review worktree
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    if: github.head_ref == 'agent/survey-audience-lens-review-20260822'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/survey-audience-lens-review-20260822
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.32.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Package worktree and dependencies
+        run: |
+          tar --exclude=.git --exclude=node_modules -czf /tmp/audience-lens-review-worktree.tgz .
+          tar -czf /tmp/audience-lens-review-node-modules.tgz node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audience-lens-review-workspace-${{ github.run_id }}
+          path: |
+            /tmp/audience-lens-review-worktree.tgz
+            /tmp/audience-lens-review-node-modules.tgz
+          if-no-files-found: error
+          retention-days: 2
