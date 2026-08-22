@@ -1,0 +1,350 @@
++  scope: SurveyFacetScope;
++  scopeLabel: string;
++  sampleSize: number;
++  weightingState: "unweighted_descriptive";
++  qualityState: "owner_approved_cleaned_with_advisory_diagnostics";
++  decisionUse: typeof SURVEY_DECISION_USE;
++  claimBoundary: typeof SURVEY_CLAIM_BOUNDARY;
++  signals: SurveyContextSignal[];
++};
++
++export type SurveyPlanningContextArtifact =
++  SurveyPlanningContextArtifactContent & {
++    artifactDigest: string;
++  };
++
++function scopeLabel(scope: SurveyFacetScope): string {
++  const values = Object.values(scope);
++  return values.length > 0 ? values.join(" · ") : "Approved survey sample";
++}
++
++export function buildSurveyPlanningContextArtifactContent(input: {
++  snapshot: SurveyAggregateSnapshot;
++  query: SurveyContextQuery;
++  maximumSignals?: number;
++}): SurveyPlanningContextArtifactContent {
++  const facet = selectSurveyFacet(input.snapshot, input.query);
++  if (!facet) throw new Error("SURVEY_CONTEXT_FACET_NOT_FOUND");
++  const signals = selectSurveyContextSignals({
++    snapshot: input.snapshot,
++    query: input.query,
++    maximumSignals: input.maximumSignals ?? 3,
++  });
++  if (signals.length === 0)
++    throw new Error("SURVEY_CONTEXT_SIGNALS_UNAVAILABLE");
++  return {
++    schemaVersion: SURVEY_PLANNING_CONTEXT_SCHEMA_VERSION,
++    sourceId: input.snapshot.source.id,
++    sourceSnapshotDigest: input.snapshot.snapshotDigest,
++    sourcePeriod: input.snapshot.source.collectionPeriod,
++    query: input.query,
++    scope: facet.scope,
++    scopeLabel: scopeLabel(facet.scope),
++    sampleSize: facet.sampleSize,
++    weightingState: "unweighted_descriptive",
++    qualityState: "owner_approved_cleaned_with_advisory_diagnostics",
++    decisionUse: SURVEY_DECISION_USE,
++    claimBoundary: SURVEY_CLAIM_BOUNDARY,
++    signals,
++  };
++}
+diff --git a/tests/component/PlanningContextDrawer.test.tsx b/tests/component/PlanningContextDrawer.test.tsx
+new file mode 100644
+index 0000000..b5207a2
+--- /dev/null
++++ b/tests/component/PlanningContextDrawer.test.tsx
+@@ -0,0 +1,64 @@
++import { render, screen } from "@testing-library/react";
++import userEvent from "@testing-library/user-event";
++import { describe, expect, it, vi } from "vitest";
++import { PlanningContextDrawer } from "@/features/PlanningContextDrawer";
++import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
++
++describe("PlanningContextDrawer", () => {
++  it("explains source, applicable denominators, method, and the non-delivery boundary", async () => {
++    const onClose = vi.fn();
++    render(
++      <PlanningContextDrawer
++        artifact={lagosPlanningContextArtifact}
++        onClose={onClose}
++      />,
++    );
++
++    expect(
++      screen.getByRole("dialog", { name: "Consumer survey context" }),
++    ).toBeVisible();
++    expect(
++      screen.getByRole("heading", {
++        name: "What people reported about outdoor advertising",
++      }),
++    ).toBeVisible();
++    expect(screen.getByText("204 respondents")).toBeVisible();
++    expect(screen.getByText("20 May–3 Jun 2026")).toBeVisible();
++    expect(screen.getByText(/177 applicable responses/)).toBeVisible();
++    expect(screen.getByText(/202 applicable responses/)).toBeVisible();
++    expect(
++      screen.getByText(/not observed movement, exposure geometry, OTS, reach/),
++    ).toBeVisible();
++    expect(screen.getByText(/unweighted descriptive aggregates/)).toBeVisible();
++
++    await userEvent.click(screen.getByText("Technical source details"));
++    expect(
++      screen.getByText(lagosPlanningContextArtifact.sourceSnapshotDigest),
++    ).toBeVisible();
++    expect(
++      screen.getByText(lagosPlanningContextArtifact.artifactDigest),
++    ).toBeVisible();
++  });
++
++  it("closes on Escape and restores focus to the opener after unmount", async () => {
++    const onClose = vi.fn();
++    const opener = document.createElement("button");
++    opener.textContent = "Explore survey context";
++    document.body.append(opener);
++    opener.focus();
++
++    const rendered = render(
++      <PlanningContextDrawer
++        artifact={lagosPlanningContextArtifact}
++        onClose={onClose}
++      />,
++    );
++
++    expect(screen.getByRole("button", { name: "Close" })).toHaveFocus();
++    await userEvent.keyboard("{Escape}");
++    expect(onClose).toHaveBeenCalledOnce();
++    rendered.unmount();
++    expect(opener).toHaveFocus();
++    opener.remove();
++  });
++});
+diff --git a/tests/component/PlanningContextStrip.test.tsx b/tests/component/PlanningContextStrip.test.tsx
+new file mode 100644
+index 0000000..fe5908e
+--- /dev/null
++++ b/tests/component/PlanningContextStrip.test.tsx
+@@ -0,0 +1,45 @@
++import { render, screen } from "@testing-library/react";
++import userEvent from "@testing-library/user-event";
++import { describe, expect, it, vi } from "vitest";
++import { PlanningContextStrip } from "@/features/PlanningContextStrip";
++import { lagosPlanningContextArtifact } from "@/survey/lagosPlanningContext";
++
++describe("PlanningContextStrip", () => {
++  it("shows no more than three digest-bound Lagos signals and their context boundary", () => {
++    render(
++      <PlanningContextStrip
++        artifact={lagosPlanningContextArtifact}
++        onExplore={() => undefined}
++      />,
++    );
++
++    expect(
++      screen.getByRole("region", { name: "Planning context" }),
++    ).toBeVisible();
++    expect(screen.getAllByTestId("planning-context-signal")).toHaveLength(3);
++    expect(screen.getByText("4.14 / 5")).toBeVisible();
++    expect(screen.getByText("35%")).toBeVisible();
++    expect(screen.getByText("28%")).toBeVisible();
++    expect(screen.getByText("Lagos")).toBeVisible();
++    expect(screen.getByText("n=204")).toBeVisible();
++    expect(screen.getByText("20 May–3 Jun 2026")).toBeVisible();
++    expect(screen.getByText("Context only")).toBeVisible();
++  });
++
++  it("opens the exploration surface through an explicit dialog action", async () => {
++    const onExplore = vi.fn();
++    render(
++      <PlanningContextStrip
++        artifact={lagosPlanningContextArtifact}
++        onExplore={onExplore}
++      />,
++    );
++
++    const action = screen.getByRole("button", {
++      name: "Explore survey context",
++    });
++    expect(action).toHaveAttribute("aria-haspopup", "dialog");
++    await userEvent.click(action);
++    expect(onExplore).toHaveBeenCalledOnce();
++  });
++});
+diff --git a/tests/e2e/planning-context.spec.ts b/tests/e2e/planning-context.spec.ts
+new file mode 100644
+index 0000000..4c0cc59
+--- /dev/null
++++ b/tests/e2e/planning-context.spec.ts
+@@ -0,0 +1,97 @@
++import AxeBuilder from "@axe-core/playwright";
++import { expect, test } from "@playwright/test";
++import {
++  assertNoHorizontalOverflow,
++  captureUxReview,
++} from "./helpers/uxReview";
++
++async function reachRecommendedPackage(page: import("@playwright/test").Page) {
++  await page.goto("/");
++  await page
++    .getByRole("button", { name: "Use default timing & budget" })
++    .click();
++  await expect(
++    page.getByRole("region", {
++      name: /Step 3 of 5: Choose a planning approach/,
++    }),
++  ).toBeVisible();
++}
++
++test.beforeEach(async ({ page }) => {
++  await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
++});
++
++test("exposes three Lagos survey signals without changing package evidence", async ({
++  page,
++}, testInfo) => {
++  await page.setViewportSize({ width: 1440, height: 1000 });
++  await reachRecommendedPackage(page);
++
++  const packageBefore = await page.getByTestId("package-strip").innerText();
++  const context = page.getByRole("region", { name: "Planning context" });
++  await expect(context).toBeVisible();
++  await expect(context.getByTestId("planning-context-signal")).toHaveCount(3);
++  await expect(context).toContainText("4.14 / 5");
++  await expect(context).toContainText("Large billboard overall affinity");
++  await expect(context).toContainText("35%");
++  await expect(context).toContainText("Major roads or highways");
++  await expect(context).toContainText("28%");
++  await expect(context).toContainText("Creative design");
++  await expect(context).toContainText("Lagos");
++  await expect(context).toContainText("n=204");
++  await expect(context).toContainText("20 May–3 Jun 2026");
++  await expect(context).toContainText("Context only");
++
++  const explore = context.getByRole("button", {
++    name: "Explore survey context",
++  });
++  await explore.click();
++  const drawer = page.getByRole("dialog", { name: "Consumer survey context" });
++  await expect(drawer).toBeVisible();
++  await expect(drawer).toContainText("177 applicable responses");
++  await expect(drawer).toContainText("202 applicable responses");
++  await expect(drawer).toContainText("unweighted descriptive aggregates");
++  await expect(drawer).toContainText(
++    "It is not observed movement, exposure geometry, OTS, reach, frequency, unique reach, target share, influence, Planning Fit, or calibration evidence.",
++  );
++  await drawer.getByText("Technical source details").click();
++  await expect(drawer).toContainText(
++    "c0644a87d54060b71963f7b9cedaf994efec3828a62400d5c4c92340ea1b64fa",
++  );
++  await expect(drawer).toContainText(
++    "cb9aefb8119ff0c1d6c7a7935b0b184600466d8a47bf73d2667c0bffb330bf8a",
++  );
++
++  await assertNoHorizontalOverflow(page, "planning-context drawer");
++  const accessibility = await new AxeBuilder({ page }).analyze();
++  expect(accessibility.violations).toEqual([]);
++  await captureUxReview(page, testInfo, "planning-context-desktop-drawer", {
++    fullPage: false,
++  });
++
++  await page.keyboard.press("Escape");
++  await expect(drawer).toHaveCount(0);
++  await expect(explore).toBeFocused();
++  expect(await page.getByTestId("package-strip").innerText()).toBe(
++    packageBefore,
++  );
++});
++
++test("keeps the compact context strip and drawer horizontally contained on mobile", async ({
++  page,
++}, testInfo) => {
++  await page.setViewportSize({ width: 390, height: 844 });
++  await reachRecommendedPackage(page);
++  await assertNoHorizontalOverflow(page, "mobile planning-context strip");
++
++  const context = page.getByRole("region", { name: "Planning context" });
++  await expect(context.getByTestId("planning-context-signal")).toHaveCount(3);
++  await context.getByRole("button", { name: "Explore survey context" }).click();
++  await expect(
++    page.getByRole("dialog", { name: "Consumer survey context" }),
++  ).toBeVisible();
++  await assertNoHorizontalOverflow(page, "mobile planning-context drawer");
++  await captureUxReview(page, testInfo, "planning-context-mobile-drawer", {
++    fullPage: false,
++  });
++});
+diff --git a/tests/unit/survey/publishedContext.test.ts b/tests/unit/survey/publishedContext.test.ts
+new file mode 100644
+index 0000000..36ecf52
+--- /dev/null
++++ b/tests/unit/survey/publishedContext.test.ts
+@@ -0,0 +1,91 @@
++import { describe, expect, it } from "vitest";
++import artifactJson from "@/survey/data/rbl-loma-2026-lagos-planning-context.json";
++import { surveyPlanningContextArtifactDigest } from "@/server/survey/publishedContextDigest";
++import type {
++  SurveyPlanningContextArtifact,
++  SurveyPlanningContextArtifactContent,
++} from "@/survey/publishedContext";
++
++const artifact = artifactJson as SurveyPlanningContextArtifact;
++
++function objectKeys(value: unknown): string[] {
++  if (Array.isArray(value)) return value.flatMap(objectKeys);
++  if (!value || typeof value !== "object") return [];
++  return Object.entries(value as Record<string, unknown>).flatMap(
++    ([key, child]) => [key, ...objectKeys(child)],
++  );
++}
++
++describe("published consumer survey planning context", () => {
++  it("binds the compact Lagos projection to the exact aggregate snapshot", () => {
++    const { artifactDigest, ...content } = artifact;
++    expect(
++      surveyPlanningContextArtifactDigest(
++        content satisfies SurveyPlanningContextArtifactContent,
++      ),
++    ).toBe(artifactDigest);
++    expect(artifact).toMatchObject({
++      schemaVersion: "consumer-survey-planning-context-v1",
++      sourceSnapshotDigest:
++        "c0644a87d54060b71963f7b9cedaf994efec3828a62400d5c4c92340ea1b64fa",
++      scope: { city: "Lagos" },
++      scopeLabel: "Lagos",
++      sampleSize: 204,
++      weightingState: "unweighted_descriptive",
++      decisionUse: "context_only",
++      claimBoundary: "self_reported_consumer_context_not_observed_delivery",
++    });
++  });
++
++  it("publishes exactly three independent signals with applicable denominators", () => {
++    expect(artifact.signals).toHaveLength(3);
++    expect(
++      artifact.signals.map(({ label, metricLabel, valueText }) => ({
++        label,
++        metricLabel,
++        valueText,
++      })),
++    ).toEqual([
++      {
++        label: "Format affinity",
++        metricLabel: "Large billboard overall affinity",
++        valueText: "4.14 / 5",
++      },
++      {
++        label: "Environment pattern",
++        metricLabel: "Major roads or highways",
++        valueText: "35%",
++      },
++      {
++        label: "Creative cue",
++        metricLabel: "Creative design",
++        valueText: "28%",
++      },
++    ]);
++    expect(
++      artifact.signals.map(({ evidenceSentence }) => evidenceSentence),
++    ).toEqual([
++      "Large billboard overall affinity scored 4.14 out of 5 across 177 applicable responses in Lagos.",
++      "Major roads or highways was reported by 35% of 202 applicable responses in Lagos.",
++      "Creative design was reported by 28% of 204 applicable responses in Lagos.",
