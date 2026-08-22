@@ -1,6 +1,6 @@
 name: Capture visual baselines
 
-# One-shot branch-only capture. The successful job removes this workflow.
+# One-shot branch-only capture. The workflow is removed after the artifact is reviewed.
 on:
   push:
     branches:
@@ -8,6 +8,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: visual-baseline-capture-agent-ci-baseline-repair-20260822
+  cancel-in-progress: true
 
 jobs:
   capture:
@@ -32,11 +36,10 @@ jobs:
           path: tests/e2e/visual-accessibility.spec.ts-snapshots/*.png
           if-no-files-found: error
           retention-days: 14
-      - name: Commit generated baselines and remove capture workflow
+      - name: Commit generated baselines
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/e2e/visual-accessibility.spec.ts-snapshots/*.png
-          git rm .github/workflows/capture-visual-baselines.yml
           git commit -m "chore(ui): capture reviewed visual baselines"
           git push origin HEAD:agent/ci-baseline-repair-20260822
