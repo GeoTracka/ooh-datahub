@@ -9,31 +9,6 @@ permissions:
   contents: read
 
 jobs:
-  export-survey-worktree:
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/authoritative-consumer-survey-20260822'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: corepack enable
-      - run: corepack prepare pnpm@10.32.1 --activate
-      - run: pnpm install --frozen-lockfile
-      - name: Package worktree and installed dependencies
-        run: |
-          tar --exclude=.git --exclude=node_modules -czf /tmp/survey-branch-worktree.tgz .
-          tar -czf /tmp/survey-node-modules.tgz node_modules
-      - uses: actions/upload-artifact@v4
-        with:
-          name: survey-integration-workspace-${{ github.run_id }}
-          path: |
-            /tmp/survey-branch-worktree.tgz
-            /tmp/survey-node-modules.tgz
-          if-no-files-found: error
-          retention-days: 2
-
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
