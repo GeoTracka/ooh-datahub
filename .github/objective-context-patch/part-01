@@ -1,0 +1,271 @@
+-            <dt>Use in planning</dt>
+-            <dd>Context only</dd>
+-          </div>
+         </dl>
+       </section>
+ 
+@@ -114,7 +125,7 @@ export function PlanningContextDrawer({
+           <h2 id="planning-context-findings-title">Independent findings</h2>
+         </div>
+         <div className="planning-context-finding-list">
+-          {artifact.signals.map((signal) => (
++          {profile.signals.map((signal) => (
+             <article key={signal.id}>
+               <header>
+                 <span>{signal.label}</span>
+@@ -150,6 +161,10 @@ export function PlanningContextDrawer({
+           <li>
+             The solution owner supplied and approved the final cleaned workbook.
+           </li>
++          <li>
++            The campaign objective selects which three facts are surfaced; it
++            does not change the package calculation or ranking.
++          </li>
+           <li>
+             Results are unweighted descriptive aggregates, not population
+             estimates.
+@@ -169,6 +184,12 @@ export function PlanningContextDrawer({
+                 <code>{artifact.sourceId}</code>
+               </dd>
+             </div>
++            <div>
++              <dt>Objective profile</dt>
++              <dd>
++                <code>{profile.objective}</code>
++              </dd>
++            </div>
+             <div>
+               <dt>Source snapshot digest</dt>
+               <dd>
+diff --git a/src/features/PlanningContextStrip.tsx b/src/features/PlanningContextStrip.tsx
+index 271436f..2d88b22 100644
+--- a/src/features/PlanningContextStrip.tsx
++++ b/src/features/PlanningContextStrip.tsx
+@@ -1,4 +1,9 @@
+-import type { SurveyPlanningContextArtifact } from "@/survey/publishedContext";
++import type {
++  SurveyPlanningContextArtifact,
++  SurveyPlanningContextProfile,
++} from "@/survey/publishedContext";
++import { selectSurveyPlanningContextProfile } from "@/survey/publishedContext";
++import type { SurveyPlanningObjective } from "@/survey/contracts";
+ import {
+   SURVEY_CONTEXT_BOUNDARY_COPY,
+   surveyPeriodLabel,
+@@ -6,20 +11,27 @@ import {
+ 
+ export function PlanningContextStrip({
+   artifact,
++  objective,
+   onExplore,
+ }: {
+   artifact: SurveyPlanningContextArtifact;
++  objective: SurveyPlanningObjective;
+   onExplore(): void;
+ }) {
++  const profile: SurveyPlanningContextProfile =
++    selectSurveyPlanningContextProfile(artifact, objective);
+   return (
+     <section
+       className="planning-context-strip"
+       aria-labelledby="planning-context-title"
+       aria-describedby="planning-context-boundary-note"
++      data-objective={objective}
+     >
+       <header className="planning-context-strip-header">
+         <div>
+-          <span className="planning-context-kicker">Consumer survey</span>
++          <span className="planning-context-kicker">
++            Consumer survey · {profile.label}
++          </span>
+           <h2 id="planning-context-title">Planning context</h2>
+         </div>
+         <button
+@@ -33,7 +45,7 @@ export function PlanningContextStrip({
+       </header>
+ 
+       <div className="planning-context-signal-grid">
+-        {artifact.signals.map((signal) => (
++        {profile.signals.map((signal) => (
+           <article key={signal.id} data-testid="planning-context-signal">
+             <span>{signal.label}</span>
+             <strong>{signal.valueText}</strong>
+@@ -47,6 +59,7 @@ export function PlanningContextStrip({
+         id="planning-context-boundary-note"
+       >
+         <span>{artifact.scopeLabel}</span>
++        <span>{profile.label} objective</span>
+         <span>n={artifact.sampleSize.toLocaleString("en-NG")}</span>
+         <span>{surveyPeriodLabel(artifact.sourcePeriod)}</span>
+         <strong>Context only</strong>
+diff --git a/src/survey/contextSignals.ts b/src/survey/contextSignals.ts
+index 11d7004..0cbc68f 100644
+--- a/src/survey/contextSignals.ts
++++ b/src/survey/contextSignals.ts
+@@ -5,6 +5,7 @@ import type {
+   SurveyContextQuery,
+   SurveyContextSignal,
+   SurveyFacetDimension,
++  SurveyPlanningObjective,
+ } from "@/survey/contracts";
+ 
+ function available(
+@@ -18,12 +19,12 @@ function available(
+   );
+ }
+ 
+-function metricWithPrefix(
++function rankedMetric(
+   facet: SurveyAggregateFacet,
+-  prefix: string,
++  predicate: (metric: SurveyAggregateMetric) => boolean,
+ ): SurveyAggregateMetric | undefined {
+   return facet.metrics
+-    .filter((metric) => metric.id.startsWith(prefix) && available(metric))
++    .filter((metric) => predicate(metric) && available(metric))
+     .sort(
+       (left, right) =>
+         (right.value ?? Number.NEGATIVE_INFINITY) -
+@@ -32,6 +33,21 @@ function metricWithPrefix(
+     )[0];
+ }
+ 
++function metricWithPrefix(
++  facet: SurveyAggregateFacet,
++  prefix: string,
++): SurveyAggregateMetric | undefined {
++  return rankedMetric(facet, (metric) => metric.id.startsWith(prefix));
++}
++
++function formatAttributeMetric(
++  facet: SurveyAggregateFacet,
++  attribute: "trust" | "effect",
++): SurveyAggregateMetric | undefined {
++  const matcher = new RegExp(`^format\\.[^.]+\\.${attribute}$`);
++  return rankedMetric(facet, (metric) => matcher.test(metric.id));
++}
++
+ function exactMetric(
+   facet: SurveyAggregateFacet,
+   id: string,
+@@ -184,3 +200,152 @@ export function selectSurveyContextSignals(input: {
+     .filter((candidate): candidate is SurveyContextSignal => candidate !== null)
+     .slice(0, maximumSignals);
+ }
++
++type ObjectiveSignalCandidate = {
++  idPrefix: string;
++  label: string;
++  select(facet: SurveyAggregateFacet): SurveyAggregateMetric | undefined;
++};
++
++type ObjectiveContextDefinition = {
++  label: string;
++  selectionRationale: string;
++  candidates: ObjectiveSignalCandidate[];
++};
++
++export type SelectedSurveyObjectiveContextProfile = {
++  objective: SurveyPlanningObjective;
++  label: string;
++  selectionRationale: string;
++  signals: SurveyContextSignal[];
++};
++
++const OBJECTIVE_CONTEXT_DEFINITIONS: Record<
++  SurveyPlanningObjective,
++  ObjectiveContextDefinition
++> = {
++  broad_reach: {
++    label: "Broad reach",
++    selectionRationale:
++      "Prioritizes recent recall, the most common visibility environment, and the format respondents found hardest to ignore.",
++    candidates: [
++      {
++        idPrefix: "survey-recall",
++        label: "Recent recall",
++        select: (facet) => exactMetric(facet, "recall.four_week"),
++      },
++      {
++        idPrefix: "survey-environment",
++        label: "Visibility environment",
++        select: (facet) => metricWithPrefix(facet, "environment."),
++      },
++      {
++        idPrefix: "survey-hardest-format",
++        label: "Hardest-to-ignore format",
++        select: (facet) => metricWithPrefix(facet, "hardest_format."),
++      },
++      {
++        idPrefix: "survey-format",
++        label: "Format affinity",
++        select: (facet) => metricWithPrefix(facet, "format.overall."),
++      },
++    ],
++  },
++  influential_core: {
++    label: "Priority audience",
++    selectionRationale:
++      "Prioritizes perceived trust, personal relevance, and the strongest reported creative memorability cue.",
++    candidates: [
++      {
++        idPrefix: "survey-trust",
++        label: "Perceived trust",
++        select: (facet) => formatAttributeMetric(facet, "trust"),
++      },
++      {
++        idPrefix: "survey-relevance",
++        label: "Personal relevance",
++        select: (facet) =>
++          exactMetric(facet, "attention_driver.relevant_to_my_life"),
++      },
++      {
++        idPrefix: "survey-creative",
++        label: "Creative cue",
++        select: (facet) => metricWithPrefix(facet, "memorability."),
++      },
++      {
++        idPrefix: "survey-recall",
++        label: "Recent recall",
++        select: (facet) => exactMetric(facet, "recall.four_week"),
++      },
++    ],
++  },
++  near_conversion: {
++    label: "Likely customers",
++    selectionRationale:
++      "Prioritizes perceived format effect and self-reported actions taken after noticing outdoor advertising.",
++    candidates: [
++      {
++        idPrefix: "survey-effect",
++        label: "Perceived effect",
++        select: (facet) => formatAttributeMetric(facet, "effect"),
++      },
++      {
++        idPrefix: "survey-action",
++        label: "Reported store visit",
++        select: (facet) =>
++          exactMetric(facet, "action.visited_store_or_location"),
++      },
++      {
++        idPrefix: "survey-action",
++        label: "Reported online search",
++        select: (facet) => exactMetric(facet, "action.searched_online"),
++      },
++      {
++        idPrefix: "survey-action",
++        label: "Reported purchase",
++        select: (facet) =>
++          exactMetric(facet, "action.purchased_product_or_service"),
++      },
++      {
++        idPrefix: "survey-recall",
++        label: "Recent recall",
++        select: (facet) => exactMetric(facet, "recall.four_week"),
++      },
++    ],
++  },
++};
++
++export function selectSurveyObjectiveContextProfile(input: {
++  snapshot: SurveyAggregateSnapshot;
