@@ -5,6 +5,7 @@ import { surveySegmentCatalogueDigest } from "@/server/survey/segmentCatalogueDi
 import {
   lagosPlanningContextArtifacts,
   resolveLagosPlanningContext,
+  surveyAudienceLensBasisKey,
 } from "@/survey/lagosPlanningContext";
 import type {
   SurveySegmentCatalogue,
@@ -161,6 +162,112 @@ describe("transparent survey segment resolution", () => {
       unavailablePredicateLabels: [],
     });
     expect(context.artifact.sampleSize).toBe(204);
+  });
+
+  it("supports explicit confirmation, manual segment override, and all-city override", () => {
+    const automatic = resolveLagosPlanningContext({
+      objective: "broad_reach",
+      brief: brief(
+        "Students, young workers, and convenience shoppers",
+        "Affordable on-the-go refreshment launch",
+      ),
+    });
+    expect(automatic.selection).toMatchObject({
+      mode: "automatic",
+      manualAction: null,
+      selectedProfileId: "ageBand:18-25",
+      selectedLabel: "Aged 18–25",
+      selectedSampleSize: 43,
+    });
+    expect(automatic.audienceOptions).toHaveLength(13);
+    expect(
+      automatic.audienceOptions.every(({ sampleSize }) => sampleSize >= 30),
+    ).toBe(true);
+
+    const confirmed = resolveLagosPlanningContext({
+      objective: "broad_reach",
+      brief: brief(
+        "Students, young workers, and convenience shoppers",
+        "Affordable on-the-go refreshment launch",
+      ),
+      choice: { mode: "manual", profileId: "ageBand:18-25" },
+    });
+    expect(confirmed.selection).toMatchObject({
+      mode: "manual",
+      manualAction: "confirmed_automatic",
+      selectedLabel: "Aged 18–25",
+      selectedSampleSize: 43,
+    });
+    expect(confirmed.artifact.artifactDigest).toBe(
+      automatic.artifact.artifactDigest,
+    );
+
+    const override = resolveLagosPlanningContext({
+      objective: "broad_reach",
+      brief: brief(
+        "Students, young workers, and convenience shoppers",
+        "Affordable on-the-go refreshment launch",
+      ),
+      choice: { mode: "manual", profileId: "occupation:business-trader" },
+    });
+    expect(override.resolution.selectedProfileId).toBe("ageBand:18-25");
+    expect(override.selection).toMatchObject({
+      mode: "manual",
+      manualAction: "override",
+      selectedProfileId: "occupation:business-trader",
+      selectedLabel: "Business owners and traders",
+      selectedPredicateLabel: "Occupation = Business/trader",
+      selectedSampleSize: 77,
+    });
+    expect(override.artifact.signals.map(({ valueText }) => valueText)).toEqual(
+      ["4.09 / 5", "39%", "30%"],
+    );
+
+    const allLagos = resolveLagosPlanningContext({
+      objective: "broad_reach",
+      brief: brief("SME owners and merchants"),
+      choice: { mode: "manual", profileId: null },
+    });
+    expect(allLagos.selection).toMatchObject({
+      mode: "manual",
+      manualAction: "override",
+      selectedProfileId: null,
+      selectedLabel: "All Lagos respondents",
+      selectedSampleSize: 204,
+    });
+    expect(allLagos.artifact).toBe(lagosPlanningContextArtifacts.broad_reach);
+  });
+
+  it("rejects stale manual profile ids and keys overrides to audience-defining brief fields", () => {
+    expect(() =>
+      resolveLagosPlanningContext({
+        objective: "broad_reach",
+        brief: brief("Students"),
+        choice: { mode: "manual", profileId: "occupation:not-published" },
+      }),
+    ).toThrow("SURVEY_AUDIENCE_LENS_PROFILE_NOT_FOUND");
+
+    const base = brief("Students", "Affordable refreshment");
+    const baseKey = surveyAudienceLensBasisKey(base);
+    expect(
+      surveyAudienceLensBasisKey({ ...base, targetAudience: "BRT commuters" }),
+    ).not.toBe(baseKey);
+    expect(
+      surveyAudienceLensBasisKey({
+        ...base,
+        productDescription: "Premium drink",
+      }),
+    ).not.toBe(baseKey);
+    expect(
+      surveyAudienceLensBasisKey({ ...base, sector: "bank_fintech" }),
+    ).not.toBe(baseKey);
+    expect(
+      surveyAudienceLensBasisKey({
+        ...base,
+        targetAudience: "  STUDENTS  ",
+        productDescription: "Affordable   refreshment",
+      }),
+    ).toBe(baseKey);
   });
 
   it("keeps segment catalogue contracts free of delivery and scoring fields", () => {

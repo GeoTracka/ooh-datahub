@@ -204,6 +204,16 @@ function normalize(value: string): string {
     .trim();
 }
 
+export function surveyAudienceLensBasisKey(
+  brief: Pick<Brief, "targetAudience" | "productDescription" | "sector">,
+): string {
+  return [
+    brief.sector,
+    normalize(brief.targetAudience),
+    normalize(brief.productDescription),
+  ].join("\u0000");
+}
+
 function matchedTerms(text: string, terms: readonly string[]): string[] {
   const searchable = ` ${text} `;
   return terms.filter((term) => searchable.includes(` ${normalize(term)} `));

@@ -4,14 +4,20 @@ import {
   surveyPeriodLabel,
 } from "@/survey/display";
 
-function resolutionStatus(
-  mode: ResolvedSurveyPlanningContext["resolution"]["mode"],
-): string {
-  if (mode === "matched") return "Matched from campaign brief";
-  if (mode === "matched_after_suppression") {
+function resolutionStatus(context: ResolvedSurveyPlanningContext): string {
+  if (context.selection.mode === "manual") {
+    return context.selection.manualAction === "confirmed_automatic"
+      ? "User confirmed"
+      : "Manual override";
+  }
+  if (context.resolution.mode === "matched")
+    return "Matched from campaign brief";
+  if (context.resolution.mode === "matched_after_suppression") {
     return "Next available matched segment";
   }
-  if (mode === "fallback_suppressed") return "Broader sample used";
+  if (context.resolution.mode === "fallback_suppressed") {
+    return "Broader sample used";
+  }
   return "City sample used";
 }
 
@@ -22,12 +28,13 @@ export function PlanningContextStrip({
   context: ResolvedSurveyPlanningContext;
   onExplore(): void;
 }) {
-  const { artifact, resolution } = context;
+  const { artifact, resolution, selection } = context;
   return (
     <section
       className="planning-context-strip"
       aria-labelledby="planning-context-title"
       aria-describedby="planning-context-boundary-note"
+      data-audience-lens-mode={selection.mode}
     >
       <header className="planning-context-strip-header">
         <div>
@@ -51,15 +58,20 @@ export function PlanningContextStrip({
       >
         <div>
           <span>Audience lens</span>
-          <strong>{resolution.selectedLabel}</strong>
+          <strong>{selection.selectedLabel}</strong>
         </div>
-        <small>{resolutionStatus(resolution.mode)}</small>
-        {resolution.matchedTerms.length > 0 && (
+        <small>{resolutionStatus(context)}</small>
+        {selection.mode === "manual" ? (
+          <p>
+            {selection.explanation} Automatic suggestion:{" "}
+            {resolution.selectedLabel}.
+          </p>
+        ) : resolution.matchedTerms.length > 0 ? (
           <p>
             Matched brief terms:{" "}
             {resolution.matchedTerms.map((term) => `“${term}”`).join(", ")}.
           </p>
-        )}
+        ) : null}
       </div>
 
       <div className="planning-context-signal-grid">
@@ -81,7 +93,7 @@ export function PlanningContextStrip({
         <span>{surveyPeriodLabel(artifact.sourcePeriod)}</span>
         <strong>Context only</strong>
         <span className="sr-only">
-          {resolution.explanation} {SURVEY_CONTEXT_BOUNDARY_COPY}
+          {selection.explanation} {SURVEY_CONTEXT_BOUNDARY_COPY}
         </span>
       </footer>
     </section>

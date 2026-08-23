@@ -117,6 +117,77 @@ test("exposes a transparent student-segment lens without changing package eviden
   );
 });
 
+test("allows a reviewed manual audience lens, restores automatic mode, and resets a stale override after an audience change", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await reachRecommendedPackage(page);
+
+  const packageBefore = await page.getByTestId("package-strip").innerText();
+  const optionsBefore = await page.locator(".package-option-grid").innerText();
+  const context = page.getByRole("region", { name: "Planning context" });
+  await context.getByRole("button", { name: "Explore survey context" }).click();
+
+  const drawer = page.getByRole("dialog", { name: "Consumer survey context" });
+  const lensSelect = drawer.getByLabel("Audience lens");
+  await expect(lensSelect).toHaveValue("__automatic__");
+  await lensSelect.selectOption("occupation:business-trader");
+  await drawer.getByRole("button", { name: "Apply lens" }).click();
+
+  await expect(drawer).toContainText("Manual override");
+  await expect(drawer).toContainText("Business owners and traders");
+  await expect(drawer).toContainText("77 respondents");
+  await expect(context).toHaveAttribute("data-audience-lens-mode", "manual");
+  await expect(context).toContainText("Business owners and traders");
+  await expect(context).toContainText("Manual override");
+  await expect(context).toContainText("n=77");
+  await expect(context).toContainText("4.09 / 5");
+  await expect(context).toContainText("39%");
+  await expect(context).toContainText("30%");
+  expect(await page.getByTestId("package-strip").innerText()).toBe(
+    packageBefore,
+  );
+  expect(await page.locator(".package-option-grid").innerText()).toBe(
+    optionsBefore,
+  );
+
+  await drawer.getByRole("button", { name: "Use automatic match" }).click();
+  await expect(drawer).toContainText("Automatic from brief");
+  await expect(context).toHaveAttribute("data-audience-lens-mode", "automatic");
+  await expect(context).toContainText("Aged 18–25");
+  await expect(context).toContainText("n=43");
+
+  await lensSelect.selectOption("transportMode:bus-or-brt");
+  await drawer.getByRole("button", { name: "Apply lens" }).click();
+  await expect(context).toContainText("Bus or BRT users");
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByText("Edit campaign details").click();
+  await page.getByLabel("Target audience").fill("SME owners and merchants");
+  await page.getByLabel("Product information").fill("Audience basis changed");
+  await page
+    .getByRole("button", { name: "Use default timing & budget" })
+    .click();
+
+  await expect(
+    page.getByRole("region", {
+      name: /Step 3 of 5: Choose a planning approach/,
+    }),
+  ).toBeVisible();
+  const refreshedContext = page.getByRole("region", {
+    name: "Planning context",
+  });
+  await expect(refreshedContext).toHaveAttribute(
+    "data-audience-lens-mode",
+    "automatic",
+  );
+  await expect(refreshedContext).toContainText("Business owners and traders");
+  await expect(refreshedContext).toContainText("Matched from campaign brief");
+  await expect(refreshedContext).toContainText("n=77");
+});
+
 test("selects independent segment and context families for each campaign preset", async ({
   page,
 }) => {

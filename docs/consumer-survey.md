@@ -182,3 +182,33 @@ Examples:
 
 This resolver selects survey context only. The existing planner audience resolver and
 all package, delivery, scoring and evidence contracts remain unchanged.
+
+## User-reviewed audience lens
+
+The automatic brief-to-segment result is a recommendation for the survey context
+surface, not an irrevocable audience assignment. Step 3 lets the planner explicitly
+review it without changing the campaign's measurement model.
+
+The review control offers three choices:
+
+1. keep the deterministic automatic suggestion;
+2. choose any published Lagos segment in the n≥30 catalogue;
+3. choose the all-Lagos sample explicitly.
+
+An explicit confirmation or override is recorded in the local planning-context state
+as `manual`, while an untouched recommendation remains `automatic`. The drawer shows
+the automatic suggestion and the active lens side by side, including their sample
+sizes and predicates. A manual choice changes only the survey artifact used by the
+context strip and drawer.
+
+Manual overrides are keyed to the normalized audience-defining brief fields:
+`sector`, `targetAudience`, and `productDescription`. If any of those fields changes,
+a stale manual override is ignored and the new brief returns to automatic resolution.
+Changing timing, budget, flight dates, or objective does not invalidate an audience
+lens; objective changes simply select the corresponding objective artifact for the
+same published segment.
+
+The review control has no write path into planner targets, target shares, package
+ordering, measurement, Planning Fit, evidence grade, RFQ data, or calibration.
+Regression tests require canonical planner output to remain byte-identical for
+automatic, confirmed-automatic, manual-segment, and manual all-Lagos choices.

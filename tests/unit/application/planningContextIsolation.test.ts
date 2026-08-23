@@ -7,7 +7,10 @@ import {
   SURVEY_PLANNING_OBJECTIVES,
   type SurveyPlanningObjective,
 } from "@/survey/contextSignals";
-import { resolveLagosPlanningContext } from "@/survey/lagosPlanningContext";
+import {
+  resolveLagosPlanningContext,
+  type SurveyAudienceLensChoice,
+} from "@/survey/lagosPlanningContext";
 
 const baseBrief: Brief = {
   productName: "Spark Refresh",
@@ -26,31 +29,53 @@ function briefFor(objective: SurveyPlanningObjective): Brief {
   return { ...baseBrief, objective };
 }
 
+const choices: Array<[string, SurveyAudienceLensChoice]> = [
+  ["automatic", { mode: "automatic" }],
+  ["confirmed automatic", { mode: "manual", profileId: "ageBand:18-25" }],
+  [
+    "manual published segment",
+    { mode: "manual", profileId: "occupation:business-trader" },
+  ],
+  ["manual all-Lagos sample", { mode: "manual", profileId: null }],
+];
+
 describe("consumer survey planning-context isolation", () => {
   it.each(SURVEY_PLANNING_OBJECTIVES)(
-    "resolves the %s audience context without mutating planner output or ordering",
+    "keeps %s planner output byte-identical for every audience-lens choice",
     (objective) => {
       const brief = briefFor(objective);
+      const briefIdentity = canonicalJson(brief);
       const before = buildPlan(bundle, brief);
       const beforeIdentity = canonicalJson(before);
       const beforeOrder = before.packageOptions.map(
         ({ candidate }) => candidate.id,
       );
 
-      const context = resolveLagosPlanningContext({ objective, brief });
+      for (const [label, choice] of choices) {
+        const context = resolveLagosPlanningContext({
+          objective,
+          brief,
+          choice,
+        });
 
-      expect(context.artifact.objective).toBe(objective);
-      expect(context.artifact.signals).toHaveLength(3);
-      expect(context.resolution.selectedLabel).toBe("Aged 18–25");
-      expect(canonicalJson(before)).toBe(beforeIdentity);
+        expect(context.artifact.objective, label).toBe(objective);
+        expect(context.artifact.signals, label).toHaveLength(3);
+        expect(context.artifact.decisionUse, label).toBe("context_only");
+        expect(context.artifact.claimBoundary, label).toBe(
+          "self_reported_consumer_context_not_observed_delivery",
+        );
+        expect(canonicalJson(brief), label).toBe(briefIdentity);
+        expect(canonicalJson(before), label).toBe(beforeIdentity);
 
-      const after = buildPlan(bundle, brief);
-      expect(canonicalJson(after)).toBe(beforeIdentity);
-      expect(after.packageOptions.map(({ candidate }) => candidate.id)).toEqual(
-        beforeOrder,
-      );
-      expect(after.recommended.id).toBe(before.recommended.id);
-      expect(after.measurement).toEqual(before.measurement);
+        const after = buildPlan(bundle, brief);
+        expect(canonicalJson(after), label).toBe(beforeIdentity);
+        expect(
+          after.packageOptions.map(({ candidate }) => candidate.id),
+          label,
+        ).toEqual(beforeOrder);
+        expect(after.recommended.id, label).toBe(before.recommended.id);
+        expect(after.measurement, label).toEqual(before.measurement);
+      }
     },
     30_000,
   );

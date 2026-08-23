@@ -44,7 +44,12 @@ import { UploadDialog } from "@/features/UploadDialog";
 import { UploadedContextPanel } from "@/features/UploadedContextPanel";
 import { projectMapLibreScene } from "@/maps/projectScene";
 import { PUBLIC_COPY, confidenceLabel } from "@/content/plainLanguage";
-import { resolveLagosPlanningContext } from "@/survey/lagosPlanningContext";
+import {
+  AUTOMATIC_SURVEY_AUDIENCE_LENS,
+  resolveLagosPlanningContext,
+  surveyAudienceLensBasisKey,
+  type SurveyAudienceLensChoice,
+} from "@/survey/lagosPlanningContext";
 
 const initialBrief: Brief = {
   productName: PUBLIC_COPY.campaign.defaultProductName,
@@ -184,13 +189,27 @@ export function PlannerPage() {
   } | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [planningContextOpen, setPlanningContextOpen] = useState(false);
+  const [audienceLensReview, setAudienceLensReview] = useState<{
+    basisKey: string;
+    choice: SurveyAudienceLensChoice;
+  }>({
+    basisKey: surveyAudienceLensBasisKey(initialBrief),
+    choice: AUTOMATIC_SURVEY_AUDIENCE_LENS,
+  });
   const [planning, setPlanning] = useState(false);
   const planningRef = useRef(false);
 
   const visible = selectVisiblePlan(state);
+  const contextBrief = visible?.brief ?? brief;
+  const audienceLensBasis = surveyAudienceLensBasisKey(contextBrief);
+  const audienceLensChoice =
+    audienceLensReview.basisKey === audienceLensBasis
+      ? audienceLensReview.choice
+      : AUTOMATIC_SURVEY_AUDIENCE_LENS;
   const planningContext = resolveLagosPlanningContext({
-    objective: visible?.brief.objective ?? brief.objective,
-    brief: visible?.brief ?? brief,
+    objective: contextBrief.objective,
+    brief: contextBrief,
+    choice: audienceLensChoice,
   });
   const dirty = selectIsDirty(state);
   const cards = visible ? selectZoneCards(bundle, state) : [];
@@ -215,6 +234,10 @@ export function PlannerPage() {
     () => projectMapLibreScene(selectLensFeatures(bundle, state, resolvedLens)),
     [state, resolvedLens],
   );
+
+  function selectAudienceLens(choice: SurveyAudienceLensChoice) {
+    setAudienceLensReview({ basisKey: audienceLensBasis, choice });
+  }
 
   function changeBrief(change: Partial<Brief>) {
     setBrief((current) => ({ ...current, ...change }));
@@ -820,6 +843,7 @@ export function PlannerPage() {
       {planningContextOpen && (
         <PlanningContextDrawer
           context={planningContext}
+          onAudienceLensChange={selectAudienceLens}
           onClose={() => setPlanningContextOpen(false)}
         />
       )}
