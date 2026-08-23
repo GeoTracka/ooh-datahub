@@ -44,6 +44,7 @@ describe("consumer survey planning-context isolation", () => {
     "keeps %s planner output byte-identical for every audience-lens choice",
     (objective) => {
       const brief = briefFor(objective);
+      const briefIdentity = canonicalJson(brief);
       const before = buildPlan(bundle, brief);
       const beforeIdentity = canonicalJson(before);
       const beforeOrder = before.packageOptions.map(
@@ -59,6 +60,11 @@ describe("consumer survey planning-context isolation", () => {
 
         expect(context.artifact.objective, label).toBe(objective);
         expect(context.artifact.signals, label).toHaveLength(3);
+        expect(context.artifact.decisionUse, label).toBe("context_only");
+        expect(context.artifact.claimBoundary, label).toBe(
+          "self_reported_consumer_context_not_observed_delivery",
+        );
+        expect(canonicalJson(brief), label).toBe(briefIdentity);
         expect(canonicalJson(before), label).toBe(beforeIdentity);
 
         const after = buildPlan(bundle, brief);
