@@ -58,5 +58,10 @@ export function createEvidenceToolRegistry(tools: EvidenceTools) {
   return {
     definitions: entries.map((value) => value.definition),
     byName: new Map(entries.map((value) => [value.definition.name, value])),
+    async execute(name: string, argumentsJson: string) {
+      const selected = entries.find((value) => value.definition.name === name);
+      if (!selected) throw new Error(`UNKNOWN_TOOL:${name}`);
+      return selected.execute(argumentsJson);
+    },
   };
 }

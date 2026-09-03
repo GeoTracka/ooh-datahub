@@ -3,6 +3,7 @@ import {
   type ArtifactPayload,
   type ArtifactType,
 } from "@/server/artifacts/contracts";
+import { randomUUID } from "node:crypto";
 import { binaryToUuid, uuidToBinary } from "@/server/auth/ids";
 import { evidenceDatabase } from "@/server/db/client";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
@@ -92,6 +93,34 @@ export function createMariaDbArtifactStore(): ArtifactStore {
             input.reason,
           ],
         );
+        if (input.payload.type === "evidence") {
+          for (const factId of new Set(input.payload.factIds)) {
+            await connection.execute(
+              `INSERT INTO artifact_citations
+                 (id, artifact_id, revision_number, fact_id, excerpt_id)
+               VALUES (?, ?, ?, ?, NULL)`,
+              [
+                uuidToBinary(randomUUID()),
+                uuidToBinary(input.artifactId),
+                revision,
+                factId,
+              ],
+            );
+          }
+          for (const excerptId of new Set(input.payload.excerptIds)) {
+            await connection.execute(
+              `INSERT INTO artifact_citations
+                 (id, artifact_id, revision_number, fact_id, excerpt_id)
+               VALUES (?, ?, ?, NULL, ?)`,
+              [
+                uuidToBinary(randomUUID()),
+                uuidToBinary(input.artifactId),
+                revision,
+                excerptId,
+              ],
+            );
+          }
+        }
         const [update] = await connection.execute<ResultSetHeader>(
           `UPDATE campaign_artifacts
            SET current_revision_number = ?, updated_at = CURRENT_TIMESTAMP

@@ -67,3 +67,18 @@ export const ChatServerEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export type ChatServerEvent = z.infer<typeof ChatServerEventSchema>;
+
+export const CreateThreadCommandSchema = z
+  .object({ title: z.string().trim().min(1).max(80).default("New campaign") })
+  .strict();
+
+export const RenameThreadCommandSchema = z
+  .object({ title: z.string().trim().min(1).max(80) })
+  .strict();
+
+export const RespondCommandSchema = z
+  .object({
+    threadId: z.string().uuid(),
+    message: z.string().trim().min(1).max(20_000),
+  })
+  .strict();
