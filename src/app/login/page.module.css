@@ -1,0 +1,31 @@
+.page {
+  position: relative;
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  overflow: hidden;
+  padding: 32px 20px 76px;
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 84%), transparent 62%),
+    #f2f1ed;
+}
+
+.glow {
+  position: absolute;
+  inset: auto auto -220px -180px;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(20 92 84 / 13%), transparent 68%);
+  pointer-events: none;
+}
+
+.note {
+  position: absolute;
+  bottom: 24px;
+  margin: 0;
+  color: #687184;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
