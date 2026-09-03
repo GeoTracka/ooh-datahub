@@ -28,6 +28,53 @@ export const PlanChangeSchema = z.discriminatedUnion("kind", [
 
 export type PlanChange = z.infer<typeof PlanChangeSchema>;
 
+export const PlanChangeToolSchema = z
+  .object({
+    kind: z.enum([
+      "budget",
+      "dates",
+      "daypart",
+      "selected_sites",
+      "replace_zone",
+      "selected_option",
+    ]),
+    budgetNgn: z.number().int().positive().max(10_000_000_000).nullable(),
+    flightStart: z.iso.date().nullable(),
+    flightEnd: z.iso.date().nullable(),
+    daypart: DaypartSchema.nullable(),
+    siteIds: z.array(z.string().min(1)).min(1).max(50).nullable(),
+    removeZoneId: z.string().min(1).nullable(),
+    addZoneId: z.string().min(1).nullable(),
+    optionId: z.string().min(1).nullable(),
+  })
+  .strict();
+
+export function parsePlanChangeToolInput(input: unknown): PlanChange {
+  const change = PlanChangeToolSchema.parse(input);
+  switch (change.kind) {
+    case "budget":
+      return PlanChangeSchema.parse({ kind: change.kind, budgetNgn: change.budgetNgn });
+    case "dates":
+      return PlanChangeSchema.parse({
+        kind: change.kind,
+        flightStart: change.flightStart,
+        flightEnd: change.flightEnd,
+      });
+    case "daypart":
+      return PlanChangeSchema.parse({ kind: change.kind, daypart: change.daypart });
+    case "selected_sites":
+      return PlanChangeSchema.parse({ kind: change.kind, siteIds: change.siteIds });
+    case "replace_zone":
+      return PlanChangeSchema.parse({
+        kind: change.kind,
+        removeZoneId: change.removeZoneId,
+        addZoneId: change.addZoneId,
+      });
+    case "selected_option":
+      return PlanChangeSchema.parse({ kind: change.kind, optionId: change.optionId });
+  }
+}
+
 export async function buildCampaignPlan(input: unknown) {
   const brief = BriefSchema.parse(input);
   return presentCampaignPlan(buildPlan(frozenLagosBundle, brief));

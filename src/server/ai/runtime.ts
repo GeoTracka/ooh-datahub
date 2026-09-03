@@ -12,11 +12,12 @@ import { BriefSchema } from "@/server/artifacts/contracts";
 import { runPlannerResponse } from "@/server/ai/orchestrator";
 import { createOpenAiPlannerProvider } from "@/server/ai/openaiClient";
 import {
-  PlanChangeSchema,
+  PlanChangeToolSchema,
   adjustCampaignPlan,
   buildCampaignPlan,
   createVisualPlannerHandoff,
   getPlanMap,
+  parsePlanChangeToolInput,
 } from "@/server/ai/tools/plannerTools";
 import { createEvidenceTools } from "@/server/ai/tools/evidenceTools";
 import { createEvidenceToolRegistry } from "@/server/ai/tools/registry";
@@ -28,7 +29,7 @@ import type { CurrentUser } from "@/server/auth/currentUser";
 const ArtifactReferenceSchema = z
   .object({ artifactId: z.string().uuid(), expectedRevision: z.number().int().positive() })
   .strict();
-const AdjustPlanArgsSchema = ArtifactReferenceSchema.extend({ change: PlanChangeSchema });
+const AdjustPlanArgsSchema = ArtifactReferenceSchema.extend({ change: PlanChangeToolSchema });
 const GetPlanMapArgsSchema = ArtifactReferenceSchema;
 const SavePlanArgsSchema = ArtifactReferenceSchema.extend({ save: z.boolean() });
 const OpenPlannerArgsSchema = ArtifactReferenceSchema;
@@ -52,7 +53,7 @@ function runtimeConfig() {
   };
 }
 
-function changeReason(change: z.infer<typeof PlanChangeSchema>) {
+function changeReason(change: ReturnType<typeof parsePlanChangeToolInput>) {
   return {
     budget: "Update campaign budget",
     dates: "Update campaign dates",
@@ -143,7 +144,11 @@ export function createRuntimeToolRegistry(user: CurrentUser, threadId: string) {
         };
       }
       if (name === "adjust_campaign_plan") {
-        const args = AdjustPlanArgsSchema.parse(parsed);
+        const toolArgs = AdjustPlanArgsSchema.parse(parsed);
+        const args = {
+          ...toolArgs,
+          change: parsePlanChangeToolInput(toolArgs.change),
+        };
         const current = await getCurrentArtifact(args.artifactId, user.id);
         if (current.revision !== args.expectedRevision) {
           throw new Error(`STALE_ARTIFACT_REVISION:${current.revision}:${args.expectedRevision}`);
