@@ -126,9 +126,9 @@ CREATE TABLE artifact_citations (
     REFERENCES campaign_artifact_revisions(artifact_id, revision_number)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT artifact_citations_fact_fk FOREIGN KEY (fact_id) REFERENCES evidence_facts(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE,
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT artifact_citations_excerpt_fk FOREIGN KEY (excerpt_id) REFERENCES evidence_excerpts(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE,
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT artifact_citations_one_source CHECK (
     (fact_id IS NOT NULL AND excerpt_id IS NULL) OR
     (fact_id IS NULL AND excerpt_id IS NOT NULL)
