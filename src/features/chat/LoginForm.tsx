@@ -35,7 +35,7 @@ export function LoginForm() {
         );
         return;
       }
-      router.replace("/ai");
+      router.replace("/chat");
     } catch {
       setError("We couldn’t reach the service. Check your connection and try again.");
     } finally {
