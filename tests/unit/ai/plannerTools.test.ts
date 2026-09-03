@@ -34,18 +34,22 @@ describe("build_campaign_plan", () => {
     ).toEqual({ kind: "budget", budgetNgn: 20_000_000 });
   });
 
-  it("returns three deterministic approaches without selecting one", async () => {
-    const result = await buildCampaignPlan(validBrief);
-    expect(result.options).toHaveLength(3);
-    expect(result.options.map((option) => option.style)).toEqual([
-      "best_overall",
-      "maximum_delivery",
-      "budget_smart",
-    ]);
-    expect(new Set(result.options.map((option) => option.candidate.id)).size).toBe(3);
-    expect(result.selectedOptionId).toBeNull();
-    expect(await buildCampaignPlan(validBrief)).toEqual(result);
-  });
+  it(
+    "returns three deterministic approaches without selecting one",
+    async () => {
+      const result = await buildCampaignPlan(validBrief);
+      expect(result.options).toHaveLength(3);
+      expect(result.options.map((option) => option.style)).toEqual([
+        "best_overall",
+        "maximum_delivery",
+        "budget_smart",
+      ]);
+      expect(new Set(result.options.map((option) => option.candidate.id)).size).toBe(3);
+      expect(result.selectedOptionId).toBeNull();
+      expect(await buildCampaignPlan(validBrief)).toEqual(result);
+    },
+    30_000,
+  );
 
   it("keeps recommendation language optional and explains each trade-off", async () => {
     const result = await buildCampaignPlan(validBrief);

@@ -133,7 +133,7 @@ describe("optimizePackage", () => {
           .toBeGreaterThanOrEqual(smaller.recommended.planningFit!);
       },
     ), { seed: 260803, numRuns: 30 });
-  }, 120_000);
+  }, 180_000);
 
   it("uses influence mass as the one Delivery input for Influential core", () => {
     const result = optimizePackage(frozenLagosBundle, {

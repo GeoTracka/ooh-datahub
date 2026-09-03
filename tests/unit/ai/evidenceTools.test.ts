@@ -76,6 +76,22 @@ describe("AI evidence tools", () => {
     ).rejects.toThrow();
   });
 
+  it("keeps the full city profile inside the evidence query boundary", async () => {
+    const metricCounts: number[] = [];
+    const tools = createEvidenceTools({
+      async search(query) {
+        metricCounts.push(query.metricIds.length);
+        if (query.metricIds.length > 25) throw new Error("EVIDENCE_QUERY_TOO_BROAD");
+        return [];
+      },
+    });
+
+    await expect(tools.getCityProfile({ cityId: "lagos" })).resolves.toMatchObject({
+      summary: "Study profile for lagos.",
+    });
+    expect(metricCounts).toEqual([25, 6]);
+  });
+
   it("publishes strict closed function schemas and revalidates arguments", async () => {
     const registry = createEvidenceToolRegistry(
       createEvidenceTools(fakeEvidenceRepository()),

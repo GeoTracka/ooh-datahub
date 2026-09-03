@@ -173,7 +173,14 @@ export function createEvidenceTools(repository: EvidenceToolRepository) {
     },
     async getCityProfile(input: z.input<typeof GetCityProfileArgsSchema>) {
       const args = GetCityProfileArgsSchema.parse(input);
-      const answers = await search(repository, PROFILE_METRICS, [args.cityId]);
+      const answers = (
+        await Promise.all([
+          search(repository, PROFILE_METRICS.slice(0, 25), [args.cityId]),
+          search(repository, PROFILE_METRICS.slice(25), [args.cityId]),
+        ])
+      )
+        .flat()
+        .sort((left, right) => left.metricId.localeCompare(right.metricId));
       return result(`Study profile for ${args.cityId.replaceAll("_", " ")}.`, answers);
     },
     async compareCities(input: z.input<typeof CompareCitiesArgsSchema>) {
