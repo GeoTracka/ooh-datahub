@@ -118,7 +118,7 @@ test.describe("drawer ergonomics", () => {
     await page.getByLabel("Inventory spreadsheet").setInputFiles(
       path.resolve("tests/fixtures/customer-owned-inventory.csv"),
     );
-    await expect(page.getByText("1 accepted · 0 quarantined · 0 rejected")).toBeVisible();
+    await expect(page.getByText("1 ready · 0 need review · 0 cannot be used")).toBeVisible();
 
     const rowCheckbox = dialog.getByRole("checkbox").first();
     await expectTarget(rowCheckbox, "Upload row checkbox", 24);
