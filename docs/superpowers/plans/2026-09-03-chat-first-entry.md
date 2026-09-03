@@ -16,8 +16,8 @@ Use a chat-first route with progressive disclosure of results. A chooser landing
 - [x] Move `src/app/(planner)/page.tsx` to `src/app/(planner)/planner/page.tsx`, add root redirect, and render guest chat shell from `src/app/chat/page.tsx` only on an authentication error.
 - [x] Update `ChatWorkspaceShell.tsx`: optional user, auth-gated submit, restored draft, explicit new-chat reset, desktop/manual menu links and small-screen disclosure navigation. Keep mobile chat selected when artifacts arrive.
 - [x] Update `chat.css`: centered full-width empty chat, results split only when available, bounded scroll with visible composer, readable navigation at tablet sizes, 44px controls. Add compact navigation inside the manual planner card rail, without covering map controls.
-- [ ] Run targeted tests, full test suite, typecheck, lint and production build. Review browser at 1440, 1024, 820, 375 and landscape sizes; verify guest, signed-in and manual flows.
-- [ ] Commit verified work, merge main, deploy with candidate health check and retained rollback; confirm live route/menu behavior.
+- [x] Run targeted tests, full test suite, typecheck, lint and production build. Review browser at 1440, 1024, 820, 375 and landscape sizes; verify guest, signed-in and manual flows.
+- [x] Commit verified work, merge main, deploy with candidate health check and retained rollback; confirm live route/menu behavior.
 
 ## Acceptance
 
@@ -29,4 +29,6 @@ Visiting the bare domain shows a usable chat composer rather than the manual wiz
 - Browser: nine entry/manual-flow checks passed, plus nine sector/fine-tune checks.
 - Build/typecheck and client-secret scan passed. Lint has zero errors, one existing unused-variable warning in the entity-resolution script.
 - Independent review: scoped manual card sizing to desktop; protected unavailable artifact previews from blanking mobile chat; used Link onNavigate so modifier-click preserves the current tab.
-- Signed-in production smoke and deployment health check remain the release checkpoint.
+- Deployed application commit `fa2954e` to `https://ooh.brainpad.me` on 2026-09-03. Container healthy with zero restarts; previous `73df8c5` container retained as rollback.
+- Live guest landing, draft restoration after sign-in, real AI response, conversation reload at 375px, manual navigation and return-to-chat passed. No chat error banners; only an environment-blocked Cloudflare analytics beacon and unused preload warnings were observed.
+- Temporary live test thread deleted via the authenticated API (204); subsequent GET returned 404. Signed out after testing. Temporary candidate container removed.
