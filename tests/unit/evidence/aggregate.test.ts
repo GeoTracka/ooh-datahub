@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  categoricalCounts,
   meanRatingFact,
   percentageFact,
   selectionFact,
 } from "@/evidence/rblLoma2026/aggregate";
 
 describe("RBL aggregate facts", () => {
+  it("coalesces case and whitespace variants before facts are identified", () => {
+    expect(categoricalCounts(["Hybrid", " hybrid ", "HYBRID", "Daily"])).toEqual([
+      { key: "hybrid", label: "Hybrid", count: 3 },
+      { key: "daily", label: "Daily", count: 1 },
+    ]);
+  });
+
   it("retains numerator, denominator, base, period and weighting caveat", () => {
     expect(
       percentageFact({
@@ -69,4 +77,3 @@ describe("RBL aggregate facts", () => {
     });
   });
 });
-

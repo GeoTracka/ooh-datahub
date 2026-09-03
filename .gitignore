@@ -23,3 +23,6 @@ data/seeded/drive.previous-*/
 # Open enrichment source and derived artifacts stay outside git.
 data/raw/enrichment/
 data/derived/enrichment/
+
+# Restricted local evidence staging and generated publication payloads.
+.local/

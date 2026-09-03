@@ -26,6 +26,23 @@ function round(value: number, precision = 1): number {
   return Math.round((value + Number.EPSILON) * scale) / scale;
 }
 
+export function categoricalCounts(values: readonly string[]): Array<{
+  key: string;
+  label: string;
+  count: number;
+}> {
+  const counts = new Map<string, { label: string; count: number }>();
+  for (const value of values) {
+    const label = value.normalize("NFKC").replace(/\s+/g, " ").trim();
+    if (!label) continue;
+    const key = label.toLocaleLowerCase("en-NG");
+    const existing = counts.get(key);
+    if (existing) existing.count += 1;
+    else counts.set(key, { label, count: 1 });
+  }
+  return [...counts].map(([key, value]) => ({ key, ...value }));
+}
+
 export function percentageFact({
   metricId,
   city,
@@ -116,4 +133,3 @@ export function selectionFact({
 }
 
 export { MINIMUM_SEGMENT_BASE };
-
