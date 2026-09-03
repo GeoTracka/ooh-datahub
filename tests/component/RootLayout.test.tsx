@@ -1,17 +1,11 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
 import RootLayout from "@/app/layout";
-import { MAP_CONTEXT_URL } from "@/maps/mapAssets";
 
-describe("RootLayout map prefetch", () => {
-  it("preloads the exact context URL consumed by MapLibre", () => {
-    const markup = renderToStaticMarkup(
-      <RootLayout><main>Planner</main></RootLayout>,
-    );
-
-    expect(markup).toContain(
-      `<link rel="preload" href="${MAP_CONTEXT_URL}" as="fetch"`,
-    );
-    expect(markup).toContain("crossorigin=\"anonymous\"");
+describe("RootLayout", () => {
+  it("does not preload the map for non-map routes", () => {
+    const { container } = render(<RootLayout><div>Chat</div></RootLayout>);
+    expect(container.querySelector('link[rel="preload"][href*="map"]')).toBeNull();
   });
 });
