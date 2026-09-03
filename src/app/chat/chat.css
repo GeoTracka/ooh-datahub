@@ -55,6 +55,7 @@
 .ai-starters button { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 10px 13px; border: 1px solid var(--ai-border); border-radius: 11px; background: #fff; color: #35423d; text-align: left; cursor: pointer; }
 .ai-starters button:hover { border-color: rgb(20 92 84 / 35%); background: #f8faf8; }
 .ai-message { margin: 0 0 20px; color: #293630; font-size: 14px; }.ai-message p { margin: 0 0 10px; }.ai-message ul { padding-left: 20px; }
+.ai-message code { overflow-wrap: anywhere; word-break: break-word; }
 .ai-message.user { width: fit-content; max-width: 88%; margin-left: auto; padding: 10px 13px; border-radius: 14px 14px 4px 14px; background: var(--ai-surface-subtle); }
 .ai-message.assistant { padding-right: 8px; }.ai-message.streaming::after { display: inline-block; width: 6px; height: 14px; margin-left: 3px; background: var(--ai-brand); content: ""; animation: ai-pulse 1s infinite; }
 .ai-artifact-link { display: flex; align-items: center; gap: 7px; min-height: 42px; padding: 8px 11px; border: 1px solid var(--ai-border); border-radius: 9px; background: #fff; color: var(--ai-brand); cursor: pointer; }
