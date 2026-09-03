@@ -54,6 +54,7 @@
     "test:data-settlement": "tsx scripts/test-grid3-settlement-integration.ts",
     "test:data-site-context": "tsx scripts/test-site-context-read-model-integration.ts",
     "test:data-calibration": "tsx scripts/test-calibration-evidence-integration.ts",
+    "test:data-calibration-semantics": "tsx scripts/test-calibration-semantic-persistence.ts",
     "bundle:build": "tsx scripts/build-demo-bundle.ts",
     "bundle:check": "tsx scripts/validate-frozen-bundle.ts",
     "bundle:verify": "pnpm bundle:build && git diff --exit-code -- src/demo/lagos-v1/bundle.json",

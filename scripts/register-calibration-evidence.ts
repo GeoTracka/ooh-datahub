@@ -35,8 +35,11 @@ async function recordRejected(
     evidenceEnvironment: string | null;
     packageFailures: readonly string[];
     promotionFailures: readonly string[];
+    evaluationFailures: readonly string[];
     calibrationFailures: readonly string[];
     artifactFailures: readonly string[];
+    movementEvaluationVersion: string | null;
+    movementEvaluationDigest: string | null;
     submittedManifest: unknown;
   },
 ): Promise<void> {
@@ -44,7 +47,8 @@ async function recordRejected(
 INSERT INTO ooh_data.calibration_promotion_runs (
   run_id, submitted_digest, policy_version, movement_calibration_gate_version,
   evidence_environment, validation_status, package_failure_codes, promotion_failure_codes,
-  calibration_failure_codes, artifact_failure_codes,
+  evaluation_failure_codes, calibration_failure_codes, artifact_failure_codes,
+  movement_evaluation_version, movement_evaluation_digest, movement_report_verified,
   eligible_for_evidence_c, submitted_manifest
 ) VALUES (
   ${sqlLiteral(input.runId)}::uuid,
@@ -55,8 +59,12 @@ INSERT INTO ooh_data.calibration_promotion_runs (
   'rejected',
   ${textArray(input.packageFailures)},
   ${textArray(input.promotionFailures)},
+  ${textArray(input.evaluationFailures)},
   ${textArray(input.calibrationFailures)},
   ${textArray(input.artifactFailures)},
+  ${input.movementEvaluationVersion ? sqlLiteral(input.movementEvaluationVersion) : "NULL"},
+  ${input.movementEvaluationDigest ? sqlLiteral(input.movementEvaluationDigest) : "NULL"},
+  false,
   false,
   ${jsonb(input.submittedManifest)}
 );
@@ -80,8 +88,11 @@ async function main(): Promise<void> {
       evidenceEnvironment,
       packageFailures: verified.promotion.packageFailures,
       promotionFailures: verified.promotion.promotionFailures,
+      evaluationFailures: verified.evaluationFailures,
       calibrationFailures: verified.promotion.calibrationFailures,
       artifactFailures: artifactFailureCodes,
+      movementEvaluationVersion: verified.movementEvaluationVersion,
+      movementEvaluationDigest: verified.movementEvaluationDigest,
       submittedManifest: verified.packageInput,
     });
     process.stdout.write(`${JSON.stringify({
@@ -89,6 +100,8 @@ async function main(): Promise<void> {
       status: "rejected",
       packageDigest: verified.packageDigest,
       packageFailures: verified.promotion.packageFailures,
+      promotionFailures: verified.promotion.promotionFailures,
+      evaluationFailures: verified.evaluationFailures,
       artifactFailures: artifactFailureCodes,
     }, null, 2)}\n`);
     process.exitCode = 2;
@@ -136,14 +149,19 @@ ON CONFLICT (package_digest, artifact_id) DO NOTHING;
 INSERT INTO ooh_data.calibration_promotion_runs (
   run_id, submitted_digest, package_digest, policy_version, movement_calibration_gate_version,
   evidence_environment, validation_status, package_failure_codes, promotion_failure_codes,
-  calibration_failure_codes, artifact_failure_codes,
+  evaluation_failure_codes, calibration_failure_codes, artifact_failure_codes,
+  movement_evaluation_version, movement_evaluation_digest, movement_report_verified,
   eligible_for_evidence_c, submitted_manifest
 ) VALUES (
   ${sqlLiteral(runId)}::uuid, ${sqlLiteral(digest)}, ${sqlLiteral(digest)},
   ${sqlLiteral(verified.promotion.policyVersion)}, ${sqlLiteral(verified.promotion.movementCalibrationGateVersion)},
   ${sqlLiteral(pkg.evidenceEnvironment)}, 'accepted', ${textArray(verified.promotion.packageFailures)},
-  ${textArray(verified.promotion.promotionFailures)}, ${textArray(verified.promotion.calibrationFailures)},
-  ARRAY[]::text[], ${verified.eligibleForEvidenceC ? "true" : "false"},
+  ${textArray(verified.promotion.promotionFailures)}, ${textArray(verified.evaluationFailures)},
+  ${textArray(verified.promotion.calibrationFailures)}, ARRAY[]::text[],
+  ${verified.movementEvaluationVersion ? sqlLiteral(verified.movementEvaluationVersion) : "NULL"},
+  ${verified.movementEvaluationDigest ? sqlLiteral(verified.movementEvaluationDigest) : "NULL"},
+  ${verified.promotion.movementEvaluationVerified ? "true" : "false"},
+  ${verified.eligibleForEvidenceC ? "true" : "false"},
   ${jsonb(pkg)}
 );
 COMMIT;
@@ -162,8 +180,11 @@ COMMIT;
         ? "CALIBRATION_CONTEXT_BINDING_MISMATCH"
         : "CALIBRATION_CONTEXT_SNAPSHOT_NOT_FOUND"],
       promotionFailures: verified.promotion.promotionFailures,
+      evaluationFailures: verified.evaluationFailures,
       calibrationFailures: verified.promotion.calibrationFailures,
       artifactFailures: [],
+      movementEvaluationVersion: verified.movementEvaluationVersion,
+      movementEvaluationDigest: verified.movementEvaluationDigest,
       submittedManifest: pkg,
     });
     process.stdout.write(`${JSON.stringify({
@@ -183,9 +204,13 @@ COMMIT;
     status: "accepted",
     packageDigest: digest,
     evidenceEnvironment: pkg.evidenceEnvironment,
+    movementEvaluationVerified: verified.promotion.movementEvaluationVerified,
+    movementEvaluationVersion: verified.movementEvaluationVersion,
+    movementEvaluationDigest: verified.movementEvaluationDigest,
     calibrationPassed: verified.promotion.calibrationPassed,
     eligibleForEvidenceC: verified.eligibleForEvidenceC,
     promotionFailures: verified.promotion.promotionFailures,
+    evaluationFailures: verified.evaluationFailures,
     calibrationFailures: verified.promotion.calibrationFailures,
   }, null, 2)}\n`);
 }
