@@ -20,18 +20,18 @@ export const campaignArtifacts = mysqlTable(
   "campaign_artifacts",
   {
     id: binaryBuffer({ length: 16 }).primaryKey(),
-    ownerUserId: binaryBuffer({ length: 16 })
+    ownerUserId: binaryBuffer("owner_user_id", { length: 16 })
       .notNull()
       .references(() => appUsers.id, { onDelete: "restrict", onUpdate: "cascade" }),
-    threadId: binaryBuffer({ length: 16 }).references(() => aiThreads.id, {
+    threadId: binaryBuffer("thread_id", { length: 16 }).references(() => aiThreads.id, {
       onDelete: "set null",
       onUpdate: "cascade",
     }),
     type: mysqlEnum(["plan", "map", "audience", "evidence"] as const).notNull(),
-    saveState: mysqlEnum(["draft", "saved"] as const).notNull().default("draft"),
-    currentRevisionNumber: int({ unsigned: true }).notNull(),
-    createdAt: timestamp({ mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp({ mode: "date" }).notNull().defaultNow().onUpdateNow(),
+    saveState: mysqlEnum("save_state", ["draft", "saved"] as const).notNull().default("draft"),
+    currentRevisionNumber: int("current_revision_number", { unsigned: true }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow().onUpdateNow(),
   },
   (table) => [
     index("campaign_artifacts_owner_updated_idx").on(table.ownerUserId, table.updatedAt),
@@ -42,17 +42,17 @@ export const campaignArtifacts = mysqlTable(
 export const campaignArtifactRevisions = mysqlTable(
   "campaign_artifact_revisions",
   {
-    artifactId: binaryBuffer({ length: 16 })
+    artifactId: binaryBuffer("artifact_id", { length: 16 })
       .notNull()
       .references(() => campaignArtifacts.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    revisionNumber: int({ unsigned: true }).notNull(),
-    parentRevisionNumber: int({ unsigned: true }),
-    createdByUserId: binaryBuffer({ length: 16 })
+    revisionNumber: int("revision_number", { unsigned: true }).notNull(),
+    parentRevisionNumber: int("parent_revision_number", { unsigned: true }),
+    createdByUserId: binaryBuffer("created_by_user_id", { length: 16 })
       .notNull()
       .references(() => appUsers.id, { onDelete: "restrict", onUpdate: "cascade" }),
     payload: json().$type<ArtifactPayload>().notNull(),
     reason: varchar({ length: 240 }).notNull(),
-    createdAt: timestamp({ mode: "date" }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
     primaryKey({ columns: [table.artifactId, table.revisionNumber] }),
@@ -64,17 +64,17 @@ export const artifactCitations = mysqlTable(
   "artifact_citations",
   {
     id: binaryBuffer({ length: 16 }).primaryKey(),
-    artifactId: binaryBuffer({ length: 16 }).notNull(),
-    revisionNumber: int({ unsigned: true }).notNull(),
-    factId: varchar({ length: 255 }).references(() => evidenceFacts.id, {
+    artifactId: binaryBuffer("artifact_id", { length: 16 }).notNull(),
+    revisionNumber: int("revision_number", { unsigned: true }).notNull(),
+    factId: varchar("fact_id", { length: 255 }).references(() => evidenceFacts.id, {
       onDelete: "restrict",
-      onUpdate: "cascade",
+      onUpdate: "restrict",
     }),
-    excerptId: varchar({ length: 160 }).references(() => evidenceExcerpts.id, {
+    excerptId: varchar("excerpt_id", { length: 160 }).references(() => evidenceExcerpts.id, {
       onDelete: "restrict",
-      onUpdate: "cascade",
+      onUpdate: "restrict",
     }),
-    createdAt: timestamp({ mode: "date" }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("artifact_citations_fact_uq").on(

@@ -18,13 +18,13 @@ export const aiThreads = mysqlTable(
   "ai_threads",
   {
     id: binaryBuffer({ length: 16 }).primaryKey(),
-    ownerUserId: binaryBuffer({ length: 16 })
+    ownerUserId: binaryBuffer("owner_user_id", { length: 16 })
       .notNull()
       .references(() => appUsers.id, { onDelete: "restrict", onUpdate: "cascade" }),
     title: varchar({ length: 80 }).notNull(),
     status: mysqlEnum(["active", "archived"] as const).notNull().default("active"),
-    createdAt: timestamp({ mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp({ mode: "date" }).notNull().defaultNow().onUpdateNow(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow().onUpdateNow(),
   },
   (table) => [index("ai_threads_owner_updated_idx").on(table.ownerUserId, table.updatedAt)],
 );
@@ -33,14 +33,14 @@ export const aiMessages = mysqlTable(
   "ai_messages",
   {
     id: binaryBuffer({ length: 16 }).primaryKey(),
-    threadId: binaryBuffer({ length: 16 })
+    threadId: binaryBuffer("thread_id", { length: 16 })
       .notNull()
       .references(() => aiThreads.id, { onDelete: "cascade", onUpdate: "cascade" }),
     role: mysqlEnum(["user", "assistant"] as const).notNull(),
-    sequenceNumber: int({ unsigned: true }).notNull(),
+    sequenceNumber: int("sequence_number", { unsigned: true }).notNull(),
     content: json().$type<MessageContent>().notNull(),
-    providerResponseId: varchar({ length: 255 }),
-    createdAt: timestamp({ mode: "date" }).notNull().defaultNow(),
+    providerResponseId: varchar("provider_response_id", { length: 255 }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("ai_messages_thread_sequence_uq").on(table.threadId, table.sequenceNumber),
@@ -52,24 +52,24 @@ export const aiToolRuns = mysqlTable(
   "ai_tool_runs",
   {
     id: binaryBuffer({ length: 16 }).primaryKey(),
-    threadId: binaryBuffer({ length: 16 })
+    threadId: binaryBuffer("thread_id", { length: 16 })
       .notNull()
       .references(() => aiThreads.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    assistantMessageId: binaryBuffer({ length: 16 }).references(() => aiMessages.id, {
+    assistantMessageId: binaryBuffer("assistant_message_id", { length: 16 }).references(() => aiMessages.id, {
       onDelete: "set null",
       onUpdate: "cascade",
     }),
-    providerCallId: varchar({ length: 255 }).notNull(),
-    toolName: varchar({ length: 96 }).notNull(),
-    argumentsJson: json().$type<Record<string, unknown>>().notNull(),
-    outputJson: json().$type<unknown>(),
+    providerCallId: varchar("provider_call_id", { length: 255 }).notNull(),
+    toolName: varchar("tool_name", { length: 96 }).notNull(),
+    argumentsJson: json("arguments_json").$type<Record<string, unknown>>().notNull(),
+    outputJson: json("output_json").$type<unknown>(),
     status: mysqlEnum(["running", "completed", "failed", "cancelled"] as const)
       .notNull()
       .default("running"),
-    durationMs: int({ unsigned: true }),
-    errorCode: varchar({ length: 96 }),
-    createdAt: timestamp({ mode: "date" }).notNull().defaultNow(),
-    completedAt: timestamp({ mode: "date" }),
+    durationMs: int("duration_ms", { unsigned: true }),
+    errorCode: varchar("error_code", { length: 96 }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { mode: "date" }),
   },
   (table) => [
     uniqueIndex("ai_tool_runs_provider_call_uq").on(table.threadId, table.providerCallId),
@@ -81,19 +81,19 @@ export const aiUsageEvents = mysqlTable(
   "ai_usage_events",
   {
     id: binaryBuffer({ length: 16 }).primaryKey(),
-    userId: binaryBuffer({ length: 16 })
+    userId: binaryBuffer("user_id", { length: 16 })
       .notNull()
       .references(() => appUsers.id, { onDelete: "restrict", onUpdate: "cascade" }),
-    threadId: binaryBuffer({ length: 16 }).references(() => aiThreads.id, {
+    threadId: binaryBuffer("thread_id", { length: 16 }).references(() => aiThreads.id, {
       onDelete: "set null",
       onUpdate: "cascade",
     }),
     provider: varchar({ length: 32 }).notNull(),
     model: varchar({ length: 96 }).notNull(),
-    inputTokens: int({ unsigned: true }).notNull().default(0),
-    outputTokens: int({ unsigned: true }).notNull().default(0),
-    totalTokens: int({ unsigned: true }).notNull().default(0),
-    createdAt: timestamp({ mode: "date" }).notNull().defaultNow(),
+    inputTokens: int("input_tokens", { unsigned: true }).notNull().default(0),
+    outputTokens: int("output_tokens", { unsigned: true }).notNull().default(0),
+    totalTokens: int("total_tokens", { unsigned: true }).notNull().default(0),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [index("ai_usage_events_user_created_idx").on(table.userId, table.createdAt)],
 );
@@ -101,13 +101,13 @@ export const aiUsageEvents = mysqlTable(
 export const aiRateLimits = mysqlTable(
   "ai_rate_limits",
   {
-    userId: binaryBuffer({ length: 16 })
+    userId: binaryBuffer("user_id", { length: 16 })
       .notNull()
       .references(() => appUsers.id, { onDelete: "cascade", onUpdate: "cascade" }),
     scope: varchar({ length: 48 }).notNull(),
-    windowStartedAt: timestamp({ mode: "date" }).notNull(),
-    requestCount: int({ unsigned: true }).notNull().default(0),
-    updatedAt: timestamp({ mode: "date" }).notNull().defaultNow().onUpdateNow(),
+    windowStartedAt: timestamp("window_started_at", { mode: "date" }).notNull(),
+    requestCount: int("request_count", { unsigned: true }).notNull().default(0),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow().onUpdateNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.scope] })],
 );

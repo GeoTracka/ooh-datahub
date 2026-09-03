@@ -19,12 +19,12 @@ export const evidenceSources = mysqlTable(
   {
     id: varchar({ length: 128 }).primaryKey(),
     kind: mysqlEnum(["survey_workbook", "published_report"] as const).notNull(),
-    fileName: varchar({ length: 255 }).notNull(),
+    fileName: varchar("file_name", { length: 255 }).notNull(),
     sha256: varchar({ length: 64 }).notNull(),
-    accessClass: varchar({ length: 64 }).notNull(),
+    accessClass: varchar("access_class", { length: 64 }).notNull(),
     period: varchar({ length: 32 }).notNull(),
     status: evidenceStatus().notNull().default("approved"),
-    publishedAt: timestamp({ mode: "date" }).notNull().defaultNow(),
+    publishedAt: timestamp("published_at", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("evidence_sources_sha256_uq").on(table.sha256)],
 );
@@ -45,13 +45,13 @@ export const evidenceFacts = mysqlTable(
   "evidence_facts",
   {
     id: varchar({ length: 255 }).primaryKey(),
-    sourceId: varchar({ length: 128 })
+    sourceId: varchar("source_id", { length: 128 })
       .notNull()
       .references(() => evidenceSources.id, {
         onDelete: "restrict",
         onUpdate: "cascade",
       }),
-    metricId: varchar({ length: 160 })
+    metricId: varchar("metric_id", { length: 160 })
       .notNull()
       .references(() => evidenceMetrics.id, {
         onDelete: "restrict",
@@ -62,17 +62,17 @@ export const evidenceFacts = mysqlTable(
     unit: varchar({ length: 32 }).notNull(),
     numerator: int(),
     denominator: int(),
-    respondentBase: int().notNull(),
-    validBase: int(),
-    selectionCount: int(),
-    geographyId: varchar({ length: 64 }).notNull(),
-    segmentHash: varchar({ length: 64 }).notNull(),
+    respondentBase: int("respondent_base").notNull(),
+    validBase: int("valid_base"),
+    selectionCount: int("selection_count"),
+    geographyId: varchar("geography_id", { length: 64 }).notNull(),
+    segmentHash: varchar("segment_hash", { length: 64 }).notNull(),
     segment: json().$type<Record<string, string>>().notNull(),
     period: varchar({ length: 32 }).notNull(),
     weighting: mysqlEnum(["unweighted"] as const).notNull(),
-    sourceColumn: int(),
+    sourceColumn: int("source_column"),
     status: evidenceStatus().notNull().default("approved"),
-    publishedAt: timestamp({ mode: "date" }).notNull().defaultNow(),
+    publishedAt: timestamp("published_at", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("evidence_facts_revision_key_uq").on(
@@ -94,19 +94,19 @@ export const evidenceCitations = mysqlTable(
   "evidence_citations",
   {
     id: varchar({ length: 255 }).primaryKey(),
-    factId: varchar({ length: 255 })
+    factId: varchar("fact_id", { length: 255 })
       .notNull()
       .references(() => evidenceFacts.id, {
         onDelete: "restrict",
         onUpdate: "cascade",
       }),
-    sourceId: varchar({ length: 128 })
+    sourceId: varchar("source_id", { length: 128 })
       .notNull()
       .references(() => evidenceSources.id, {
         onDelete: "restrict",
         onUpdate: "cascade",
       }),
-    workbookField: varchar({ length: 96 }),
+    workbookField: varchar("workbook_field", { length: 96 }),
     page: int(),
     caveat: text().notNull(),
   },
@@ -117,16 +117,16 @@ export const evidenceDisputes = mysqlTable(
   "evidence_disputes",
   {
     id: varchar({ length: 160 }).primaryKey(),
-    sourceId: varchar({ length: 128 })
+    sourceId: varchar("source_id", { length: 128 })
       .notNull()
       .references(() => evidenceSources.id, {
         onDelete: "restrict",
         onUpdate: "cascade",
       }),
-    metricId: varchar({ length: 160 }),
+    metricId: varchar("metric_id", { length: 160 }),
     status: evidenceStatus().notNull().default("blocked"),
-    workbookValue: decimal({ precision: 18, scale: 6, mode: "number" }),
-    reportValue: decimal({ precision: 18, scale: 6, mode: "number" }),
+    workbookValue: decimal("workbook_value", { precision: 18, scale: 6, mode: "number" }),
+    reportValue: decimal("report_value", { precision: 18, scale: 6, mode: "number" }),
     note: text().notNull(),
   },
   (table) => [index("evidence_disputes_metric_status_idx").on(table.metricId, table.status)],
@@ -136,18 +136,18 @@ export const evidenceExcerpts = mysqlTable(
   "evidence_excerpts",
   {
     id: varchar({ length: 160 }).primaryKey(),
-    sourceId: varchar({ length: 128 })
+    sourceId: varchar("source_id", { length: 128 })
       .notNull()
       .references(() => evidenceSources.id, {
         onDelete: "restrict",
         onUpdate: "cascade",
       }),
-    metricId: varchar({ length: 160 }),
+    metricId: varchar("metric_id", { length: 160 }),
     page: int().notNull(),
     theme: varchar({ length: 160 }).notNull(),
-    geographyId: varchar({ length: 64 }).notNull(),
+    geographyId: varchar("geography_id", { length: 64 }).notNull(),
     period: varchar({ length: 32 }).notNull(),
-    evidenceType: varchar({ length: 48 }).notNull(),
+    evidenceType: varchar("evidence_type", { length: 48 }).notNull(),
     paraphrase: text().notNull(),
     caveat: text().notNull(),
     status: evidenceStatus().notNull(),
