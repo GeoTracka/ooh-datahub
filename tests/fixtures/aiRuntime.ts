@@ -1,6 +1,7 @@
 import type { Brief } from "@/contracts/domain";
 import type { ArtifactStore } from "@/server/artifacts/repository";
 import type { ChatStore } from "@/server/chat/repository";
+import type { EvidenceAnswer, EvidenceQuery } from "@/server/evidence/repository";
 
 export const validBrief: Brief = {
   productName: "Everyday essentials",
@@ -60,3 +61,41 @@ export function fakeChatStore({
   };
 }
 
+export function fakeEvidenceRepository({
+  answers,
+}: {
+  answers?: readonly EvidenceAnswer[];
+} = {}) {
+  const defaultAnswer: EvidenceAnswer = {
+    factId: "journey-attention-lagos",
+    metricId: "journey_attention_high",
+    label: "High attention while travelling",
+    value: 60,
+    unit: "percent",
+    numerator: 30,
+    denominator: 50,
+    respondentBase: 50,
+    geography: "lagos",
+    segment: { city: "lagos" },
+    period: "2026-05",
+    caveat: "Unweighted survey evidence for the study sample; not population reach or site delivery.",
+    citation: {
+      sourceId: "rbl-loma-ooh-penetration-databook-2026-r1",
+      sha256: "780a9fbaa2b4e736c4a4236fae751cb8c314aabaf6cad8206e553870bc5032e2",
+      workbookField: "Q10",
+      page: null,
+    },
+  };
+  return {
+    queries: [] as EvidenceQuery[],
+    async search(query: EvidenceQuery): Promise<EvidenceAnswer[]> {
+      this.queries.push(query);
+      const available = answers ?? [defaultAnswer];
+      return available.filter(
+        (answer) =>
+          query.metricIds.includes(answer.metricId) &&
+          query.geographyIds.includes(answer.geography),
+      );
+    },
+  };
+}
