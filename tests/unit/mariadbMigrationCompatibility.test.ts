@@ -4,6 +4,18 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("MariaDB migration compatibility", () => {
+  it("keeps session expiry fixed when last-seen changes", () => {
+    const migration = readFileSync(
+      path.resolve("migrations-mariadb/0004_fix_session_expiry.sql"),
+      "utf8",
+    );
+
+    expect(migration).toMatch(
+      /ALTER TABLE app_sessions\s+MODIFY expires_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;/,
+    );
+    expect(migration).not.toMatch(/expires_at[\s\S]*ON UPDATE CURRENT_TIMESTAMP/i);
+  });
+
   it("does not cascade updates into columns used by the artifact citation check", () => {
     const migration = readFileSync(
       path.resolve("migrations-mariadb/0003_ai_threads_artifacts.sql"),
