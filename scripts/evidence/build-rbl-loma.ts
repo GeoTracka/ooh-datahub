@@ -13,6 +13,7 @@ import {
 } from "@/evidence/rblLoma2026/aggregate";
 import { normalizeSurveyRow } from "@/evidence/rblLoma2026/normalize";
 import { evidenceDisposition } from "@/evidence/rblLoma2026/policy";
+import { reportEvidence } from "@/evidence/rblLoma2026/reportEvidence";
 import { rblLoma2026Sources } from "@/evidence/sourceCatalog";
 import { auditSources } from "./audit-rbl-loma";
 import {
@@ -310,6 +311,7 @@ export async function buildEvidenceArtifacts({
         "Survey evidence describes the study sample and does not estimate population reach, site delivery, price, availability, ROI, radio listening, or activation potential.",
     },
     facts: buildPublicFacts(acceptedRows, headers),
+    reportEvidence,
     blockedDiscrepancies: audit.discrepancies.filter(
       (discrepancy) => discrepancy.status === "blocked",
     ),
