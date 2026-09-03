@@ -164,7 +164,10 @@ export function createEvidenceTools(repository: EvidenceToolRepository) {
         repository,
         metricsForSearch(args.query),
         args.cityIds,
-        { ageBands: args.ageBands, genders: args.genders },
+        {
+          ageBands: args.ageBands ?? undefined,
+          genders: args.genders ?? undefined,
+        },
       );
       return result(`Found ${answers.length} governed study findings for the requested cities.`, answers);
     },

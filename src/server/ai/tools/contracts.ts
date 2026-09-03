@@ -9,8 +9,8 @@ export const SearchEvidenceArgsSchema = z
   .object({
     query: z.string().trim().min(2).max(240),
     cityIds: CityIdsSchema,
-    ageBands: z.array(z.string().trim().min(1).max(48)).max(8).optional(),
-    genders: z.array(z.string().trim().min(1).max(48)).max(8).optional(),
+    ageBands: z.array(z.string().trim().min(1).max(48)).max(8).nullable(),
+    genders: z.array(z.string().trim().min(1).max(48)).max(8).nullable(),
   })
   .strict();
 
@@ -40,12 +40,12 @@ export const GetFormatScoresArgsSchema = z
       )
       .min(1)
       .max(5)
-      .optional(),
+      .nullable(),
     dimensions: z
       .array(z.enum(["attention", "recall", "trust", "effect", "quality"]))
       .min(1)
       .max(5)
-      .optional(),
+      .nullable(),
   })
   .strict();
 
