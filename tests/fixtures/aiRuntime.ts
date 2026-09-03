@@ -99,3 +99,61 @@ export function fakeEvidenceRepository({
     },
   };
 }
+
+export function fakeProviderWithOneToolCall() {
+  let turn = 0;
+  return {
+    async *stream() {
+      turn += 1;
+      if (turn === 1) {
+        yield {
+          type: "function_call" as const,
+          callId: "call_1",
+          name: "build_campaign_plan",
+          arguments: JSON.stringify(validBrief),
+        };
+        yield {
+          type: "completed" as const,
+          responseId: "resp_1",
+          usage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 },
+        };
+        return;
+      }
+      yield { type: "text_delta" as const, delta: "Here are three approaches." };
+      yield {
+        type: "completed" as const,
+        responseId: "resp_2",
+        usage: { inputTokens: 140, outputTokens: 30, totalTokens: 170 },
+      };
+    },
+  };
+}
+
+let runtimeId = 0;
+export const requestContext = {
+  threadId: "thread_1",
+  user: { id: "user_1", email: "planner@example.com", displayName: "Planner" },
+  text: "Plan an FMCG campaign in Lagos.",
+  history: [],
+  config: { maxToolCalls: 12, maxProviderTurns: 6, toolTimeoutMs: 20_000 },
+  idFactory() {
+    runtimeId += 1;
+    return `runtime_${runtimeId}`;
+  },
+  persistence: {
+    async saveUserMessage() {},
+    async startToolRun() {},
+    async completeToolRun() {},
+    async saveAssistantMessage() {},
+    async saveUsage() {},
+  },
+  toolRegistry: {
+    definitions: [{ type: "function" as const, name: "build_campaign_plan" }],
+    async execute() {
+      return {
+        output: { options: 3 },
+        artifact: { id: "artifact_1", type: "plan" as const, revision: 1 },
+      };
+    },
+  },
+};
