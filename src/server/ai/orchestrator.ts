@@ -7,6 +7,7 @@ import type {
   PlannerProvider,
   ProviderUsage,
 } from "@/server/ai/provider";
+import { assessPlannerRequest } from "@/server/ai/policy";
 
 export type ToolArtifactResult = {
   id: string;
@@ -147,6 +148,24 @@ export async function* runPlannerResponse(
     text: context.text,
   });
   yield { type: "response.started", messageId: assistantMessageId };
+
+  const assessment = assessPlannerRequest(context.text);
+  if (assessment.disposition === "unsupported") {
+    await context.persistence.saveAssistantMessage({
+      id: assistantMessageId,
+      threadId: context.threadId,
+      text: assessment.response,
+      providerResponseId: "local-policy",
+      artifacts: [],
+    });
+    yield { type: "text.delta", delta: assessment.response };
+    yield {
+      type: "response.completed",
+      messageId: assistantMessageId,
+      suggestedActions: [],
+    };
+    return;
+  }
 
   try {
     for (let turn = 0; turn < context.config.maxProviderTurns; turn += 1) {
