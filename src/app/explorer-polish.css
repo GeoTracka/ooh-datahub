@@ -1,3 +1,10 @@
+.explorer-card-rail { flex-direction: column; justify-content: center; }
+.planner-navigation { display: flex; flex: none; gap: 6px; width: 100%; margin-bottom: 12px; pointer-events: auto; }
+.planner-navigation a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 16px; border-radius: 10px; background: #fff; color: #145c54; text-decoration: none; font-weight: 650; font-size: 14px; box-shadow: 0 2px 8px rgb(28 32 38 / 8%); }
+.planner-navigation a[aria-current="page"] { background: #145c54; color: #fff; }
+.planner-navigation a:focus-visible { outline: 3px solid #2d7f76; outline-offset: 3px; }
+@media (min-width: 1024px) { .explorer-card-rail .explorer-step-card { max-height: calc(100dvh - 112px); } }
+
 .explorer-preset-grid button[aria-pressed="true"] {
   border-color: #98bbb3;
   background: #edf5f2;

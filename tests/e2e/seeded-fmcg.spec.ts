@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("five-step consumer-goods planner reaches a supplier request", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/planner");
   await expect(page.getByRole("region", { name: /Step 1 of 5:/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Continue to timing" }).click();

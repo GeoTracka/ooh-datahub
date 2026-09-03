@@ -36,7 +36,7 @@ for (const motion of [
     });
 
     const navigationStartedAt = performance.now();
-    await page.goto("/");
+    await page.goto("/planner");
 
     const renderer = page.getByTestId("maplibre-renderer");
     await expect(renderer).toHaveAttribute("data-context-state", "loaded");

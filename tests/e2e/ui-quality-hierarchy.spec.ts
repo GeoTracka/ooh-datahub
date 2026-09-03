@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 async function reachRecommendedPackage(page: Page, preset?: string | RegExp): Promise<void> {
-  await page.goto("/");
+  await page.goto("/planner");
   if (preset) await page.getByRole("button", { name: preset }).click();
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(
@@ -291,7 +291,7 @@ test.describe("desktop package comparison hierarchy", () => {
   });
 
   test("makes the pre-recommendation map read as an intentional planning canvas", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/planner");
     const content = await page.locator(".explorer-map-stage").evaluate((element) =>
       getComputedStyle(element, "::after").content,
     );

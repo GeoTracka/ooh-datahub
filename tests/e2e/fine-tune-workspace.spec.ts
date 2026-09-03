@@ -11,7 +11,7 @@ async function assertAccessible(page: Page): Promise<void> {
 }
 
 async function reachFineTune(page: Page): Promise<Locator> {
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await page.getByRole("button", { name: "Continue with selected package" }).click();
   await page.getByRole("button", { name: /^Adjust package/ }).click();
@@ -131,12 +131,12 @@ test("keeps the 1024px fine-tune workspace coherent and horizontally contained",
 
 test("does not rank responsive scrolling as nested-scroll debt", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/planner");
   const mobile = await collectUxReviewDiagnostics(page);
   expect(mobile.actionableNestedScrollCandidates).toEqual([]);
 
   await page.setViewportSize({ width: 834, height: 1112 });
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
   const tablet = await collectUxReviewDiagnostics(page);

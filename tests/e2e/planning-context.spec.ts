@@ -9,7 +9,7 @@ async function reachRecommendedPackage(
   page: Page,
   preset?: string | RegExp,
 ): Promise<void> {
-  await page.goto("/");
+  await page.goto("/planner");
   if (preset) {
     await page.getByRole("button", { name: preset }).click();
   }
@@ -24,7 +24,7 @@ async function reachRecommendedPackage(
 }
 
 async function reachCustomAudience(page: Page, targetAudience: string) {
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByText("Edit campaign details").click();
   await page.getByLabel("Target audience").fill(targetAudience);
   await page.getByLabel("Product information").fill("Segment resolution test");

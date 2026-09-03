@@ -26,7 +26,7 @@ async function assertReviewClean(page: Page, diagnostics: UxReviewDiagnostics, l
 }
 
 async function reachActionStep(page: Page): Promise<void> {
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await page.getByRole("button", { name: "Continue with selected package" }).click();
   await expect(page.getByRole("region", { name: /Step 4 of 5:/ })).toBeVisible();
@@ -44,7 +44,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("reviews invalid package recovery without leading with machine codes", async ({ page }, testInfo) => {
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Continue to timing" }).click();
   const budget = page.getByLabel("Budget (NGN)");
   await budget.fill("1");

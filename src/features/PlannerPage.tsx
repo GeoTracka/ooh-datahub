@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useReducer, useRef, useState } from "react";
+import Link from "next/link";
 import { frozenLagosBundle as bundle } from "@/bundle/loadFrozenBundle";
 import type { Brief, PackageCandidate } from "@/contracts/domain";
 import type { MeasurementStage } from "@/contracts/metrics";
@@ -432,6 +433,10 @@ export function PlannerPage() {
       )}
 
       <div className="explorer-card-rail">
+        <nav className="planner-navigation" aria-label="Planning tools">
+          <Link href="/chat">AI chat</Link>
+          <Link href="/planner" aria-current="page">Plan manually</Link>
+        </nav>
         {step === 1 && (
           <StepCard
             step={1}

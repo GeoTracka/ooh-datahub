@@ -40,7 +40,7 @@ async function makeExplicitSwap(page: Page): Promise<void> {
 }
 
 async function reachRecommendedPackage(page: Page): Promise<void> {
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
 }
@@ -59,7 +59,7 @@ test.describe("desktop workflow review", () => {
   test.use({ viewport: { width: 1440, height: 1000 } });
 
   test("captures the complete seeded decision journey", async ({ page }, testInfo) => {
-    await page.goto("/");
+    await page.goto("/planner");
     const step1 = page.getByRole("region", { name: /Step 1 of 5:/ });
     await expect(step1).toBeVisible();
     await assertNoHorizontalOverflow(page, "desktop step 1");
@@ -116,7 +116,7 @@ test.describe("desktop workflow review", () => {
   });
 
   test("captures keyboard focus and upload/context states", async ({ page }, testInfo) => {
-    await page.goto("/");
+    await page.goto("/planner");
     await page.keyboard.press("Tab");
     await captureUxReview(page, testInfo, "desktop-10-keyboard-focus", { fullPage: false });
 
@@ -175,7 +175,7 @@ test.describe("responsive review", () => {
 
   test("keeps 390px mobile layout free of page overflow", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
+    await page.goto("/planner");
     await expect(page.getByRole("region", { name: /Step 1 of 5:/ })).toBeVisible();
     await assertNoHorizontalOverflow(page, "390px step 1");
     await assertCriticalControlInViewport(page.getByRole("button", { name: "Continue to timing" }), "mobile Continue to timing");

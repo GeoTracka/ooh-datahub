@@ -20,7 +20,7 @@ async function expectDrawerOwnsScroll(page: Page, dialog: Locator, background: L
 }
 
 async function reachRecommendedPackage(page: Page): Promise<void> {
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
 }

@@ -27,7 +27,7 @@ test("seeded explorer makes no external request", async ({ page }) => {
     }
     await route.continue();
   });
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByTestId("package-strip")).toBeVisible();
   await expect(page.getByTestId("maplibre-renderer"))
@@ -44,7 +44,7 @@ for (const viewport of [
     const contextPattern = "**/map/lagos-open-context.geojson*";
     await page.route(contextPattern, (route) => route.abort("failed"));
 
-    await page.goto("/");
+    await page.goto("/planner");
     await page.getByRole("button", { name: "Use default timing & budget" }).click();
 
     const renderer = page.getByTestId("maplibre-renderer");

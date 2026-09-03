@@ -30,7 +30,7 @@ async function makeExplicitSwap(page: import("@playwright/test").Page) {
 }
 
 test("locks the split-canvas explorer hierarchy and interaction states", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/planner");
   await hideDevelopmentIndicator(page);
   await expect(page.getByRole("region", { name: /Step 1 of 5:/ })).toBeVisible();
   await expect(page).toHaveScreenshot("explorer-step1.png", { animations: "disabled" });
@@ -56,7 +56,7 @@ test("locks the split-canvas explorer hierarchy and interaction states", async (
 
 test("keeps the explorer legible at 390 CSS pixels", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/planner");
   await hideDevelopmentIndicator(page);
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5:/ })).toBeVisible();

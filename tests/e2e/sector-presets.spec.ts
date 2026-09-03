@@ -6,7 +6,7 @@ for (const preset of [
   { label: "Bank / Fintech · Likely customers", sector: "bank_fintech" },
 ]) {
   test(preset.label + " builds from the same evidence-labelled explorer", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/planner");
     await page.getByRole("button", { name: preset.label }).click();
     await page.getByRole("button", { name: "Continue to timing" }).click();
     await page.getByRole("button", { name: "Show recommended areas" }).click();
@@ -18,14 +18,14 @@ for (const preset of [
 }
 
 test("default-profile skip goes directly to the recommendation decision", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await expect(page.getByRole("region", { name: /Step 3 of 5: Choose a planning approach/ })).toBeVisible();
   await expect(page.getByTestId("zone-card")).toHaveCount(3);
 });
 
 test("fine-tune blocks an invalid removal until Undo restores the package", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/planner");
   await page.getByRole("button", { name: "Use default timing & budget" }).click();
   await page.getByRole("button", { name: "Continue with selected package" }).click();
   await page.getByRole("button", { name: /^Adjust package/ }).click();
