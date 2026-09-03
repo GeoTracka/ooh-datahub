@@ -27,7 +27,9 @@ import type {
 } from "@/features/chat/contracts";
 import { CampaignPlanView } from "@/features/chat/artifacts/CampaignPlanView";
 import { CampaignMapView } from "@/features/chat/artifacts/CampaignMapView";
+import { DownloadCard } from "@/features/chat/DownloadCard";
 import type { CurrentUser } from "@/server/auth/currentUser";
+import type { DownloadDescriptor } from "@/server/chat/contracts";
 
 type View = "chat" | "plan" | "map" | "evidence";
 
@@ -52,6 +54,7 @@ export function ChatWorkspaceShell({
   const [view, setView] = useState<View>(initialArtifacts.some((item) => item.payload.type === "plan") ? "plan" : "chat");
   const [draft, setDraft] = useState("");
   const [assistantText, setAssistantText] = useState("");
+  const [liveDownloads, setLiveDownloads] = useState<DownloadDescriptor[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -86,9 +89,11 @@ export function ChatWorkspaceShell({
     setBusy(true);
     setError(null);
     setAssistantText("");
+    setLiveDownloads([]);
     setProgress([]);
     setMessages((value) => [...value, { id: `local-${Date.now()}`, role: "user", content: [{ type: "text", text: prompt }] }]);
     setDraft("");
+    const turnDownloads: DownloadDescriptor[] = [];
     try {
       const activeThread = await ensureThread(prompt);
       const controller = new AbortController();
@@ -114,11 +119,21 @@ export function ChatWorkspaceShell({
             setArtifacts((value) => [...value.filter((item) => item.id !== data.artifact.id), data.artifact]);
             if (event.artifactType === "plan") setView("plan");
           }
+        } else if (event.type === "download.ready") {
+          turnDownloads.push(event.download);
+          setLiveDownloads([...turnDownloads]);
         } else if (event.type === "response.failed") {
           setError(event.code === "STREAM_FAILED" ? "The response stopped early. Completed plan items are still available." : "Some planning work could not be completed. You can retry.");
         } else if (event.type === "response.completed") {
-          if (completedText) setMessages((value) => [...value, { id: event.messageId, role: "assistant", content: [{ type: "text", text: completedText }] }]);
+          const content = [
+            ...(completedText ? [{ type: "text" as const, text: completedText }] : []),
+            ...turnDownloads.map((download) => ({ type: "download_ref" as const, ...download })),
+          ];
+          if (content.length) {
+            setMessages((value) => [...value, { id: event.messageId, role: "assistant", content }]);
+          }
           setAssistantText("");
+          setLiveDownloads([]);
         }
       }
     } catch (caught) {
@@ -156,9 +171,10 @@ export function ChatWorkspaceShell({
         <header className="ai-conversation-header"><button aria-label="Toggle navigation" onClick={() => setRailOpen((value) => !value)}><PanelLeft size={18} /></button><div><strong>{thread?.title ?? "New campaign"}</strong><small>AI planner · grounded in your data</small></div></header>
         <div className="ai-message-scroll">
           {!messages.length && !assistantText ? <div className="ai-greeting"><span className="ai-spark"><Sparkles size={20} /></span><h1>{AI_PLANNER_COPY.greeting}</h1><p>{AI_PLANNER_COPY.intro}</p><div className="ai-starters">{AI_PLANNER_COPY.starters.map((text) => <button key={text} onClick={() => void submit(text)}>{text}<Send size={14} /></button>)}</div></div> : null}
-          {messages.map((message) => <article className={`ai-message ${message.role}`} key={message.id}>{message.content.map((block, index) => block.type === "text" ? <ReactMarkdown remarkPlugins={[remarkGfm]} key={index}>{block.text}</ReactMarkdown> : block.type === "artifact_ref" ? <button className="ai-artifact-link" key={index} onClick={() => setView("plan")}><FileText size={15} />Open plan revision {block.revision}</button> : null)}</article>)}
+          {messages.map((message) => <article className={`ai-message ${message.role}`} key={message.id}>{message.content.map((block, index) => block.type === "text" ? <ReactMarkdown remarkPlugins={[remarkGfm]} key={index}>{block.text}</ReactMarkdown> : block.type === "artifact_ref" ? <button className="ai-artifact-link" key={index} onClick={() => setView("plan")}><FileText size={15} />Open plan revision {block.revision}</button> : block.type === "download_ref" ? <DownloadCard download={block} key={index} /> : null)}</article>)}
           {progress.length ? <div className="ai-tool-progress" aria-live="polite">{progress.map((label, index) => <span key={`${label}-${index}`}><i className={busy && index === progress.length - 1 ? "working" : "done"} />{label}</span>)}</div> : null}
           {assistantText ? <article className="ai-message assistant streaming"><ReactMarkdown remarkPlugins={[remarkGfm]}>{assistantText}</ReactMarkdown></article> : null}
+          {liveDownloads.map((download) => <DownloadCard download={download} key={`${download.artifactId}-${download.revision}`} />)}
           {error ? <div className="ai-chat-error" role="alert">{error}<button onClick={() => setError(null)}>Dismiss</button></div> : null}
         </div>
         <form className="ai-composer" onSubmit={onSubmit}>

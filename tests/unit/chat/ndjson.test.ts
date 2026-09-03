@@ -18,4 +18,29 @@ describe("NDJSON parser", () => {
     for await (const event of parseNdjson(stream)) events.push(event);
     expect(events.map((event) => event.type)).toEqual(["response.started", "text.delta"]);
   });
+
+  it("accepts a strict inline download event", async () => {
+    const encoder = new TextEncoder();
+    const event = {
+      type: "download.ready",
+      download: {
+        artifactId: "11111111-1111-4111-8111-111111111111",
+        revision: 2,
+        reportKind: "campaign_plan",
+        title: "Everyday essentials campaign plan",
+        filename: "everyday-essentials-campaign-plan-r2",
+        formats: ["xlsx", "csv"],
+      },
+    };
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+        controller.close();
+      },
+    });
+
+    const events = [];
+    for await (const parsed of parseNdjson(stream)) events.push(parsed);
+    expect(events).toEqual([event]);
+  });
 });
