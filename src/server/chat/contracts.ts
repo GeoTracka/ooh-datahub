@@ -22,6 +22,7 @@ export const MessageContentBlockSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("artifact_ref"),
     artifactId: z.string().min(1),
+    artifactType: z.enum(["plan", "map", "audience", "evidence"]).optional(),
     revision: z.number().int().positive(),
   }),
   z.object({
@@ -39,7 +40,13 @@ export function providerContentFromMessage(content: MessageContent) {
     .map((block) => {
       if (block.type === "text") return block.text;
       if (block.type === "artifact_ref") {
-        return `[Plan artifact ${block.artifactId}, revision ${block.revision}]`;
+        const label = {
+          plan: "Plan",
+          map: "Map",
+          audience: "Audience",
+          evidence: "Evidence",
+        }[block.artifactType ?? "plan"];
+        return `[${label} artifact ${block.artifactId}, revision ${block.revision}]`;
       }
       if (block.type === "citation_ref") return `[Evidence fact ${block.factId}]`;
       const label = block.reportKind === "campaign_plan" ? "Campaign plan" : "Evidence";

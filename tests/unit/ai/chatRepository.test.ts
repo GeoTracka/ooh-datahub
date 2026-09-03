@@ -41,4 +41,19 @@ describe("chat ownership", () => {
       "Your report is ready.\n[Campaign plan report 11111111-1111-4111-8111-111111111111, revision 2, available as XLSX and CSV]",
     );
   });
+
+  it("identifies evidence artifacts correctly in follow-up history", () => {
+    const content = MessageContentSchema.parse([
+      {
+        type: "artifact_ref",
+        artifactId: "11111111-1111-4111-8111-111111111111",
+        artifactType: "evidence",
+        revision: 1,
+      },
+    ]);
+
+    expect(providerContentFromMessage(content)).toBe(
+      "[Evidence artifact 11111111-1111-4111-8111-111111111111, revision 1]",
+    );
+  });
 });

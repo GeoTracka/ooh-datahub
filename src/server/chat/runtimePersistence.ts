@@ -119,6 +119,7 @@ export function createMariaDbRuntimePersistence(): RuntimePersistence {
         ...input.artifacts.map((artifact) => ({
           type: "artifact_ref" as const,
           artifactId: artifact.id,
+          artifactType: artifact.type,
           revision: artifact.revision,
         })),
         ...input.downloads.map((download) => ({
