@@ -1,5 +1,4 @@
 import {
-  customType,
   index,
   mysqlEnum,
   mysqlTable,
@@ -8,16 +7,7 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 
-const binaryBuffer = customType<{
-  data: Buffer;
-  driverData: Buffer;
-  config: { length: number };
-  configRequired: true;
-}>({
-  dataType: ({ length }) => `binary(${length})`,
-  toDriver: (value) => value,
-  fromDriver: (value) => Buffer.from(value),
-});
+import { binaryBuffer } from "@/server/db/schema/types";
 
 export const appUsers = mysqlTable(
   "app_users",
