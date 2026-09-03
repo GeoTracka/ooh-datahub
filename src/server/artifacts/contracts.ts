@@ -69,4 +69,5 @@ export const ArtifactPayloadSchema = z.discriminatedUnion("type", [
 
 export type ArtifactPayload = z.infer<typeof ArtifactPayloadSchema>;
 export type ArtifactType = ArtifactPayload["type"];
-
+export type PlanArtifactPayload = Extract<ArtifactPayload, { type: "plan" }>;
+export type MapArtifactPayload = Extract<ArtifactPayload, { type: "map" }>;
