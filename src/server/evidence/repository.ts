@@ -209,3 +209,65 @@ export function createMariaDbEvidenceRepository() {
     },
   });
 }
+
+export async function getApprovedEvidenceAnswersByIds(
+  factIds: readonly string[],
+): Promise<EvidenceAnswer[]> {
+  const uniqueIds = [...new Set(factIds)];
+  if (uniqueIds.length === 0 || uniqueIds.length > 200) {
+    throw new Error("BOUNDED_EVIDENCE_FACT_IDS_REQUIRED");
+  }
+  const { db } = evidenceDatabase();
+  const rows = await db
+    .select({
+      factId: evidenceFacts.id,
+      metricId: evidenceFacts.metricId,
+      label: evidenceFacts.label,
+      value: evidenceFacts.value,
+      unit: evidenceFacts.unit,
+      numerator: evidenceFacts.numerator,
+      denominator: evidenceFacts.denominator,
+      respondentBase: evidenceFacts.respondentBase,
+      geography: evidenceFacts.geographyId,
+      segment: evidenceFacts.segment,
+      period: evidenceFacts.period,
+      weighting: evidenceFacts.weighting,
+      status: evidenceFacts.status,
+      sourceId: evidenceSources.id,
+      sha256: evidenceSources.sha256,
+      workbookField: evidenceCitations.workbookField,
+      page: evidenceCitations.page,
+    })
+    .from(evidenceFacts)
+    .innerJoin(evidenceCitations, eq(evidenceCitations.factId, evidenceFacts.id))
+    .innerJoin(evidenceSources, eq(evidenceSources.id, evidenceFacts.sourceId))
+    .where(inArray(evidenceFacts.id, uniqueIds));
+  return rows.map((row) => {
+    if (row.status !== "approved") throw new Error(`EVIDENCE_BLOCKED:${row.factId}`);
+    if (row.weighting !== "unweighted") {
+      throw new Error(`UNKNOWN_EVIDENCE_WEIGHTING:${row.factId}`);
+    }
+    if (row.respondentBase < 30) throw new Error(`EVIDENCE_BASE_TOO_SMALL:${row.factId}`);
+    return {
+      factId: row.factId,
+      metricId: row.metricId,
+      label: row.label,
+      value: row.value,
+      unit: answerUnit(row.unit),
+      numerator: row.numerator,
+      denominator: row.denominator,
+      respondentBase: row.respondentBase,
+      geography: row.geography,
+      segment: row.segment,
+      period: row.period,
+      caveat:
+        "Unweighted survey evidence for the study sample; not population reach or site delivery.",
+      citation: {
+        sourceId: row.sourceId,
+        sha256: row.sha256,
+        workbookField: row.workbookField,
+        page: row.page,
+      },
+    };
+  });
+}
