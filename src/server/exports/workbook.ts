@@ -9,10 +9,8 @@ import type {
 const BRAND = "145C54";
 const BRAND_DARK = "0F4942";
 const BRAND_LIGHT = "DEEBE7";
-const CANVAS = "F6F5F2";
 const TEXT = "17231F";
 const MUTED = "68726D";
-const BORDER = "D9E0DD";
 const WARNING = "FFF3E2";
 
 function titleRow(sheet: ExcelJS.Worksheet, title: string, lastColumn: string) {
