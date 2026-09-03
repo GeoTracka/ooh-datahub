@@ -121,6 +121,10 @@ export function createMariaDbRuntimePersistence(): RuntimePersistence {
           artifactId: artifact.id,
           revision: artifact.revision,
         })),
+        ...input.downloads.map((download) => ({
+          type: "download_ref" as const,
+          ...download,
+        })),
       ];
       await insertMessage({
         id: input.id,

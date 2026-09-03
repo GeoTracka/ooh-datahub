@@ -2,7 +2,10 @@ import { createHash, randomUUID } from "node:crypto";
 
 import type { CurrentUser } from "@/server/auth/currentUser";
 import type { ArtifactType } from "@/server/artifacts/contracts";
-import type { ChatServerEvent } from "@/server/chat/contracts";
+import type {
+  ChatServerEvent,
+  DownloadDescriptor,
+} from "@/server/chat/contracts";
 import type {
   PlannerProvider,
   ProviderUsage,
@@ -18,6 +21,7 @@ export type ToolArtifactResult = {
 export type ToolExecutionResult = {
   output: unknown;
   artifact?: ToolArtifactResult;
+  download?: DownloadDescriptor;
 };
 
 export type RuntimeToolRegistry = {
@@ -56,6 +60,7 @@ export type RuntimePersistence = {
     text: string;
     providerResponseId: string;
     artifacts: ToolArtifactResult[];
+    downloads: DownloadDescriptor[];
   }): Promise<void>;
   saveUsage(input: {
     id: string;
@@ -137,6 +142,7 @@ export async function* runPlannerResponse(
     { role: "user", content: context.text },
   ];
   const artifacts: ToolArtifactResult[] = [];
+  const downloads: DownloadDescriptor[] = [];
   let assistantText = "";
   let toolCalls = 0;
   let finalResponseId = "";
@@ -157,6 +163,7 @@ export async function* runPlannerResponse(
       text: assessment.response,
       providerResponseId: "local-policy",
       artifacts: [],
+      downloads: [],
     });
     yield { type: "text.delta", delta: assessment.response };
     yield {
@@ -205,13 +212,16 @@ export async function* runPlannerResponse(
           text: assistantText,
           providerResponseId: finalResponseId,
           artifacts,
+          downloads,
         });
         yield {
           type: "response.completed",
           messageId: assistantMessageId,
           suggestedActions: artifacts.length
             ? ["Compare the three approaches", "Fine-tune the plan", "Open the visual planner"]
-            : [],
+            : downloads.length
+              ? ["Download XLSX", "Download CSV"]
+              : [],
         };
         return;
       }
@@ -261,6 +271,10 @@ export async function* runPlannerResponse(
               artifactType: execution.artifact.type,
               revision: execution.artifact.revision,
             };
+          }
+          if (execution.download) {
+            downloads.push(execution.download);
+            yield { type: "download.ready", download: execution.download };
           }
           input.push(
             {

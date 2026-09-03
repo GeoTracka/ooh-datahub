@@ -7,6 +7,7 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { binaryToUuid, uuidToBinary } from "@/server/auth/ids";
 import {
   MessageContentSchema,
+  providerContentFromMessage,
   type ChatThread,
   type MessageContent,
 } from "@/server/chat/contracts";
@@ -102,15 +103,7 @@ export async function providerHistory(threadId: string, ownerId: string) {
   const messages = await listMessages(threadId, ownerId);
   return messages.map((message) => ({
     role: message.role,
-    content: message.content
-      .map((block) => {
-        if (block.type === "text") return block.text;
-        if (block.type === "artifact_ref") {
-          return `[Plan artifact ${block.artifactId}, revision ${block.revision}]`;
-        }
-        return `[Evidence fact ${block.factId}]`;
-      })
-      .join("\n"),
+    content: providerContentFromMessage(message.content),
   }));
 }
 
