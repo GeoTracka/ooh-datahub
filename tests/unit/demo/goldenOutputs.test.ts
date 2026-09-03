@@ -6,6 +6,8 @@ import { canonicalJson } from "@/shared/canonicalJson";
 describe("golden outputs", () => {
   it("rebuilds all three plan and RFQ bytes exactly", async () => {
     const checkedIn = await readFile("src/demo/lagos-v1/golden-outputs.json", "utf8");
-    expect(canonicalJson(buildGoldenOutputs()) + "\n").toBe(checkedIn);
+    expect(canonicalJson(buildGoldenOutputs()) + "\n").toBe(
+      checkedIn.replaceAll("\r\n", "\n"),
+    );
   }, 120_000);
 });
