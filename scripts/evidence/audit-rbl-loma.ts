@@ -17,8 +17,11 @@ const EXPECTED_COLUMNS = 302;
 
 const RESTRICTED_PUBLICATION_KEYS = [
   "restrictedopentext",
+  "opentext",
   "routeopentext",
   "areaopentext",
+  "routeraw",
+  "arearaw",
   "interviewer",
   "respondentname",
   "respondentidentity",

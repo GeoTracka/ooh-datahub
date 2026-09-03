@@ -6,7 +6,7 @@ import { evidenceDisposition } from "@/evidence/rblLoma2026/policy";
 import { rblLoma2026Sources } from "@/evidence/sourceCatalog";
 import { assertPublicationPrivacy } from "./audit-rbl-loma";
 
-type Publication = {
+export type Publication = {
   sourceHashes: Record<string, string>;
   facts: Array<{
     factId: string;
