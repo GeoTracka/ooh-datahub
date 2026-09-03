@@ -20,4 +20,10 @@ describe("planner safety policy", () => {
     expect(assessPlannerRequest("Plan a Lagos FMCG campaign for ₦20m").disposition).toBe("supported");
     expect(assessPlannerRequest("Reduce the budget to ₦15m").disposition).toBe("supported");
   });
+
+  it("uses a protected export tool and excludes respondent-level data", () => {
+    expect(PLANNER_INSTRUCTIONS).toMatch(/prepare_artifact_export/i);
+    expect(PLANNER_INSTRUCTIONS).toMatch(/XLSX|CSV/i);
+    expect(PLANNER_INSTRUCTIONS).toMatch(/Never export respondent-level data/i);
+  });
 });

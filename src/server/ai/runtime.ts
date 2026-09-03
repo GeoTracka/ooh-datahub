@@ -21,6 +21,10 @@ import {
 } from "@/server/ai/tools/plannerTools";
 import { createEvidenceTools } from "@/server/ai/tools/evidenceTools";
 import { createEvidenceToolRegistry } from "@/server/ai/tools/registry";
+import {
+  PrepareArtifactExportArgsSchema,
+  prepareArtifactExport,
+} from "@/server/ai/tools/exportTools";
 import { providerHistory } from "@/server/chat/service";
 import { createMariaDbRuntimePersistence } from "@/server/chat/runtimePersistence";
 import { createMariaDbEvidenceRepository } from "@/server/evidence/repository";
@@ -93,6 +97,11 @@ export function createRuntimeToolRegistry(user: CurrentUser, threadId: string) {
       "open_visual_planner",
       "Create a short-lived link that opens this exact plan revision in the visual planner.",
       OpenPlannerArgsSchema,
+    ),
+    definition(
+      "prepare_artifact_export",
+      "Prepare secure XLSX and CSV download actions for an owned campaign plan or governed evidence report revision.",
+      PrepareArtifactExportArgsSchema,
     ),
   ];
 
@@ -216,6 +225,14 @@ export function createRuntimeToolRegistry(user: CurrentUser, threadId: string) {
             expiresInSeconds: 300,
           },
         };
+      }
+      if (name === "prepare_artifact_export") {
+        const args = PrepareArtifactExportArgsSchema.parse(parsed);
+        const download = await prepareArtifactExport(args, {
+          ownerId: user.id,
+          getArtifact: getCurrentArtifact,
+        });
+        return { output: download, download };
       }
       throw new Error(`UNKNOWN_TOOL:${name}`);
     },
