@@ -5,7 +5,6 @@ import {
   mysqlEnum,
   mysqlTable,
   primaryKey,
-  text,
   timestamp,
   uniqueIndex,
   varchar,

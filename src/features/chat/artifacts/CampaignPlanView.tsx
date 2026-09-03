@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Check, ChevronRight, SlidersHorizontal } from "lucide-react";
 
-import type { PlanArtifactPayload } from "@/server/artifacts/contracts";
 import type { PlanWorkspaceArtifact } from "@/features/chat/contracts";
 
 function money(value: number) {
